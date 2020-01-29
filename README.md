@@ -8,3 +8,5 @@ How to install:
 3. Install packages
 4. Launch SSM/simple_spectra_manipulator.pyw
 5. Enjoy
+
+Added change
