@@ -1,0 +1,371 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Fitting models &mdash; Simple Spectra Manipulator 0.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Fitting result" href="fitresult.html" />
+    <link rel="prev" title="User Namespace" href="usernamespace.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Simple Spectra Manipulator
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="apireference.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="spectrum.html">Class Spectrum and SpectrumList</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usernamespace.html">User Namespace</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Fitting models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#ab-1st-order">A→B (1st order)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ab-var-order">A→B (var order)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ab-mixed-1st-and-2nd-order">A→B (Mixed 1st and 2nd order)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#abc-1st-order">A→B→C (1st order)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#abc-var-order">A→B→C (var order)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#abcd-1st-order">A→B→C→D (1st order)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#abcd-var-order">A→B→C→D (var order)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ab-cd-1st-order">A→B, C→D (1st order)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#linear">Linear</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#photobleaching">Photobleaching</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fitresult.html">Fitting result</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Simple Spectra Manipulator</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="apireference.html">API Reference</a> &raquo;</li>
+        
+      <li>Fitting models</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/fitmodels.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="fitting-models">
+<h1>Fitting models<a class="headerlink" href="#fitting-models" title="Permalink to this headline">¶</a></h1>
+<p>The file <code class="docutils literal notranslate"><span class="pre">fitmodels.py</span></code> contains generic models used for fitting.
+Available models are listed below. In order to create own model, please add your model to <code class="docutils literal notranslate"><span class="pre">userfitmodels.py</span></code>.
+The other file was added so that the original file is not modified. For creating your own model, you can get inspiration
+from generic models in <code class="docutils literal notranslate"><span class="pre">fitmodels.py</span></code>.</p>
+<p>In classical kinetic models, the concentration at time zero (<span class="math notranslate nohighlight">\(c(0) = c_0\)</span>) is omitted as a fitting
+parameter for <span class="math notranslate nohighlight">\(1^{\mathrm{st}}\)</span> order kinetics, because the rate does not depend on <span class="math notranslate nohighlight">\(c_0\)</span>. This parameter
+is included for variable order and special models (eg. Photobleaching), because the rate depends on <span class="math notranslate nohighlight">\(c_0\)</span>.</p>
+<div class="section" id="ab-1st-order">
+<h2>A→B (1st order)<a class="headerlink" href="#ab-1st-order" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fitmodels.AB1stModel">
+<em class="property">class </em><code class="descclassname">fitmodels.</code><code class="descname">AB1stModel</code><a class="reference internal" href="_modules/fitmodels.html#AB1stModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fitmodels.AB1stModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the A→B model, 1st order kinetics. Differential equations:</p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k[\mathrm{A}]\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k[\mathrm{A}]\)</span></p>
+<p>initial conditions: <span class="math notranslate nohighlight">\([\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = 0\)</span></p>
+</dd></dl>
+
+</div>
+<div class="section" id="ab-var-order">
+<h2>A→B (var order)<a class="headerlink" href="#ab-var-order" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fitmodels.ABVarOrderModel">
+<em class="property">class </em><code class="descclassname">fitmodels.</code><code class="descname">ABVarOrderModel</code><a class="reference internal" href="_modules/fitmodels.html#ABVarOrderModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fitmodels.ABVarOrderModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the A→B model, variable order kinetics. Differential equations:</p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k[\mathrm{A}]^n\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k[\mathrm{A}]^n\)</span></p>
+<p>initial conditions: <span class="math notranslate nohighlight">\([\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = 0\)</span></p>
+</dd></dl>
+
+</div>
+<div class="section" id="ab-mixed-1st-and-2nd-order">
+<h2>A→B (Mixed 1st and 2nd order)<a class="headerlink" href="#ab-mixed-1st-and-2nd-order" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fitmodels.AB_mixed12Model">
+<em class="property">class </em><code class="descclassname">fitmodels.</code><code class="descname">AB_mixed12Model</code><a class="reference internal" href="_modules/fitmodels.html#AB_mixed12Model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fitmodels.AB_mixed12Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the A→B model, mixed 1st and 2nd order kinetics. Differential equations:</p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k_1[\mathrm{A}] - k_2[\mathrm{A}]^2\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k_1[\mathrm{A}] + k_2[\mathrm{A}]^2\)</span></p>
+<p>initial conditions: <span class="math notranslate nohighlight">\([\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = 0\)</span></p>
+</dd></dl>
+
+</div>
+<div class="section" id="abc-1st-order">
+<h2>A→B→C (1st order)<a class="headerlink" href="#abc-1st-order" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fitmodels.ABC1stModel">
+<em class="property">class </em><code class="descclassname">fitmodels.</code><code class="descname">ABC1stModel</code><a class="reference internal" href="_modules/fitmodels.html#ABC1stModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fitmodels.ABC1stModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the A→B→C model, 1st order kinetics. Differential equations:</p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k_1[\mathrm{A}]\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k_1[\mathrm{A}] - k_2[\mathrm{B}]\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{C}]}{\mathrm{d}t} = +k_2[\mathrm{B}]\)</span></p>
+<p>initial conditions: <span class="math notranslate nohighlight">\([\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = [\mathrm C]_0 = 0\)</span></p>
+</dd></dl>
+
+</div>
+<div class="section" id="abc-var-order">
+<h2>A→B→C (var order)<a class="headerlink" href="#abc-var-order" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fitmodels.ABCvarOrderModel">
+<em class="property">class </em><code class="descclassname">fitmodels.</code><code class="descname">ABCvarOrderModel</code><a class="reference internal" href="_modules/fitmodels.html#ABCvarOrderModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fitmodels.ABCvarOrderModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the A→B→C model, variable order kinetics. Differential equations:</p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k_1[\mathrm{A}]^{n_1}\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k_1[\mathrm{A}]^{n_1} - k_2[\mathrm{B}]^{n_2}\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{C}]}{\mathrm{d}t} = +k_2[\mathrm{B}]^{n_2}\)</span></p>
+<p>initial conditions: <span class="math notranslate nohighlight">\([\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = [\mathrm C]_0 = 0\)</span></p>
+<p>Note, that <span class="math notranslate nohighlight">\(n_2\)</span> must be <span class="math notranslate nohighlight">\(\ge 1\)</span>, however, <span class="math notranslate nohighlight">\(n_1 \ge 0\)</span>.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="abcd-1st-order">
+<h2>A→B→C→D (1st order)<a class="headerlink" href="#abcd-1st-order" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fitmodels.ABCD1stModel">
+<em class="property">class </em><code class="descclassname">fitmodels.</code><code class="descname">ABCD1stModel</code><a class="reference internal" href="_modules/fitmodels.html#ABCD1stModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fitmodels.ABCD1stModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the A→B→C→D model, 1st order kinetics. Differential equations:</p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k_1[\mathrm{A}]\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k_1[\mathrm{A}] - k_2[\mathrm{B}]\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{C}]}{\mathrm{d}t} = +k_2[\mathrm{B}] - k_3[\mathrm{C}]\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{D}]}{\mathrm{d}t} = +k_3[\mathrm{C}]\)</span></p>
+<p>initial conditions: <span class="math notranslate nohighlight">\([\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = [\mathrm C]_0 = [\mathrm D]_0 = 0\)</span></p>
+</dd></dl>
+
+</div>
+<div class="section" id="abcd-var-order">
+<h2>A→B→C→D (var order)<a class="headerlink" href="#abcd-var-order" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fitmodels.ABCDvarOrderModel">
+<em class="property">class </em><code class="descclassname">fitmodels.</code><code class="descname">ABCDvarOrderModel</code><a class="reference internal" href="_modules/fitmodels.html#ABCDvarOrderModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fitmodels.ABCDvarOrderModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the A→B→C→D model, variable order kinetics. Differential equations:</p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k_1[\mathrm{A}]^{n_1}\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k_1[\mathrm{A}]^{n_1} - k_2[\mathrm{B}]^{n_2}\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{C}]}{\mathrm{d}t} = +k_2[\mathrm{B}]^{n_2} - k_3[\mathrm{C}]^{n_3}\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{D}]}{\mathrm{d}t} = +k_3[\mathrm{C}]^{n_3}\)</span></p>
+<p>initial conditions: <span class="math notranslate nohighlight">\([\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = [\mathrm C]_0 = [\mathrm D]_0 = 0\)</span></p>
+<p>Note, that <span class="math notranslate nohighlight">\(n_2,n_3\)</span> must be <span class="math notranslate nohighlight">\(\ge 1\)</span>, however, <span class="math notranslate nohighlight">\(n_1 \ge 0\)</span>.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="ab-cd-1st-order">
+<h2>A→B, C→D (1st order)<a class="headerlink" href="#ab-cd-1st-order" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fitmodels.ABCD_seqModel">
+<em class="property">class </em><code class="descclassname">fitmodels.</code><code class="descname">ABCD_seqModel</code><a class="reference internal" href="_modules/fitmodels.html#ABCD_seqModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fitmodels.ABCD_seqModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the A→B, C→D sequential model, 1st order kinetics. Differential equations:</p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k_1[\mathrm{A}]\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k_1[\mathrm{A}]\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{C}]}{\mathrm{d}t} = -k_2[\mathrm{C}]\)</span></p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}[\mathrm{D}]}{\mathrm{d}t} = +k_2[\mathrm{C}]\)</span></p>
+<p>initial conditions are same as in A→B model, since it is a 1st order, <span class="math notranslate nohighlight">\(c_0\)</span> was not added to
+the parameters.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="linear">
+<h2>Linear<a class="headerlink" href="#linear" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fitmodels.LinearModel">
+<em class="property">class </em><code class="descclassname">fitmodels.</code><code class="descname">LinearModel</code><a class="reference internal" href="_modules/fitmodels.html#LinearModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fitmodels.LinearModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the linear model,
+<span class="math notranslate nohighlight">\(y(x) = ax + y_0\)</span>
+where <span class="math notranslate nohighlight">\(a\)</span> is a slope and <span class="math notranslate nohighlight">\(y_0\)</span> intercept.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="photobleaching">
+<h2>Photobleaching<a class="headerlink" href="#photobleaching" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fitmodels.Photobleaching_Model">
+<em class="property">class </em><code class="descclassname">fitmodels.</code><code class="descname">Photobleaching_Model</code><a class="reference internal" href="_modules/fitmodels.html#Photobleaching_Model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fitmodels.Photobleaching_Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the photobleaching model. Differential equation:</p>
+<p><span class="math notranslate nohighlight">\(\frac{\mathrm{d}c(t)}{\mathrm{d}t} = -k\left(1 - 10^{-\varepsilon c(t)l}\right)\)</span></p>
+<p>where <span class="math notranslate nohighlight">\(k = \frac{1}{V}I_0\Phi\)</span> is a product of incident light intensity and photoreaction quantum yield
+divided by the volume of the solution.</p>
+<p>initial conditions: <span class="math notranslate nohighlight">\(c(0) = c_0 = \frac{A_0}{\varepsilon l}\)</span></p>
+<p>Integrated law for evolution of absorbance in time (fitting equation):</p>
+<p><span class="math notranslate nohighlight">\(A(t) = \frac{1}{\ln 10}\ln\left(  10^{-A_0k^{\prime}t}  \left( 10^{A_0} + 10^{A_0k^{\prime}t} - 1  \right)\right)\)</span></p>
+<p>where <span class="math notranslate nohighlight">\(A_0\)</span> is absorbance at time 0, <span class="math notranslate nohighlight">\(k^{\prime} = \frac{k}{c_0}\)</span>, both <span class="math notranslate nohighlight">\(k\)</span> and <span class="math notranslate nohighlight">\(c_0\)</span>
+are fitting parameters, one of them must be fixed, usually <span class="math notranslate nohighlight">\(c_0\)</span></p>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="fitresult.html" class="btn btn-neutral float-right" title="Fitting result" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="usernamespace.html" class="btn btn-neutral float-left" title="User Namespace" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Dominik Madea
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

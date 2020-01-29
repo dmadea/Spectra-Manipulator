@@ -1,0 +1,323 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>User Namespace &mdash; Simple Spectra Manipulator 0.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Fitting models" href="fitmodels.html" />
+    <link rel="prev" title="Class Spectrum and SpectrumList" href="spectrum.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Simple Spectra Manipulator
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="apireference.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="spectrum.html">Class Spectrum and SpectrumList</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">User Namespace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fitmodels.html">Fitting models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fitresult.html">Fitting result</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Simple Spectra Manipulator</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="apireference.html">API Reference</a> &raquo;</li>
+        
+      <li>User Namespace</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/usernamespace.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="user-namespace">
+<h1>User Namespace<a class="headerlink" href="#user-namespace" title="Permalink to this headline">¶</a></h1>
+<p>The methods located in module <code class="docutils literal notranslate"><span class="pre">user_namespace.py</span></code> are imported to the console, thus, they are accessible through console.
+Some methods are often very useful (mainly functions <code class="xref py py-func docutils literal notranslate"><span class="pre">add_to_list()</span></code>,  <code class="xref py py-func docutils literal notranslate"><span class="pre">set_xy_range()</span></code> and  <code class="xref py py-func docutils literal notranslate"><span class="pre">copy_to_clipboard()</span></code>).</p>
+<dl class="function">
+<dt id="user_namespace.add_to_list">
+<code class="descclassname">user_namespace.</code><code class="descname">add_to_list</code><span class="sig-paren">(</span><em>spectra</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_namespace.html#add_to_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_namespace.add_to_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copies all spectra and imports them to the Tree Widget.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>spectra</strong> ({<code class="xref py py-class docutils literal notranslate"><span class="pre">Spectrum</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">SpectrumList</span></code>, list, list of lists, SpectrumItemGroup, SpectrumItem}) – The input spectra to be added into Tree Widget.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_namespace.set_xy_range">
+<code class="descclassname">user_namespace.</code><code class="descname">set_xy_range</code><span class="sig-paren">(</span><em>x0=None</em>, <em>x1=None</em>, <em>y0=None</em>, <em>y1=None</em>, <em>padding=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_namespace.html#set_xy_range"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_namespace.set_xy_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>Changes the x and y ranges of scene in Plot Widget.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x0</strong> (<em>{int</em><em>, </em><em>float</em><em>, </em><em>None}</em>) – New fist x value. If None, old value is kept.</p></li>
+<li><p><strong>x1</strong> (<em>{int</em><em>, </em><em>float</em><em>, </em><em>None}</em>) – New last x value. If None, old value is kept.</p></li>
+<li><p><strong>y0</strong> (<em>{int</em><em>, </em><em>float</em><em>, </em><em>None}</em>) – New fist y value. If None, old value is kept.</p></li>
+<li><p><strong>y1</strong> (<em>{int</em><em>, </em><em>float</em><em>, </em><em>None}</em>) – New last y value. If None, old value is kept.</p></li>
+<li><p><strong>padding</strong> (<em>{int</em><em>, </em><em>float}</em>) – Sets the padding around the choosed rectangle. If 0, no padding will be used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_namespace.copy_to_clipboard">
+<code class="descclassname">user_namespace.</code><code class="descname">copy_to_clipboard</code><span class="sig-paren">(</span><em>array</em>, <em>delimiter='\t'</em>, <em>decimal_sep='.'</em>, <em>new_line='\n'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_namespace.html#copy_to_clipboard"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_namespace.copy_to_clipboard" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copies the <em>array</em> of numbers into clipboard. This can be then pasted to Excel for example.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>array</strong> (<em>{array_like</em><em>, </em><em>iterable}</em>) – Array of values. Can be 1D or 2D array</p></li>
+<li><p><strong>delimiter</strong> (<em>str</em>) – Delimiter between numbers, default tabulator ‘\t’</p></li>
+<li><p><strong>decimal_sep</strong> (<em>str</em>) – Decimal separator, default ‘.’</p></li>
+<li><p><strong>new_line</strong> (<em>str</em>) – New line character, default ‘\n’</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_namespace.set_HSV_color_scheme">
+<code class="descclassname">user_namespace.</code><code class="descname">set_HSV_color_scheme</code><span class="sig-paren">(</span><em>active=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_namespace.html#set_HSV_color_scheme"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_namespace.set_HSV_color_scheme" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the options for HSV color scheme and whether the scheme is active.</p>
+<table class="docutils align-center">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 84%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><em>active</em> (bool)</p></td>
+<td><p>True for setting the scheme active, False for not (default color scheme will be
+used).</p></td>
+</tr>
+<tr class="row-even"><td><p><em>hues</em> (int)</p></td>
+<td><p>The number of hues that will be repeating, default 9.</p></td>
+</tr>
+<tr class="row-odd"><td><p><em>values</em> (int)</p></td>
+<td><p>The number of values/brightnesses that will be repeating, default 1.</p></td>
+</tr>
+<tr class="row-even"><td><p><em>minValue</em> (int)</p></td>
+<td><p>A minimum value/brightness, this can be &lt;0, 255&gt;, default 150.</p></td>
+</tr>
+<tr class="row-odd"><td><p><em>maxValue</em> (int)</p></td>
+<td><p>A maximum value/brightness, this can be &lt;0, 255&gt;, default 255.</p></td>
+</tr>
+<tr class="row-even"><td><p><em>minHue</em> (int)</p></td>
+<td><p>A minimum hue, this can be &lt;0, 360&gt;, default 0</p></td>
+</tr>
+<tr class="row-odd"><td><p><em>maxHue</em> (int)</p></td>
+<td><p>A maximum hue, this can be &lt;0, 360&gt;, default 360</p></td>
+</tr>
+<tr class="row-even"><td><p><em>sat</em> (int)</p></td>
+<td><p>The saturation value, this can be &lt;0, 255&gt;, default 255</p></td>
+</tr>
+<tr class="row-odd"><td><p><em>alpha</em> (int)</p></td>
+<td><p>The transparency value, this can be &lt;0, 255&gt;, default 255</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_namespace.set_default_HSV_color_scheme">
+<code class="descclassname">user_namespace.</code><code class="descname">set_default_HSV_color_scheme</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_namespace.html#set_default_HSV_color_scheme"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_namespace.set_default_HSV_color_scheme" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the default values for HSV color scheme.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_namespace.update_view">
+<code class="descclassname">user_namespace.</code><code class="descname">update_view</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_namespace.html#update_view"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_namespace.update_view" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the Tree Widget.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_namespace.redraw_all_spectra">
+<code class="descclassname">user_namespace.</code><code class="descname">redraw_all_spectra</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_namespace.html#redraw_all_spectra"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_namespace.redraw_all_spectra" title="Permalink to this definition">¶</a></dt>
+<dd><p>Redraws all spectra.</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="fitmodels.html" class="btn btn-neutral float-right" title="Fitting models" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="spectrum.html" class="btn btn-neutral float-left" title="Class Spectrum and SpectrumList" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Dominik Madea
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

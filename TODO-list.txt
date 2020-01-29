@@ -1,0 +1,76 @@
+
+
+ -- - TODO
+ o- - in progress
+ oo - done
+!   - URGENT
+*   - hard, have to think a lot (time demanding)... or hard, because I have to search a lot...
+
+
+# TODO list
+
+    oo add recent files, distinguish save and save us project
+   !oo* import from Excel XML Spreadsheet object, write parse function
+    oo check the build-in items iterator
+   !oo* finally finish general parser algorithm so it is actually general
+    oo remove TXTFileParser, use general parser instead, CSVFileParser will still inherits from GeneralParser
+    oo write abstract class for QDialog, all of the dialogs will then inherit from this class
+    oo write general input dialog class with a possibility of adding various input widgets (line edit, spin box, etc.)
+    oo add possibility to add a list of names in rename selected spectra function, !use csv module
+    oo simplify clipboard.py so it utilizes QApplication.clipboard() for setting and getting text and images
+    oo add smooth of spectrum function
+    oo add function expand range of spectrum by filling zeros
+    oo in Spectrum.list_to_string method, use csv module for csv files to export
+    oo add 2. column into treewidget that will contain names of items
+    oo* make console for further manipulation with spectra
+    oo remove out of bounds check from spectra manipulations
+    o- case insensitive open files dialog, nedá se kompletně vyřešit, bug v Qt https://stackoverflow.com/questions/34858220/qt-how-to-set-a-case-insensitive-filter-on-qfiledialog
+    oo***** wrote Abstract Item Model class
+    oo add extend by zeros range dialog
+    oo add linear range selector into Normalize dialog
+    oo export dialog add delimiter and decimal separator
+    oo change settings
+    oo interpolate dialog
+    oo menu bar export picture svg
+    oo* SpectrumItem jako podtřída Spectrum
+    oo* SpectrumItemGroup jako podtřída SpectrumList
+
+    plotwidget:
+
+    oo SVG exporter
+    -- create simpler context menu, with set xrange and yrange
+    o-* make better legend, remember the position of legend on redraw, maybe not necessary
+    oo add cross/ show coordinates
+    -- PŘIDAT DO LINEAR SELECTION REGION FUNKCI - změna šířky regionu v pohybem myši nahoru/dolů, zmenšit pohybem dolů, zvětšit nahoru
+
+    fitting
+
+    oo lmfit fitter
+    oo wrote model class
+    -- make a function plotter
+    oo poresit custom model, zjednodusit videnou fci
+    oo neco s modely
+
+
+
+
+# ! fixing the bug
+https://github.com/pyqtgraph/pyqtgraph/pull/641/commits/d09fe6bd478770862dffc3157f25e2dfcfa2a4ed
+
+
+
+
+
+uprava dev distribuce pyqtgraph dev-0.11
+
+file pyqtgraph.graphicsItems.PlotItem.PlotItem.py was modified
+
+added option wheater to draw legend or not, modified two functions, "plot" and "addItem"
+
+
+
+
+
+
+
+
