@@ -9,6 +9,8 @@ ItemList = list
 import numpy as np
 from typing import Iterable
 from settings import Settings
+import os
+
 
 
 
@@ -193,6 +195,7 @@ def calc_Eps(group):
 
 
 
+
 def rename_times(group, decimal_places=1):
     """Renames the group that has names in seconds. Changes for minutes for 60s <= time < 1 hour to minutes and
     time >= 1 hour to hours."""
@@ -215,6 +218,32 @@ def rename_times(group, decimal_places=1):
     group.set_names(parsed_times)
 
 
+def load_kinetics(dir_name, spectra_dir_name='spectra', times_fname='times.txt', blank_spectrum='blank.dx'):
+    """given a directory name, it loads all spectra in dir named "spectra",
+    if blank is given, it will be subtracted from all spectra, times.txt will contain
+    times for all spectra"""
+
+    if UserNamespace.instance is None:
+        return
+
+    if not os.path.isdir(dir_name):
+        raise ValueError(f'{dir_name}  does not exist!')
+    
+    spectra_path = os.path.join(dir_name, spectra_dir_name)
+    
+    if not os.path.isdir(spectra_path):
+        raise ValueError(f'{spectra_dir_name}  does not exist in {dir_name}!')
+
+    spectras = []
+
+    for filename in os.listdir(spectra_path):
+        spectras.append(os.path.join(spectra_path, filename))
+
+    UserNamespace.instance.main.tree_widget.import_files(spectras)
+
+    times_fname = os.path.join(dir_name, times_fname)
+    if os.path.isfile(times_fname):
+        UserNamespace.instance.main.tree_widget.import_files(times_fname)
 
 
 class UserNamespace:
