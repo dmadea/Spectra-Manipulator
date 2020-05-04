@@ -939,7 +939,8 @@ class Spectrum(object):
     def find_nearest_idx(array, value):
         """
         Finds nearest index of `value` in `array`. If value >  max(array), the last index of array
-        is returned, if value < min(array), 0 is returned. Array must be sorted.
+        is returned, if value < min(array), 0 is returned. Array must be sorted. Also works for value
+        to be array, then array of indexes is returned.
 
         Parameters
         ----------
@@ -950,14 +951,28 @@ class Spectrum(object):
 
         Returns
         -------
-        out : int
-            Found nearest index to value.
+        out : int, np.ndarray
+            Found nearest index/es to value/s.
         """
-        idx = np.searchsorted(array, value, side="left")
-        if idx > 0 and (idx == len(array) or math.fabs(value - array[idx - 1]) < math.fabs(value - array[idx])):
-            return idx - 1
+        # idx = np.searchsorted(array, value, side="left")
+        # if idx > 0 and (idx == len(array) or math.fabs(value - array[idx - 1]) < math.fabs(value - array[idx])):
+        #     return idx - 1
+        # else:
+        #     return idx
+        if isinstance(value, (int, float)):
+            value = np.asarray([value])
         else:
-            return idx
+            value = np.asarray(value)
+
+        result = np.empty_like(value, dtype=int)
+        for i in range(value.shape[0]):
+            idx = np.searchsorted(array, value[i], side="left")
+            if idx > 0 and (
+                    idx == len(array) or math.fabs(value[i] - array[idx - 1]) < math.fabs(value[i] - array[idx])):
+                result[i] = idx - 1
+            else:
+                result[i] = idx
+        return result if result.shape[0] > 1 else result[0]
 
     @staticmethod
     def find_nearest(array, value):

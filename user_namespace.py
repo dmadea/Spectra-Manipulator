@@ -11,8 +11,15 @@ from typing import Iterable
 from settings import Settings
 import os
 
+import matplotlib as mpl
+import matplotlib.pyplot as plt  # we plot graphs with this library
+from matplotlib import cm
+from matplotlib.ticker import *
 
+from spectrum import Spectrum
 
+WL_LABEL = 'Wavelength / nm'
+WN_LABEL = "Wavenumber / $10^{4}$ cm$^{-1}$"
 
 
 
@@ -218,13 +225,17 @@ def rename_times(group, decimal_places=1):
     group.set_names(parsed_times)
 
 
-def load_kinetics(dir_name, spectra_dir_name='spectra', times_fname='times.txt', blank_spectrum='blank.dx'):
+def load_kinetics(dir_name, spectra_dir_name='spectra', times_fname='times.txt', blank_spectrum='blank.dx', dt=None,
+                  b_corr=None, cut=None):
     """given a directory name, it loads all spectra in dir named "spectra",
     if blank is given, it will be subtracted from all spectra, times.txt will contain
     times for all spectra"""
 
     if UserNamespace.instance is None:
         return
+
+    tw = UserNamespace.instance.main.tree_widget
+    root = tw.myModel.root  # item in IPython console
 
     if not os.path.isdir(dir_name):
         raise ValueError(f'{dir_name}  does not exist!')
@@ -234,16 +245,166 @@ def load_kinetics(dir_name, spectra_dir_name='spectra', times_fname='times.txt',
     if not os.path.isdir(spectra_path):
         raise ValueError(f'{spectra_dir_name}  does not exist in {dir_name}!')
 
-    spectras = []
+    spectras = [os.path.join(spectra_path, filename) for filename in os.listdir(spectra_path)]
 
-    for filename in os.listdir(spectra_path):
-        spectras.append(os.path.join(spectra_path, filename))
+    # for filename in os.listdir(spectra_path):
+    #     spectras.append(os.path.join(spectra_path, filename))
 
-    UserNamespace.instance.main.tree_widget.import_files(spectras)
+    n_items_before = root.__len__()
+    tw.import_files(spectras)
+    n_spectra = root.__len__() - n_items_before
 
+    tw.add_items_to_group(root[n_items_before:], edit=False)  # add loaded spectra to group
+    root[n_items_before].name = f'raw [{os.path.split(dir_name)[1]}]'  # set name of a group
+
+    times = np.asarray([dt * i for i in range(n_spectra)]) if dt is not None else None
+    idx_add = 0
+
+    # load explicit times
     times_fname = os.path.join(dir_name, times_fname)
     if os.path.isfile(times_fname):
-        UserNamespace.instance.main.tree_widget.import_files(times_fname)
+        tw.import_files(times_fname)
+        idx_add += 1
+        if times is None:
+            times = root[n_items_before + idx_add].data[:, 0].copy()
+
+        # push times variable to the console
+        UserNamespace.instance.main.console.push_variables(
+            {
+                'times': times
+            }
+        )
+
+    if times is not None:
+        root[n_items_before].set_names(times)
+
+    # load blank spectrum if available
+    blank_fname = os.path.join(dir_name, blank_spectrum)
+    if os.path.isfile(blank_fname):
+        tw.import_files(blank_fname)
+        idx_add += 1
+        UserNamespace.instance.add_items_to_list(root[n_items_before] - root[n_items_before + idx_add])
+        if times is not None:
+            root[-1].set_names(times)
+        if b_corr is not None:
+            root[-1].baseline_correct(*b_corr)
+        return
+
+    if b_corr is not None:
+        root[n_items_before].baseline_correct(*b_corr)
+
+    return times
+
+
+def _setup_wavenumber_axis(ax, x_label=WN_LABEL,
+                          x_major_locator=None, x_minor_locator=AutoMinorLocator(5), factor=1e3):
+    secondary_ax = ax.secondary_xaxis('top', functions=(lambda x: factor / x, lambda x: 1 / (factor * x)))
+
+    secondary_ax.tick_params(which='major', direction='in')
+    secondary_ax.tick_params(which='minor', direction='in')
+
+    if x_major_locator:
+        secondary_ax.xaxis.set_major_locator(x_major_locator)
+
+    if x_minor_locator:
+        secondary_ax.xaxis.set_minor_locator(x_minor_locator)
+
+    secondary_ax.set_xlabel(x_label)
+
+    return secondary_ax
+
+
+def _set_main_axis(ax, x_label=WL_LABEL, y_label="Absorbance", xlim=(None, None), ylim=(None, None),
+                  x_major_locator=None, x_minor_locator=None, y_major_locator=None, y_minor_locator=None):
+    ax.set_ylabel(y_label)
+    ax.set_xlabel(x_label)
+    if xlim[0] is not None:
+        ax.set_xlim(xlim)
+    if ylim[0] is not None:
+        ax.set_ylim(ylim)
+
+    if x_major_locator:
+        ax.xaxis.set_major_locator(x_major_locator)
+
+    if x_minor_locator:
+        ax.xaxis.set_minor_locator(x_minor_locator)
+
+    if y_major_locator:
+        ax.yaxis.set_major_locator(y_major_locator)
+
+    if y_minor_locator:
+        ax.yaxis.set_minor_locator(y_minor_locator)
+
+    ax.tick_params(axis='both', which='major', direction='in')
+    ax.tick_params(axis='both', which='minor', direction='in')
+
+
+def plot_kinetics(group_item, n_spectra=50, linscale=1, linthresh=100, cmap='jet_r',
+                  major_ticks_labels=(100, 1000), emph_t=(0, 200, 1000), inset_loc=(0.75, 0.1, 0.03, 0.8),
+                  colorbar_label='Time / s', lw=0.5, alpha=0.5, fig_size=(5, 4), y_label='Absorbance', x_label=WL_LABEL,
+                  x_lim=(230, 600), filepath=None, dpi=500, transparent=True):
+
+    t = np.asarray(group_item.get_names(), dtype=np.float64)
+    w = group_item[0].data[:, 0]
+
+    fig, ax1 = plt.subplots(1, 1, figsize=fig_size)
+
+    _set_main_axis(ax1, x_label=x_label, y_label=y_label, xlim=x_lim, x_minor_locator=None, y_minor_locator=None)
+    _ = _setup_wavenumber_axis(ax1)
+
+    cmap = cm.get_cmap(cmap)
+    norm = mpl.colors.SymLogNorm(vmin=t[0], vmax=t[-1], linscale=linscale, linthresh=linthresh, base=10, clip=True)
+
+    tsb_idxs = Spectrum.find_nearest_idx(t, emph_t)
+    ts_real = np.round(t[tsb_idxs])
+
+    x_space = np.linspace(0, 1, n_spectra, endpoint=True, dtype=np.float64)
+
+    t_idx_space = Spectrum.find_nearest_idx(t, norm.inverse(x_space))
+    t_idx_space = np.sort(np.asarray(list(set(t_idx_space).union(set(tsb_idxs)))))
+
+    for i in t_idx_space:
+        x_real = norm(t[i])
+        x_real = 0 if np.ma.is_masked(x_real) else x_real
+        ax1.plot(w, group_item[i].data[:, 1], color=cmap(x_real),
+                 lw=1.5 if i in tsb_idxs else lw,
+                 alpha=1 if i in tsb_idxs else alpha,
+                 zorder=1 if i in tsb_idxs else 0)
+
+    cbaxes = ax1.inset_axes(inset_loc)
+
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = plt.colorbar(sm, cax=cbaxes, orientation='vertical',
+                        format=mpl.ticker.ScalarFormatter(),
+                        label=colorbar_label)
+
+    cbaxes.invert_yaxis()
+
+    minor_ticks = [10, 20, 30, 40, 50, 60, 70, 80, 90, 200, 300, 400, 500, 600, 700, 800, 900] + list(
+        np.arange(2e3, t[-1], 1e3))
+    cbaxes.yaxis.set_ticks(cbar._locate(minor_ticks), minor=True)
+
+    major_ticks = np.sort(np.hstack((np.asarray([100, 1000]), ts_real)))
+    major_ticks_labels = np.sort(np.hstack((np.asarray(major_ticks_labels), ts_real)))
+
+    cbaxes.yaxis.set_ticks(cbar._locate(major_ticks), minor=False)
+    cbaxes.set_yticklabels([(f'{num:0.0f}' if num in major_ticks_labels else "") for num in major_ticks])
+
+    for ytick, ytick_label, _t in zip(cbaxes.yaxis.get_major_ticks(), cbaxes.get_yticklabels(), major_ticks):
+        if _t in ts_real:
+            color = cmap(norm(_t))
+            ytick_label.set_color(color)
+            ytick_label.set_fontweight('bold')
+            ytick.tick2line.set_color(color)
+            ytick.tick2line.set_markersize(5)
+            # ytick.tick2line.set_markeredgewidth(2)
+
+    if filepath:
+        ext = os.path.splitext(filepath)[1].lower()[1:]
+        plt.savefig(fname=filepath, format=ext, transparent=transparent, dpi=dpi)
+
+    plt.show()
 
 
 class UserNamespace:

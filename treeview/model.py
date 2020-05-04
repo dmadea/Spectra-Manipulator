@@ -15,6 +15,8 @@ from spectrum import Spectrum, SpectrumList
 import cProfile
 import pstats
 
+import numpy as np
+
 
 # this was tough to get together, I could not use the TreeWidget with StandardItemModel,
 # because iteration over items sometime gave not my item (SpectrumItem or SpectrumItemGroup) with my data,
@@ -286,7 +288,7 @@ class Model(QAbstractItemModel):
         return self.insertRows(row, 1, parentIndex)
 
     def insertRows(self, row, count, parentIndex):
-        self.beginInsertRows(parentIndex, row, (row + (count - 1)))
+        self.beginInsertRows(parentIndex, row, (row + count - 1))
         self.endInsertRows()
         return True
 
@@ -702,32 +704,23 @@ class TreeView(QTreeView):
 
         self.save_state()
 
-    def add_selected_items_to_group(self):
+    def add_items_to_group(self, items, group=None, row_to_place=None, edit=True):
+        """edit - if place cursor in a new group item to edit the name"""
 
-        if len(self.selectedIndexes()) == 0:
-            return
+        if not np.iterable(items):
+            raise ValueError("Argument items must be iterable.")
 
-        group_item = SpectrumItemGroup('', parent=self.myModel.root)
+        group_item = SpectrumItemGroup('', parent=self.myModel.root) if group is None else group
         self.myModel.insertRows(self.myModel.root.__len__(), 1, QModelIndex())
 
-        row = None  # row where the new group will be placed
-
-        # taken_items = []
-
-        for item in self.myModel.iterate_selected_items(skip_groups=True,
-                                                        skip_childs_in_selected_groups=False):
-            if row is None:
-                row = item.parent.row() if item.is_in_group() else item.row()
+        for item in items:
+            if row_to_place is None:
+                row_to_place = item.parent.row() if item.is_in_group() else item.row()
 
             self.myModel.add_item(self.myModel.take_item(item), group_item)
 
-            # taken_items.append(self.myModel.take_item(item))
-
-        # self.myModel.add_items(taken_items, group_item)
-
-        # # move the group to the top of the list
         taken_group_item = self.myModel.take_item(group_item)
-        self.myModel.add_item(taken_group_item, self.myModel.root, row)
+        self.myModel.add_item(taken_group_item, self.myModel.root, row_to_place)
 
         index = self.myModel.indexFromNode(group_item)
 
@@ -736,9 +729,58 @@ class TreeView(QTreeView):
         self.setup_info()
 
         # set edit mode of the group item
-        self.edit(index)
+        if edit:
+            self.edit(index)
 
         self.save_state()
+
+    def add_selected_items_to_group(self):
+
+        if len(self.selectedIndexes()) == 0:
+            return
+
+        iterator = self.myModel.iterate_selected_items(skip_groups=True,
+                                                        skip_childs_in_selected_groups=False)
+        self.add_items_to_group(iterator)
+
+
+    # def add_selected_items_to_group(self):
+    #
+    #     if len(self.selectedIndexes()) == 0:
+    #         return
+    #
+    #     group_item = SpectrumItemGroup('', parent=self.myModel.root)
+    #     self.myModel.insertRows(self.myModel.root.__len__(), 1, QModelIndex())
+    #
+    #     row = None  # row where the new group will be placed
+    #
+    #     # taken_items = []
+    #
+    #     for item in self.myModel.iterate_selected_items(skip_groups=True,
+    #                                                     skip_childs_in_selected_groups=False):
+    #         if row is None:
+    #             row = item.parent.row() if item.is_in_group() else item.row()
+    #
+    #         self.myModel.add_item(self.myModel.take_item(item), group_item)
+    #
+    #         # taken_items.append(self.myModel.take_item(item))
+    #
+    #     # self.myModel.add_items(taken_items, group_item)
+    #
+    #     # # move the group to the top of the list
+    #     taken_group_item = self.myModel.take_item(group_item)
+    #     self.myModel.add_item(taken_group_item, self.myModel.root, row)
+    #
+    #     index = self.myModel.indexFromNode(group_item)
+    #
+    #     self.expand(index)
+    #     self.myModel.update_tristate()
+    #     self.setup_info()
+    #
+    #     # set edit mode of the group item
+    #     self.edit(index)
+    #
+    #     self.save_state()
 
     def import_spectra(self, spectra):
         if spectra is None:
