@@ -406,6 +406,29 @@ def plot_kinetics(group_item, n_spectra=50, linscale=1, linthresh=100, cmap='jet
 
     plt.show()
 
+def bcorr_1D(item, first_der_tresh=1e-4, second_der_tresh=0.1):
+
+    x = item.data[:, 0].copy()
+    y = item.data[:, 1].copy()
+
+    grad1 = np.gradient(y, x)  # first central derivative
+    grad2 = np.gradient(grad1, x)  # second central derivative
+
+    grad1, grad2 = grad1 / grad1.max(), grad2 / grad2.max()
+
+    zero_idxs = np.argwhere(
+        (grad1 < first_der_tresh) & (grad1 > -first_der_tresh) &
+        (grad2 < second_der_tresh) & (grad2 >= 0)
+    )
+
+    zero_idxs = zero_idxs.squeeze()
+
+    baseline = np.interp(x, x[zero_idxs], y[zero_idxs])
+
+    sp = Spectrum.from_xy_values(x, baseline, f'{item.name} baseline')
+    UserNamespace.instance.add_items_to_list(sp)
+
+
 
 class UserNamespace:
     instance = None
