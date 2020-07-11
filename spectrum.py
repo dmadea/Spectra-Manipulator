@@ -14,7 +14,7 @@ from scipy.integrate import cumtrapz
 import csv
 import io
 
-from numba import jit
+# from numba import jit
 
 
 # from typing import Union, List, Iterable
