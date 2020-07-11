@@ -41,7 +41,7 @@ def spec2mat(spectra):
 
     header_vals_temp = []
 
-    x_vals = None
+    x = None
     matrix = None
     err = False
 
@@ -51,17 +51,19 @@ def spec2mat(spectra):
         except ValueError:
             err = True
 
-        if x_vals is None:
-            x_vals = sp.data[:, 0]
+        if x is None:
+            x = sp.data[:, 0]
         else:
-            if not np.allclose(x_vals, sp.data[:, 0]):
-                raise ValueError("Spectra have not the same x values within the group. Unable to perform the operation.")
+            if x.shape[0] != sp.data.shape[0]:
+                raise ValueError("Spectra do not have the same dimension within the group. Unable to perform the operation.")
+            if not np.allclose(x, sp.data[:, 0]):
+                raise ValueError("Spectra do not have the same x values within the group. Unable to perform the operation.")
 
         matrix = sp.data[:, 1] if matrix is None else np.vstack((matrix, sp.data[:, 1]))
 
-    axis1_vals = None if err else np.asarray(header_vals_temp)
+    y = None if err else np.asarray(header_vals_temp)
 
-    return x_vals, axis1_vals, matrix
+    return x, y, matrix
 
 
 class Spectrum(object):
