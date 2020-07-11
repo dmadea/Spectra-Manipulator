@@ -509,7 +509,7 @@ class TreeWidget(TreeView):
         uncheck_selected_items = sel_it_menu.addAction("Uncheck Items (Ctrl + W)")
         uncheck_selected_items.triggered.connect(self.uncheck_selected_items)
 
-        select_every_nth = sel_it_menu.addAction("Select Every n-th Item")
+        select_every_nth = sel_it_menu.addAction("Select Every n-th Item (Ctrl + D)")
         select_every_nth.triggered.connect(self.select_every_nth_item)
 
         rename = sel_it_menu.addAction("Rename Items (Ctrl + R)")
@@ -517,7 +517,7 @@ class TreeWidget(TreeView):
 
         sel_it_menu.addSeparator()
 
-        cut = sel_it_menu.addAction("Cut")
+        cut = sel_it_menu.addAction("Cut (Ctrl + T)")
         cut.triggered.connect(self.cut)
 
         baseline_correct = sel_it_menu.addAction("Baseline Correct (Ctrl + B)")
@@ -654,6 +654,14 @@ class TreeWidget(TreeView):
         if e.key() == 87 and e.modifiers() == Qt.ControlModifier:
             # Ctrl + W
             self.uncheck_selected_items()
+
+        if e.key() == 84 and e.modifiers() == Qt.ControlModifier:
+            # Ctrl + T
+            self.cut()
+
+        if e.key() == 68 and e.modifiers() == Qt.ControlModifier:
+            # Ctrl + D
+            self.select_every_nth_item()
 
     def import_files(self, filepaths):
 

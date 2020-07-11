@@ -429,7 +429,6 @@ def bcorr_1D(item, first_der_tresh=1e-4, second_der_tresh=0.1):
     UserNamespace.instance.add_items_to_list(sp)
 
 
-
 class UserNamespace:
     instance = None
 
@@ -440,7 +439,7 @@ class UserNamespace:
 
         # execute first commands
         self.main.console.execute_command(
-            "import numpy as np\nfrom user_namespace import *\n"
+            "import numpy as np\nfrom user_namespace import *\nfrom spectrum import *\n"
             "import matplotlib.pyplot as plt\n%matplotlib inline")
 
         # from IPython.display import display, Math, Latex\n

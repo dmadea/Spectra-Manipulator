@@ -8,6 +8,7 @@ import math
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 from scipy.fftpack import fft, fftfreq
+from scipy.integrate import cumtrapz
 
 # import lmfit
 import csv
@@ -22,6 +23,45 @@ from numba import jit
 class CalcMode:
     add_sub = 0
     mul_div = 1
+
+
+def spec2mat(spectra):
+    """Given a generator of spectra, it returns the x, 'name' values and matrix.
+    The columns of data will become rows that are vertically stack together.
+
+    Parameters
+    ----------
+    spectra : iterable
+        Spectra.
+
+    Returns
+    -------
+    out : tuple
+        x_values, converted_names, matrix"""
+
+    header_vals_temp = []
+
+    x_vals = None
+    matrix = None
+    err = False
+
+    for sp in spectra:
+        try:
+            header_vals_temp.append(float(sp.name.replace(',', '.').strip()))
+        except ValueError:
+            err = True
+
+        if x_vals is None:
+            x_vals = sp.data[:, 0]
+        else:
+            if not np.allclose(x_vals, sp.data[:, 0]):
+                raise ValueError("Spectra have not the same x values within the group. Unable to perform the operation.")
+
+        matrix = sp.data[:, 1] if matrix is None else np.vstack((matrix, sp.data[:, 1]))
+
+    axis1_vals = None if err else np.asarray(header_vals_temp)
+
+    return x_vals, axis1_vals, matrix
 
 
 class Spectrum(object):
@@ -362,18 +402,6 @@ class Spectrum(object):
             self._update_view()
         return self
 
-    #
-    # @staticmethod
-    # @jit(fastmath=True, nopython=True)
-    # def _differentiate(data):
-    #     der_data = np.zeros((data.shape[0] - 1, 2))
-    #     der_data[:, 0] = data[1:, 0]
-    #     for i in range(1, data.shape[0]):
-    #         dx = data[i, 0] - data[i - 1, 0]
-    #         der_data[i - 1, 1] = (data[i, 1] - data[i - 1, 1]) / dx  # dy/dx
-    #
-    #     return der_data
-
     def integrate(self, int_constant=0, redraw_spectra=True):
         """Integrates the spectrum using trapezoidal integration method, spectrum y values will
         be replaced by integrated values.
@@ -385,27 +413,12 @@ class Spectrum(object):
         redraw_spectra : bool
             If True (default), spectra will be redrawn.
         """
-        self.data[:, 1] = Spectrum._integrate_trap(self.data, int_constant)
+        self.data[:, 1] = cumtrapz(self.data[:, 1], self.data[:, 0], initial=int_constant)
 
         if redraw_spectra:
             self._redraw_all_spectra()
 
         return self
-
-    @staticmethod
-    @jit(fastmath=True, nopython=True)
-    def _integrate_trap(data, int_constant):
-        int_data = np.zeros(data.shape[0])
-        int_data[0] = int_constant * 2
-        sum = int_data[0]
-        for i in range(1, data.shape[0]):
-            dx = data[i, 0] - data[i - 1, 0]
-            sum += (data[i, 1] + data[i - 1, 1]) * dx
-            int_data[i] = sum
-
-        int_data[:] /= 2
-
-        return int_data
 
     def integral(self, x0=None, x1=None):
         """Calculate cumulative integral of spectrum at specified x range [x0, x1] by trapezoidal integration method.
@@ -421,7 +434,7 @@ class Spectrum(object):
         Returns
         -------
         out : float
-            Integral.
+            Integral - scalar.
         """
 
         start_idx = 0
@@ -436,22 +449,6 @@ class Spectrum(object):
 
         return np.trapz(self.data[start_idx:end_idx, 1], self.data[start_idx:end_idx, 0])
 
-        # # cca 3 orders of magnitude faster than pythonic version
-        # return Spectrum._integral_trap(self.data, start_idx, end_idx)
-
-    #
-    # @staticmethod
-    # @jit(fastmath=True, nopython=True)
-    # def _integral_trap(data, start, end):
-    #     # perform trapezodic integration, assuming the data are unevenly distributed,
-    #     # so no simplification in computation, except the division by 2 at the end
-    #     # numba likes a lot of indexes
-    #     sum = 0.0
-    #     for i in range(start + 1, end):
-    #         dx = data[i, 0] - data[i - 1, 0]
-    #         sum += (data[i, 1] + data[i - 1, 1]) * dx
-    #
-    #     return sum / 2
 
     def baseline_correct(self, x0, x1, redraw_spectra=True):
         """Subtracts the average of y data from the specified x range [x0, x1] from y values.
@@ -1064,7 +1061,7 @@ class SpectrumList(object):
         :returns: list
         """
 
-        return [sp.name for sp in self._iterate_items()]
+        return [sp.name for sp in self]
 
     def set_names(self, names):
         """Sets the names of the group and updates the Tree Widget and redraws the spectra.
@@ -1096,7 +1093,7 @@ class SpectrumList(object):
             Default True.
         """
 
-        for sp in self._iterate_items():
+        for sp in self:
             sp.set_plot_legend(plot_legend, False)
 
         self._redraw_all_spectra()
@@ -1118,22 +1115,22 @@ class SpectrumList(object):
             for line types. If None (default), user defined color scheme will be used.
         """
 
-        for sp in self._iterate_items():
+        for sp in self:
             sp.set_style(color, line_width, line_type, False)
         if redraw_spectra:
             self._redraw_all_spectra()
 
-    def _iterate_items(self):
-        for node in self:
-            if isinstance(node, SpectrumList):
-                for sp in node:
-                    if not isinstance(sp, Spectrum):
-                        raise ValueError("Objects in list have to be type of Spectrum.")
-                    yield sp
-                continue
-            if isinstance(node, Spectrum):
-                yield node
-                continue
+    # def _iterate_items(self):
+    #     for node in self:
+    #         if isinstance(node, SpectrumList):
+    #             for sp in node:
+    #                 if not isinstance(sp, Spectrum):
+    #                     raise ValueError("Objects in list have to be type of Spectrum.")
+    #                 yield sp
+    #             continue
+    #         if isinstance(node, Spectrum):
+    #             yield node
+    #             continue
             raise ValueError("Objects in list have to be type of Spectrum.")
 
     def differentiate(self, n=1):
@@ -1141,7 +1138,7 @@ class SpectrumList(object):
         Calculates a derivatives for this group, replaces the values and redraws the spectra.
         Length of the spectrum decreases by 1.
         """
-        for sp in self._iterate_items():
+        for sp in self:
             sp.differentiate(n, False)
 
         self._redraw_all_spectra()
@@ -1159,7 +1156,7 @@ class SpectrumList(object):
             Integration constant, default 0.
         """
 
-        for sp in self._iterate_items():
+        for sp in self:
             sp.integrate(int_constant, False)
 
         self._redraw_all_spectra()
@@ -1185,7 +1182,7 @@ class SpectrumList(object):
 
         results = []
 
-        for sp in self._iterate_items():
+        for sp in self:
             results.append(sp.integral(x0, x1))
 
         return np.asarray(results, dtype=np.float64)
@@ -1208,7 +1205,7 @@ class SpectrumList(object):
         """
         results = []
 
-        for sp in self._iterate_items():
+        for sp in self:
             results.append(sp.find_maximum(x0, x1))
 
         return np.asarray(results, dtype=np.float64)
@@ -1229,11 +1226,12 @@ class SpectrumList(object):
 
         ret_list = []
 
-        for sp in self._iterate_items():
+        for sp in self:
             idx = Spectrum.find_nearest_idx(sp.data[:, 0], x)
             ret_list.append(sp.data[idx, 1])
 
         return np.asarray(ret_list, dtype=np.float64)
+
 
     def transpose(self, max_items=1000):
         """
@@ -1256,24 +1254,10 @@ class SpectrumList(object):
         if not isinstance(self[0], Spectrum):
             raise ValueError("Objects in list have to be type of Spectrum.")
 
-        x_vals_temp = []
+        x, y, matrix = spec2mat(self.__iter__())
 
-        for sp in self:
-            try:
-                x_vals_temp.append(float(sp.name.replace(',', '.').strip()))
-            except ValueError:
-                raise ValueError("Names of spectra cannot be parsed to float.")
-
-        x_values = np.asarray(x_vals_temp, dtype=np.float64)
-        matrix = self[0].data[:, 0]  # wavelengths
-
-        # add absorbance data to matrix from all exported spectra
-        for sp in self:
-            if sp.length() != self[0].length():
-                raise ValueError(
-                    "Spectra \'{}\' and \'{}\' have not the same length (dimension). "
-                    "Unable to transpose.".format(self[0].name, sp.name))
-            matrix = np.vstack((matrix, sp.data[:, 1]))
+        if y is None:
+            raise ValueError("Names of spectra cannot be parsed to float.")
 
         group_name = "Transpose of {}".format(self.name)
         spectra = []
@@ -1284,7 +1268,7 @@ class SpectrumList(object):
                     matrix.shape[1], max_items))
 
         for i in range(matrix.shape[1]):
-            sp = Spectrum.from_xy_values(x_values, matrix[1:, i], name=str(matrix[0, i]), group_name=group_name)
+            sp = Spectrum.from_xy_values(y, matrix[:, i], name=str(x[i]), group_name=group_name)
             spectra.append(sp)
 
         self.add_to_list([spectra])
@@ -1293,7 +1277,7 @@ class SpectrumList(object):
         """Calculates the power spectrum using FFT and replaces the data values and redraws the spectra. Power spectrum is normalized to 1.
         """
 
-        for sp in self._iterate_items():
+        for sp in self:
             sp.power_spectrum(False)
 
         self._redraw_all_spectra()
@@ -1313,7 +1297,7 @@ class SpectrumList(object):
             Polynomial order used in the algorithm, must be >= 1.
         """
 
-        for sp in self._iterate_items():
+        for sp in self:
             sp.savgol(window_length, poly_order, False)
 
         self._redraw_all_spectra()
@@ -1331,7 +1315,7 @@ class SpectrumList(object):
         x1 : {int, float}
             Last x value.
         """
-        for sp in self._iterate_items():
+        for sp in self:
             sp.baseline_correct(x0, x1, False)
 
         self._redraw_all_spectra()
@@ -1348,7 +1332,7 @@ class SpectrumList(object):
         x1 : {int, float}
             Last x value.
         """
-        for sp in self._iterate_items():
+        for sp in self:
             sp.cut(x0, x1, False)
 
         self._redraw_all_spectra()
@@ -1368,7 +1352,7 @@ class SpectrumList(object):
             `interp1d documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html#scipy.interpolate.interp1d>`_.
             Default 'linear'.
         """
-        for sp in self._iterate_items():
+        for sp in self:
             sp.interpolate(spacing, kind, False)
 
         self._redraw_all_spectra()
@@ -1387,7 +1371,7 @@ class SpectrumList(object):
         x1 : {int, float}
             Last x value.
         """
-        for sp in self._iterate_items():
+        for sp in self:
             sp.normalize(x0, x1, False)
 
         self._redraw_all_spectra()
@@ -1406,7 +1390,7 @@ class SpectrumList(object):
         x1 : {int, float}
             New last x value.
         """
-        for sp in self._iterate_items():
+        for sp in self:
             sp.extend_by_zeros(x0, x1, False)
 
         self._redraw_all_spectra()
@@ -1420,17 +1404,17 @@ class SpectrumList(object):
         This function takes 2 arguments that must be type of Spectrum.
         """
         # operation with another list, group + group
-        if isinstance(other, SpectrumList):
+        if isinstance(other, (SpectrumList, np.ndarray)):
             if len(self) != len(other):
                 raise ValueError("Cannot perform an operation on groups which contains different number of items.")
             if len(self) == 0:
                 return SpectrumList()
-            if not isinstance(self[0], Spectrum) or not isinstance(other[0], Spectrum):
-                raise ValueError("Objects in list have to be type of Spectrum.")
+            # if not isinstance(self[0], Spectrum) or not isinstance(other[0], Spectrum):
+            #     raise ValueError("Objects in list have to be type of Spectrum.")
             ret_list = SpectrumList()
             for i in range(len(self)):
                 ret_list.children.append(func_operation(self[i], other[i]))
-            return ret_list, other.name
+            return ret_list, other.name if isinstance(other, SpectrumList) else 'ndarray'
 
         # operation with single spectrum, group + spectrum or with number, eg. group - 1
         if isinstance(other, (Spectrum, float, int)):
