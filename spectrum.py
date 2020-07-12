@@ -25,9 +25,9 @@ class CalcMode:
     mul_div = 1
 
 
-def spec2mat(spectra):
+def group2mat(spectra):
     """Given a generator of spectra, it returns the x, 'name' values and matrix.
-    The columns of data will become rows that are vertically stack together.
+    The columns of data will remain columns are horizontaly stack together.
 
     Parameters
     ----------
@@ -63,7 +63,7 @@ def spec2mat(spectra):
 
     y = None if err else np.asarray(header_vals_temp)
 
-    return x, y, matrix
+    return x, y, matrix.T
 
 
 class Spectrum(object):
@@ -1256,21 +1256,24 @@ class SpectrumList(object):
         if not isinstance(self[0], Spectrum):
             raise ValueError("Objects in list have to be type of Spectrum.")
 
-        x, y, matrix = spec2mat(self.__iter__())
+        x, y, matrix = group2mat(self.__iter__())
 
         if y is None:
             raise ValueError("Names of spectra cannot be parsed to float.")
 
+        n = x.shape[0]
+        assert n == matrix.shape[0]
+
         group_name = "Transpose of {}".format(self.name)
         spectra = []
 
-        if matrix.shape[1] > max_items:
+        if n > max_items:
             raise ValueError(
                 "Number of transposed items ({}) exceeded the maximum number ({}). Cannot transpose spectra.".format(
-                    matrix.shape[1], max_items))
+                    n, max_items))
 
-        for i in range(matrix.shape[1]):
-            sp = Spectrum.from_xy_values(y, matrix[:, i], name=str(x[i]), group_name=group_name)
+        for i in range(n):
+            sp = Spectrum.from_xy_values(y, matrix[i], name=str(x[i]), group_name=group_name)
             spectra.append(sp)
 
         self.add_to_list([spectra])
