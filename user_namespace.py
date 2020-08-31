@@ -21,6 +21,70 @@ from spectrum import Spectrum
 WL_LABEL = 'Wavelength / nm'
 WN_LABEL = "Wavenumber / $10^{4}$ cm$^{-1}$"
 
+# needed for correctly display tics for symlog scale
+class MinorSymLogLocator(Locator):
+    """
+    Dynamically find minor tick positions based on the positions of
+    major ticks for a symlog scaling.
+    """
+
+    def __init__(self, linthresh, nints=10):
+        """
+        Ticks will be placed between the major ticks.
+        The placement is linear for x between -linthresh and linthresh,
+        otherwise its logarithmically. nints gives the number of
+        intervals that will be bounded by the minor ticks.
+        """
+        self.linthresh = linthresh
+        self.nintervals = nints
+
+    def __call__(self):
+        # Return the locations of the ticks
+        majorlocs = self.axis.get_majorticklocs()
+
+        if len(majorlocs) == 1:
+            return self.raise_if_exceeds(np.array([]))
+
+        # add temporary major tick locs at either end of the current range
+        # to fill in minor tick gaps
+        dmlower = majorlocs[1] - majorlocs[0]  # major tick difference at lower end
+        dmupper = majorlocs[-1] - majorlocs[-2]  # major tick difference at upper e	nd
+
+        # add temporary major tick location at the lower end
+        if majorlocs[0] != 0. and ((majorlocs[0] != self.linthresh and dmlower > self.linthresh) or (
+                dmlower == self.linthresh and majorlocs[0] < 0)):
+            majorlocs = np.insert(majorlocs, 0, majorlocs[0] * 10.)
+        else:
+            majorlocs = np.insert(majorlocs, 0, majorlocs[0] - self.linthresh)
+
+        # add temporary major tick location at the upper end
+        if majorlocs[-1] != 0. and ((np.abs(majorlocs[-1]) != self.linthresh and dmupper > self.linthresh) or (
+                dmupper == self.linthresh and majorlocs[-1] > 0)):
+            majorlocs = np.append(majorlocs, majorlocs[-1] * 10.)
+        else:
+            majorlocs = np.append(majorlocs, majorlocs[-1] + self.linthresh)
+
+        # iterate through minor locs
+        minorlocs = []
+
+        # handle the lowest part
+        for i in range(1, len(majorlocs)):
+            majorstep = majorlocs[i] - majorlocs[i - 1]
+            if abs(majorlocs[i - 1] + majorstep / 2) < self.linthresh:
+                ndivs = self.nintervals
+            else:
+                ndivs = self.nintervals - 1.
+
+            minorstep = majorstep / ndivs
+            locs = np.arange(majorlocs[i - 1], majorlocs[i], minorstep)[1:]
+            minorlocs.extend(locs)
+
+        return self.raise_if_exceeds(np.array(minorlocs))
+
+    def tick_values(self, vmin, vmax):
+        raise NotImplementedError('Cannot get tick locations for a '
+                                  '%s type.' % type(self))
+
 
 
 def add_to_list(spectra):
@@ -406,7 +470,55 @@ def plot_kinetics(group_item, n_spectra=50, linscale=1, linthresh=100, cmap='jet
 
     plt.show()
 
+
+def plot_fit(data_item, fit_item, residuals_item, symlog=False, linscale=1, linthresh=100,
+                  lw_data=0.5, lw_fit=1.5, fig_size=(5, 4), y_label='$\\Delta$A', x_label='Time / $\\mu$s',
+                  x_lim=(-0.1, 200), t_mul_factor=1, y_lim=(None, None), filepath=None, dpi=500, transparent=False,
+             x_major_formatter=ScalarFormatter(), x_major_locator=None, y_major_locator=None, data_color='red'):
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=fig_size, gridspec_kw={'height_ratios': (4, 1)})
+
+    t_data = data_item.data[:, 0] * t_mul_factor
+
+    _set_main_axis(ax1, x_label="", y_label=y_label, xlim=x_lim, ylim=y_lim, x_major_locator=x_major_locator, y_major_locator=y_major_locator)
+    _set_main_axis(ax2, x_label=x_label, y_label='res.', xlim=x_lim, x_minor_locator=None, y_minor_locator=None)
+
+    ax1.plot(t_data, np.zeros_like(t_data), ls='--', color='black', lw=0.5, zorder=1000)
+    ax1.plot(t_data, data_item.data[:, 1], lw=lw_data, color=data_color)
+    ax1.plot(fit_item.data[:, 0] * t_mul_factor, fit_item.data[:, 1], lw=lw_fit, color='black')
+    ax2.plot(t_data, np.zeros_like(t_data), ls='--', color='black', lw=0.5, zorder=1000)
+    ax2.plot(residuals_item.data[:, 0] * t_mul_factor, residuals_item.data[:, 1], lw=lw_data, color=data_color)
+
+    ax1.set_axisbelow(False)
+    ax2.set_axisbelow(False)
+
+    ax1.yaxis.set_ticks_position('both')
+    ax1.xaxis.set_ticks_position('both')
+
+    ax2.yaxis.set_ticks_position('both')
+    ax2.xaxis.set_ticks_position('both')
+
+    if symlog:
+        ax1.set_xscale('symlog', subsx=[2, 3, 4, 5, 6, 7, 8, 9], linscalex=linscale, linthreshx=linthresh)
+        ax2.set_xscale('symlog', subsx=[2, 3, 4, 5, 6, 7, 8, 9], linscalex=linscale, linthreshx=linthresh)
+        ax1.xaxis.set_minor_locator(MinorSymLogLocator(linthresh))
+        ax2.xaxis.set_minor_locator(MinorSymLogLocator(linthresh))
+
+    if x_major_formatter:
+        ax1.xaxis.set_major_formatter(x_major_formatter)
+        ax2.xaxis.set_major_formatter(x_major_formatter)
+
+    plt.tight_layout()
+
+    if filepath:
+        ext = os.path.splitext(filepath)[1].lower()[1:]
+        plt.savefig(fname=filepath, format=ext, transparent=transparent, dpi=dpi)
+
+    plt.show()
+
+
 def bcorr_1D(item, first_der_tresh=1e-4, second_der_tresh=0.1):
+    """Gradient based baseline correction"""
 
     x = item.data[:, 0].copy()
     y = item.data[:, 1].copy()
