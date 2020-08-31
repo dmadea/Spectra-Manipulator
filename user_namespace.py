@@ -473,15 +473,25 @@ def plot_kinetics(group_item, n_spectra=50, linscale=1, linthresh=100, cmap='jet
 
 def plot_fit(data_item, fit_item, residuals_item, symlog=False, linscale=1, linthresh=100,
                   lw_data=0.5, lw_fit=1.5, fig_size=(5, 4), y_label='$\\Delta$A', x_label='Time / $\\mu$s',
-                  x_lim=(-0.1, 200), t_mul_factor=1, y_lim=(None, None), filepath=None, dpi=500, transparent=False,
+                  x_lim=(None, None), t_mul_factor=1, y_lim=(None, None), filepath=None, dpi=500, transparent=False,
              x_major_formatter=ScalarFormatter(), x_major_locator=None, y_major_locator=None, data_color='red'):
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=fig_size, gridspec_kw={'height_ratios': (4, 1)})
 
     t_data = data_item.data[:, 0] * t_mul_factor
 
-    _set_main_axis(ax1, x_label="", y_label=y_label, xlim=x_lim, ylim=y_lim, x_major_locator=x_major_locator, y_major_locator=y_major_locator)
-    _set_main_axis(ax2, x_label=x_label, y_label='res.', xlim=x_lim, x_minor_locator=None, y_minor_locator=None)
+    _x_lim = list(x_lim)
+    _y_lim = list(y_lim)
+
+    _x_lim[0] = data_item.data[0, 0] if _x_lim[0] is None else _x_lim[0]
+    _x_lim[1] = data_item.data[-1, 0] if _x_lim[1] is None else _x_lim[1]
+
+    _y_lim[0] = data_item.data[:, 1].min() if _y_lim[0] is None else _y_lim[0]
+    _y_lim[1] = data_item.data[:, 1].max() if _y_lim[1] is None else _y_lim[1]
+
+    _set_main_axis(ax1, x_label="", y_label=y_label, xlim=_x_lim, ylim=_y_lim, x_major_locator=x_major_locator,
+                   y_major_locator=y_major_locator)
+    _set_main_axis(ax2, x_label=x_label, y_label='res.', xlim=_x_lim, x_minor_locator=None, y_minor_locator=None)
 
     ax1.plot(t_data, np.zeros_like(t_data), ls='--', color='black', lw=0.5, zorder=1000)
     ax1.plot(t_data, data_item.data[:, 1], lw=lw_data, color=data_color)

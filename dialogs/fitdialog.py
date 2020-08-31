@@ -18,40 +18,11 @@ from console import Console
 
 
 # import lmfit
-from lmfit import fit_report, report_fit, Minimizer, report_ci, conf_interval, conf_interval2d
-import matplotlib.pyplot as plt
+from lmfit import Minimizer
+from .fitresult import FitResult
 
 import fitmodels
 import inspect
-import sys
-
-
-class FitResult(object):
-
-    def __init__(self, minimizer_result, minimizer, values_errors):
-        self.result = minimizer_result
-        self.minimizer = minimizer
-        self.params = minimizer_result.params
-        self.values_errors = values_errors
-
-    def report(self, print=True):
-        """Prints a fit report if print == True, otherwise returns fit report as text."""
-        return report_fit(self.result) if print else fit_report(self.result)
-
-    # https://lmfit.github.io/lmfit-py/confidence.html
-    def confidence_intervals(self, p_names=None, sigmas=(1, 2, 3)):
-        """Prints a confidence intervals. """
-        ci = conf_interval(self.minimizer, self.result, p_names=p_names, sigmas=sigmas)
-        report_ci(ci)
-
-    # https://lmfit.github.io/lmfit-py/confidence.html
-    def confidence_interval2D(self, x_name: str, y_name: str, nx: float = 10, ny: float = 10):
-        cx, cy, grid = conf_interval2d(self.minimizer, self.result, x_name, y_name, nx, ny)
-        plt.contourf(cx, cy, grid, np.linspace(0, 1, 21))
-        plt.xlabel(x_name)
-        plt.colorbar()
-        plt.ylabel(y_name)
-        plt.show()
 
 
 class FitDialog(QtWidgets.QDialog, Ui_Dialog):
@@ -343,7 +314,9 @@ class FitDialog(QtWidgets.QDialog, Ui_Dialog):
             error = self.current_model.params[param].stderr
             values_errors[i, 1] = error if error is not None else 0
 
-        self.fit_result = FitResult(result, minimizer, values_errors)
+        self.fit_result = FitResult(result, minimizer, values_errors,
+                                    data_item=self.spectrum, fit_item=self.fitted_spectrum,
+                                    residuals_item=self.residual_spectrum)
 
     def fixed_checked_changed(self, value):
         checkbox = self.sender()
