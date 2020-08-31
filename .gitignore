@@ -67,3 +67,6 @@ test.py
 ui_convert.py
 config.json
 test_docstring.py
+
+# user defined script
+script.py
