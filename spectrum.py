@@ -1,6 +1,5 @@
 import numpy as np
 import os
-# from sys import platform
 
 from copy import deepcopy
 import math
@@ -10,19 +9,11 @@ from scipy.interpolate import interp1d
 from scipy.fftpack import fft, fftfreq
 from scipy.integrate import cumtrapz
 
-# import lmfit
 import csv
 import io
 
 # from numba import jit
-
-
 # from typing import Union, List, Iterable
-
-
-class CalcMode:
-    add_sub = 0
-    mul_div = 1
 
 
 def group2mat(spectra):
@@ -258,19 +249,37 @@ class Spectrum(object):
             # from user_namespace import redraw_all_spectra
             self._redraw_all_spectra()
 
-    def x_values(self):
+    @property
+    def x(self):
         """Returns the x values in this spectrum.
 
         :return: ndarray
         """
         return self.data[:, 0]
 
-    def y_values(self):
+    @x.setter
+    def x(self, array):
+        """Sets the x values in this spectrum.
+
+        :return: ndarray
+        """
+        self.data[:, 0] = array
+
+    @property
+    def y(self):
         """Returns the y values in this spectrum.
 
         :return: ndarray
         """
         return self.data[:, 1]
+
+    @y.setter
+    def y(self, array):
+        """Sets the y values in this spectrum.
+
+        :return: ndarray
+        """
+        self.data[:, 1] = array
 
     def length(self):
         """Returns the number of point that this spectrum has.
@@ -304,16 +313,16 @@ class Spectrum(object):
 
         :return: str
         """
-        x_dif = self.data[-1, 0] - self.data[0, 0]
-        spacing = x_dif / (self.data.shape[0] - 1)
-        # regular spacing
-        type = 'r'
-        if self.data.shape[0] > 2:
-            # probably irregular spacing, difference between first two and last two x values is not equal
-            if not math.isclose(self.data[1, 0] - self.data[0, 0], self.data[-1, 0] - self.data[-2, 0]):
-                type = 'i'
 
-        return type + "{:.3g}".format(spacing)
+        spacing = (self.data[-1, 0] - self.data[0, 0]) / (self.data.shape[0] - 1)  # average spacing
+        s_type = 'r'  # regular spacing
+        if self.data.shape[0] > 2:
+            # irregular spacing
+            x_diff = self.data[1:, 0] - self.data[:-1, 0]  # x differences
+            if not np.allclose(x_diff, x_diff[0]):
+                s_type = 'i'
+
+        return s_type + "{:.3g}".format(spacing)
 
     # https://stackoverflow.com/questions/15382076/plotting-power-spectrum-in-python
     def power_spectrum(self, redraw_spectra=True):
@@ -345,7 +354,7 @@ class Spectrum(object):
 
     def savgol(self, window_length, poly_order, redraw_spectra=True):
         """
-        Applies Savitysky-Golay filter to a spectrum. Based on `scipy.signal.savgol_filter <https://docs.scipy.org/doc/scipy-0.15.1/reference/generated/scipy.signal.savgol_filter.html>`_.
+        Applies Savitsky-Golay filter to a spectrum. Based on `scipy.signal.savgol_filter <https://docs.scipy.org/doc/scipy-0.15.1/reference/generated/scipy.signal.savgol_filter.html>`_.
 
         Parameters
         ----------
@@ -366,14 +375,33 @@ class Spectrum(object):
             raise ValueError("Polynomial order must be less than window_length.")
 
         # window_length must be odd number
-        if window_length % 2 != 1:
-            window_length += 1
+        window_length += int(not window_length % 2)
 
         self.data[:, 1] = savgol_filter(self.data[:, 1], window_length, poly_order)
 
         if redraw_spectra:
             self._redraw_all_spectra()
 
+        return self
+
+    def gradient(self, edge_order=1, redraw_spectra=True):
+        """
+        Calculates a gradient using central differences and replaces the original values.
+
+        Parameters
+        ----------
+        edge_order : int
+            1 or 2, Gradient is calculated using N-th order accurate differences at the boundaries. Default: 1.
+
+        redraw_spectra : bool
+            If True (default), spectra will be redrawn (and Tree View updated).
+        """
+
+        self.data[:, 1] = np.gradient(self.data[:, 1], self.data[:, 0], edge_order=edge_order)
+
+        if redraw_spectra:
+            self._redraw_all_spectra()
+            self._update_view()
         return self
 
     def differentiate(self, n=1, redraw_spectra=True):
@@ -396,8 +424,6 @@ class Spectrum(object):
         new_data[:, 0] = self.data[n:, 0]
 
         self.data = new_data
-
-        # self.data = Spectrum._differentiate(self.data)
 
         if redraw_spectra:
             self._redraw_all_spectra()
@@ -450,7 +476,6 @@ class Spectrum(object):
             end_idx = Spectrum.find_nearest_idx(self.data[:, 0], x1) + 1
 
         return np.trapz(self.data[start_idx:end_idx, 1], self.data[start_idx:end_idx, 0])
-
 
     def baseline_correct(self, x0, x1, redraw_spectra=True):
         """Subtracts the average of y data from the specified x range [x0, x1] from y values.
@@ -693,98 +718,126 @@ class Spectrum(object):
             self._update_view()
 
         return self
+    #
+    # def _operation_check(self, other):
+    #     """Checks if the shapes of self and other data array are the same and where
+    #     first and last x value is the same. If not, raises ValueError."""
+    #     if not isinstance(other, Spectrum):
+    #         return
+    #     if other.data.shape[0] != self.data.shape[0]:
+    #         raise ValueError(
+    #             f"Spectra '{self.name}' and '{other.name}' have not the same length (dimension). "
+    #             "Unable to perform calculation.")
+    #     if other.data[0, 0] != self.data[0, 0] or other.data[-1, 0] != self.data[-1, 0]:
+    #         raise ValueError(
+    #             f"Spectra '{self.name}' and '{other.name}' have different x ranges. "
+    #             "Unable to perform calculation.")
 
     def _operation_check(self, other):
         """Checks if the shapes of self and other data array are the same and where
         first and last x value is the same. If not, raises ValueError."""
-        if not isinstance(other, Spectrum):
-            return
-        if other.data.shape[0] != self.data.shape[0]:
+        if self.data.shape[0] != other.data.shape[0] or not np.allclose(self.data[:, 0], other.data[:, 0]):
             raise ValueError(
-                f"Spectra '{self.name}' and '{other.name}' have not the same length (dimension). "
-                "Unable to perform calculation.")
-        if other.data[0, 0] != self.data[0, 0] or other.data[-1, 0] != self.data[-1, 0]:
-            raise ValueError(
-                f"Spectra '{self.name}' and '{other.name}' have different x ranges. "
-                "Unable to perform calculation.")
+                f"Spectra '{self.name}' and '{other.name}' have not share the same x values "
+                f"(or have different dimension). Unable to perform operation.")
 
-    def _arithmetic_operation(self, other, mode=CalcMode.add_sub):
+    def _arithmetic_operation(self, other, func_operation):
 
-        if not isinstance(other, Spectrum) and not (isinstance(other, float) or isinstance(other, int)):
+        if not isinstance(other, (Spectrum, float, int)):
             raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
-
-        shape = self.data.shape[0]
 
         # another spectrum
         if isinstance(other, Spectrum):
             self._operation_check(other)
-            y_data = other.data[:, 1]
+            y_data = func_operation(self.data[:, 1], other.data[:, 1])
+            other_str = other.name
 
         else:  # number
-            y_data = np.full(shape, other, dtype=np.float64)
+            y_data = func_operation(self.data[:, 1], other)
+            other_str = str(other)
 
-        x_data = np.zeros(shape, dtype=np.float64) if mode == CalcMode.add_sub else np.full(shape, 1, dtype=np.float64)
-        return np.vstack((x_data, y_data)).T
+        return Spectrum.from_xy_values(self.data[:, 0], y_data), other_str
 
     def __add__(self, other):
         if isinstance(other, SpectrumList):
             return other.__radd__(self)
-        other_data = self._arithmetic_operation(other, mode=CalcMode.add_sub)
-        ret_data = self.data + other_data
-        name = "{} + {}".format(self.name, other.name if isinstance(other, Spectrum) else other)
-        return Spectrum(ret_data, name=name)
+        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 + s2)
+        sp.name = f"{self.name} + {other_str}"
+
+        return sp
 
     def __sub__(self, other):
         if isinstance(other, SpectrumList):
             return other.__rsub__(self)
-        other_data = self._arithmetic_operation(other, mode=CalcMode.add_sub)
-        ret_data = self.data - other_data
-        name = "{} - {}".format(self.name, other.name if isinstance(other, Spectrum) else other)
-        return Spectrum(ret_data, name=name)
+        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 - s2)
+        sp.name = f"{self.name} - {other_str}"
+
+        return sp
 
     def __mul__(self, other):
         if isinstance(other, SpectrumList):
             return other.__rmul__(self)
-        other_data = self._arithmetic_operation(other, mode=CalcMode.mul_div)
-        ret_data = self.data * other_data
-        name = "{} * {}".format(self.name, other.name if isinstance(other, Spectrum) else other)
-        return Spectrum(ret_data, name=name)
+        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 * s2)
+        sp.name = f"{self.name} * {other_str}"
 
-    def __truediv__(self, other):
+        return sp
+
+    def __truediv__(self, other):   # self / other
         if isinstance(other, SpectrumList):
             return other.__rtruediv__(self)
-        other_data = self._arithmetic_operation(other, mode=CalcMode.mul_div)
-        ret_data = self.data / other_data
-        name = "{} / {}".format(self.name, other.name if isinstance(other, Spectrum) else other)
-        return Spectrum(ret_data, name=name)
+        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 / s2)
+        sp.name = f"{self.name} / {other_str}"
 
-    def __radd__(self, other):
-        other_data = self._arithmetic_operation(other, mode=CalcMode.add_sub)
-        ret_data = other_data + self.data
-        name = "{} + {}".format(other.name if isinstance(other, Spectrum) else other, self.name)
-        return Spectrum(ret_data, name=name)
+        return sp
 
-    def __rsub__(self, other):
+    def __radd__(self, other):   # other + self
         if not isinstance(other, (int, float)):
             raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
-        ret_data = self.data.copy()
-        ret_data[:, 1] = other - ret_data[:, 1]
-        name = "{} - {}".format(other, self.name)
-        return Spectrum(ret_data, name=name)
+        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 + s1)
+        sp.name = f"{other_str} + {self.name}"
 
-    def __rmul__(self, other):
-        other_data = self._arithmetic_operation(other, mode=CalcMode.mul_div)
-        ret_data = other_data * self.data
-        name = "{} * {}".format(other.name if isinstance(other, Spectrum) else other, self.name)
-        return Spectrum(ret_data, name=name)
+        return sp
 
-    def __rtruediv__(self, other):
+    def __rsub__(self, other):   # other - self
         if not isinstance(other, (int, float)):
             raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
-        ret_data = self.data.copy()
-        ret_data[:, 1] = other / ret_data[:, 1]
-        name = "{} / {}".format(other, self.name)
-        return Spectrum(ret_data, name=name)
+        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 - s1)
+        sp.name = f"{other_str} - {self.name}"
+
+        return sp
+
+    def __rmul__(self, other):   # other * self
+        if not isinstance(other, (int, float)):
+            raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
+        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 * s1)
+        sp.name = f"{other_str} * {self.name}"
+
+        return sp
+
+    def __rtruediv__(self, other):  # other / self
+        if not isinstance(other, (int, float)):
+            raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
+        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 / s1)
+        sp.name = f"{other_str} / {self.name}"
+
+        return sp
+
+    def __pow__(self, power, modulo=None):  # self ** power
+        if isinstance(power, SpectrumList):
+            return power.__rpow__(self)
+        sp, other_str = self._arithmetic_operation(power, lambda s1, s2: s1 ** s2)
+        sp.name = f"{self.name} ** {other_str}"
+
+        return sp
+
+    def __rpow__(self, other):  # other ** self
+        if not isinstance(other, (Spectrum, float, int)):
+            raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
+
+        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 ** s1)
+        sp.name = f"{other_str} ** {self.name}"
+
+        return sp
 
     def __neg__(self):
         sp = self * -1
@@ -793,43 +846,6 @@ class Spectrum(object):
 
     def __pos__(self):
         return self.__copy__()
-
-    def __pow__(self, power, modulo=None):  # self ** power
-        if isinstance(power, SpectrumList):
-            return power.__rpow__(self)
-
-        if not isinstance(power, (Spectrum, float, int)):
-            raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(power)))
-
-        x_data = self.data[:, 0]
-
-        # another spectrum
-        if isinstance(power, Spectrum):
-            self._operation_check(power)
-
-            y_data = np.power(self.data[:, 1], power.data[:, 1])
-            return Spectrum.from_xy_values(x_data, y_data, name=f'{self.name} ** {power.name}')
-
-        else:  # number
-            y_data = np.power(self.data[:, 1], power)
-            return Spectrum.from_xy_values(x_data, y_data, name=f'{self.name} ** {power}')
-
-    def __rpow__(self, other):  # other ** self
-        if not isinstance(other, (Spectrum, float, int)):
-            raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
-
-        x_data = self.data[:, 0]
-
-        # another spectrum
-        if isinstance(other, Spectrum):
-            self._operation_check(other)
-
-            y_data = np.power(other.data[:, 1], self.data[:, 1])
-            return Spectrum.from_xy_values(x_data, y_data, name=f'{other.name} ** {self.name}')
-
-        else:  # number
-            y_data = np.power(other, self.data[:, 1])
-            return Spectrum.from_xy_values(x_data, y_data, name=f'{other} ** {self.name}')
 
     @staticmethod
     def float_to_string(float_number, decimal_sep='.'):
@@ -1135,6 +1151,23 @@ class SpectrumList(object):
     #             continue
             raise ValueError("Objects in list have to be type of Spectrum.")
 
+    def gradient(self, edge_order=1):
+        """
+        Calculates a gradients using central differences and replaces the original values.
+
+        Parameters
+        ----------
+        edge_order : int
+            1 or 2, Gradient is calculated using N-th order accurate differences at the boundaries. Default: 1.
+        """
+        for sp in self:
+            sp.gradient(edge_order, False)
+
+        self._redraw_all_spectra()
+        self._update_view()
+
+        return self
+
     def differentiate(self, n=1):
         """
         Calculates a derivatives for this group, replaces the values and redraws the spectra.
@@ -1233,7 +1266,6 @@ class SpectrumList(object):
             ret_list.append(sp.data[idx, 1])
 
         return np.asarray(ret_list, dtype=np.float64)
-
 
     def transpose(self, max_items=1000):
         """

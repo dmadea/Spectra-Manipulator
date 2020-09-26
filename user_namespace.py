@@ -1,11 +1,3 @@
-from spectrum import Spectrum, SpectrumList
-# from copy import deepcopy
-from PyQt5.QtWidgets import QApplication
-from scipy.linalg import lstsq
-
-# for backward compatibility of smpj files
-ItemList = list
-
 import numpy as np
 from typing import Iterable
 from settings import Settings
@@ -16,10 +8,17 @@ import matplotlib.pyplot as plt  # we plot graphs with this library
 from matplotlib import cm
 from matplotlib.ticker import *
 
-from spectrum import Spectrum
+from spectrum import Spectrum, SpectrumList
+# from copy import deepcopy
+from PyQt5.QtWidgets import QApplication
+from scipy.linalg import lstsq
+
+# for backward compatibility of smpj files
+ItemList = list
 
 WL_LABEL = 'Wavelength / nm'
 WN_LABEL = "Wavenumber / $10^{4}$ cm$^{-1}$"
+
 
 # needed for correctly display tics for symlog scale
 class MinorSymLogLocator(Locator):
@@ -86,7 +85,6 @@ class MinorSymLogLocator(Locator):
                                   '%s type.' % type(self))
 
 
-
 def add_to_list(spectra):
     """
     Copies all spectra and imports them to the Tree Widget.
@@ -99,6 +97,19 @@ def add_to_list(spectra):
 
     if UserNamespace.instance is not None:
         UserNamespace.instance.add_items_to_list(spectra)
+
+
+def import_files(filepaths):
+    """
+    Imports the filepaths and add to Tree Widget
+
+    Parameters
+    ----------
+    filepaths : list of strs or str
+        List of filepaths to import.
+    """
+    if UserNamespace.instance is not None:
+        UserNamespace.instance.main.tree_widget.import_files(filepaths)
 
 
 def set_xy_range(x0=None, x1=None, y0=None, y1=None, padding=0):
@@ -265,8 +276,6 @@ def calc_Eps(group):
     Spectrum.from_xy_values(wls, ST.flatten(), name=group.name + '-epsilon').add_to_list()
 
 
-
-
 def rename_times(group, decimal_places=1):
     """Renames the group that has names in seconds. Changes for minutes for 60s <= time < 1 hour to minutes and
     time >= 1 hour to hours."""
@@ -290,10 +299,56 @@ def rename_times(group, decimal_places=1):
 
 
 def load_kinetics(dir_name, spectra_dir_name='spectra', times_fname='times.txt', blank_spectrum='blank.dx', dt=None,
-                  b_corr=None, cut=None):
-    """given a directory name, it loads all spectra in dir named "spectra",
+                  b_corr=None, cut=None, corr_to_zero_time=True):
+    """Given a directory name that contains folders of individual experiments, it loads all kinetics.
+       each experiment folder must contain folder spectra (or defined in spectra_dir_name arg.)
+        if blank is given, it will be subtracted from all spectra, times.txt will contain
+        times for all spectra, optional baseline correction and cut can be done.
+
+    Folder structure:
+        [dir_name]:
+            [exp1_dir]
+                [spectra]:
+                    01.dx (or .csv or .txt)
+                    02.dx
+                    ...
+                times.txt (optional)
+                blank.dx (optional)
+            [exp2_dir]
+                ...
+            ...
+    """
+
+    if UserNamespace.instance is None:
+        return
+
+    if not os.path.isdir(dir_name):
+        raise ValueError(f'{dir_name}  does not exist!')
+
+    for item in os.listdir(dir_name):
+        path = os.path.join(dir_name, item)
+        if not os.path.isdir(path):
+            continue
+
+        load_kinetic(path, spectra_dir_name=spectra_dir_name, times_fname=times_fname, blank_spectrum=blank_spectrum,
+                     dt=dt, b_corr=b_corr, cut=cut, corr_to_zero_time=corr_to_zero_time)
+
+
+def load_kinetic(dir_name, spectra_dir_name='spectra', times_fname='times.txt', blank_spectrum='blank.dx', dt=None,
+                  b_corr=None, cut=None, corr_to_zero_time=True):
+    """Given a directory name, it loads all spectra in dir named "spectra" - func. arg.,
     if blank is given, it will be subtracted from all spectra, times.txt will contain
-    times for all spectra"""
+    times for all spectra, optional baseline correction and cut can be done.
+
+    Folder structure:
+        [dir_name]
+            [spectra]:
+                01.dx
+                02.dx
+                ...
+            times.txt (optional)
+            blank.dx (optional)
+    """
 
     if UserNamespace.instance is None:
         return
@@ -311,9 +366,6 @@ def load_kinetics(dir_name, spectra_dir_name='spectra', times_fname='times.txt',
 
     spectras = [os.path.join(spectra_path, filename) for filename in os.listdir(spectra_path)]
 
-    # for filename in os.listdir(spectra_path):
-    #     spectras.append(os.path.join(spectra_path, filename))
-
     n_items_before = root.__len__()
     tw.import_files(spectras)
     n_spectra = root.__len__() - n_items_before
@@ -322,15 +374,19 @@ def load_kinetics(dir_name, spectra_dir_name='spectra', times_fname='times.txt',
     root[n_items_before].name = f'raw [{os.path.split(dir_name)[1]}]'  # set name of a group
 
     times = np.asarray([dt * i for i in range(n_spectra)]) if dt is not None else None
-    idx_add = 0
+    # idx_add = 0
+    group_idx = n_items_before
+    blank_used = False
 
     # load explicit times
-    times_fname = os.path.join(dir_name, times_fname)
-    if os.path.isfile(times_fname):
-        tw.import_files(times_fname)
-        idx_add += 1
+    times_fpath = os.path.join(dir_name, times_fname)
+    if os.path.isfile(times_fpath):
+        tw.import_files(times_fpath)
+        # idx_add += 1
         if times is None:
-            times = root[n_items_before + idx_add].data[:, 0].copy()
+            times = root[-1].data[:, 0].copy()
+            if corr_to_zero_time:
+                times -= times[0]
 
         # push times variable to the console
         UserNamespace.instance.main.console.push_variables(
@@ -340,24 +396,28 @@ def load_kinetics(dir_name, spectra_dir_name='spectra', times_fname='times.txt',
         )
 
     if times is not None:
-        root[n_items_before].set_names(times)
+        root[group_idx].set_names(times)
 
     # load blank spectrum if available
-    blank_fname = os.path.join(dir_name, blank_spectrum)
-    if os.path.isfile(blank_fname):
-        tw.import_files(blank_fname)
-        idx_add += 1
-        UserNamespace.instance.add_items_to_list(root[n_items_before] - root[n_items_before + idx_add])
+    blank_fpath = os.path.join(dir_name, blank_spectrum)
+    if os.path.isfile(blank_fpath):
+        tw.import_files(blank_fpath)
+        # idx_add += 1
+        add_to_list(root[group_idx] - root[-1])
         if times is not None:
             root[-1].set_names(times)
-        if b_corr is not None:
-            root[-1].baseline_correct(*b_corr)
-        return
+        blank_used = True
+
+    corr_idx = -1 if blank_used else group_idx
 
     if b_corr is not None:
-        root[n_items_before].baseline_correct(*b_corr)
+        root[corr_idx].baseline_correct(*b_corr)
+        root[corr_idx].name = f'{root[corr_idx].name} bcorr'
+    if cut is not None:
+        root[corr_idx].cut(*cut)
+        root[corr_idx].name = f'{root[corr_idx].name} cut'
 
-    return times
+    # return times
 
 
 def _setup_wavenumber_axis(ax, x_label=WN_LABEL,
@@ -493,10 +553,12 @@ def plot_fit(data_item, fit_item, residuals_item, symlog=False, linscale=1, lint
                    y_major_locator=y_major_locator)
     _set_main_axis(ax2, x_label=x_label, y_label='res.', xlim=_x_lim, x_minor_locator=None, y_minor_locator=None)
 
-    ax1.plot(t_data, np.zeros_like(t_data), ls='--', color='black', lw=0.5, zorder=1000)
+    # plot zero lines
+    ax1.axline((0, 0), slope=0, ls='--', color='black', lw=0.5)
+    ax2.axline((0, 0), slope=0, ls='--', color='black', lw=0.5)
+
     ax1.plot(t_data, data_item.data[:, 1], lw=lw_data, color=data_color)
     ax1.plot(fit_item.data[:, 0] * t_mul_factor, fit_item.data[:, 1], lw=lw_fit, color='black')
-    ax2.plot(t_data, np.zeros_like(t_data), ls='--', color='black', lw=0.5, zorder=1000)
     ax2.plot(residuals_item.data[:, 0] * t_mul_factor, residuals_item.data[:, 1], lw=lw_data, color=data_color)
 
     ax1.set_axisbelow(False)
