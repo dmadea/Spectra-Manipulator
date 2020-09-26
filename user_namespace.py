@@ -306,9 +306,9 @@ def load_kinetics(dir_name, spectra_dir_name='spectra', times_fname='times.txt',
         times for all spectra, optional baseline correction and cut can be done.
 
     Folder structure:
-        [dir_name]:
+        [dir_name]
             [exp1_dir]
-                [spectra]:
+                [spectra]
                     01.dx (or .csv or .txt)
                     02.dx
                     ...
@@ -342,7 +342,7 @@ def load_kinetic(dir_name, spectra_dir_name='spectra', times_fname='times.txt', 
 
     Folder structure:
         [dir_name]
-            [spectra]:
+            [spectra]
                 01.dx
                 02.dx
                 ...
@@ -412,10 +412,10 @@ def load_kinetic(dir_name, spectra_dir_name='spectra', times_fname='times.txt', 
 
     if b_corr is not None:
         root[corr_idx].baseline_correct(*b_corr)
-        root[corr_idx].name = f'{root[corr_idx].name} bcorr'
+        root[corr_idx].name += 'bcorr'
     if cut is not None:
         root[corr_idx].cut(*cut)
-        root[corr_idx].name = f'{root[corr_idx].name} cut'
+        root[corr_idx].name += 'cut'
 
     # return times
 
