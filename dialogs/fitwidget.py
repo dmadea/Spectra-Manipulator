@@ -17,16 +17,20 @@ from logger import Logger
 from console import Console
 
 # import lmfit
-from lmfit import fit_report, report_fit, Minimizer, report_ci, conf_interval, conf_interval2d
+from lmfit import fit_report, report_fit, Minimizer, report_ci, conf_interval, conf_interval2d, Parameters
 import matplotlib.pyplot as plt
 
 import fitmodels
 import userfitmodels
 import inspect
 import sys
+from general_model import GeneralModel
 
 from plotwidget import PlotWidget
 from .fitresult import FitResult
+
+import glob
+import os
 
 from settings import Settings
 
@@ -37,7 +41,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     _instance = None
 
     # maximum number of parameters
-    max_count = 20
+    max_count = 30
 
     def __init__(self, dock_widget, accepted_func, spectrum=None, parent=None):
         super(FitWidget, self).__init__(parent)
@@ -95,6 +99,9 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.btnOK.clicked.connect(self.accept)
         self.btnCancel.clicked.connect(self.reject)
         self.cbModel.currentIndexChanged.connect(self.model_changed)
+        self.cbGenModels.currentIndexChanged.connect(self.cbGenModel_changed)
+        self.btnBuildModel.clicked.connect(lambda: self.build_gen_model(True))
+        self.cbShowBackwardRates.stateChanged.connect(self.cbShowBackwardRates_checked_changed)
 
         self.sbParamsCount.setMaximum(self.max_count)
 
@@ -106,30 +113,34 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.error_list = []
 
         for i in range(self.max_count):
-            self.params_list.append(QLineEdit())
-            self.lower_bound_list.append(QLineEdit())
-            self.value_list.append(QLineEdit())
-            self.upper_bound_list.append(QLineEdit())
-            self.fixed_list.append(QCheckBox())
-            self.error_list.append(QLineEdit())
-            self.error_list[i].setReadOnly(True)
+            self.params_list.append([QLineEdit(), QLineEdit()])
+            self.lower_bound_list.append([QLineEdit(), QLineEdit()])
+            self.value_list.append([QLineEdit(), QLineEdit()])
+            self.upper_bound_list.append([QLineEdit(), QLineEdit()])
+            self.fixed_list.append([QCheckBox(), QCheckBox()])
+            self.error_list.append([QLineEdit(), QLineEdit()])
+            self.params_list[i][1].setReadOnly(True)
+            self.error_list[i][0].setReadOnly(True)
+            self.error_list[i][1].setReadOnly(True)
 
-            self.gridLayout.addWidget(self.params_list[i], i + 1, 0, 1, 1)
-            self.gridLayout.addWidget(self.lower_bound_list[i], i + 1, 1, 1, 1)
-            self.gridLayout.addWidget(self.value_list[i], i + 1, 2, 1, 1)
-            self.gridLayout.addWidget(self.upper_bound_list[i], i + 1, 3, 1, 1)
-            self.gridLayout.addWidget(self.fixed_list[i], i + 1, 4, 1, 1)
-            self.gridLayout.addWidget(self.error_list[i], i + 1, 5, 1, 1)
+            for j, layout in enumerate([self.predefGridLayout, self.cusModelGridLayout]):
+                layout.addWidget(self.params_list[i][j], i + 1, 0, 1, 1)
+                layout.addWidget(self.lower_bound_list[i][j], i + 1, 1, 1, 1)
+                layout.addWidget(self.value_list[i][j], i + 1, 2, 1, 1)
+                layout.addWidget(self.upper_bound_list[i][j], i + 1, 3, 1, 1)
+                layout.addWidget(self.fixed_list[i][j], i + 1, 4, 1, 1)
+                layout.addWidget(self.error_list[i][j], i + 1, 5, 1, 1)
 
-            self.fixed_list[i].stateChanged.connect(self.fixed_checked_changed)
+            self.fixed_list[i][0].stateChanged.connect(self.fixed_checked_changed)
+            self.fixed_list[i][1].stateChanged.connect(self.fixed_checked_changed)
 
             # if we are only plotting functions, disable some controls
-
             if self.spectrum is None:
-                self.lower_bound_list[i].setEnabled(False)
-                self.upper_bound_list[i].setEnabled(False)
-                self.fixed_list[i].setEnabled(False)
-                self.error_list[i].setEnabled(False)
+                for j in (0, 1):
+                    self.lower_bound_list[i][j].setEnabled(False)
+                    self.upper_bound_list[i][j].setEnabled(False)
+                    self.fixed_list[i][j].setEnabled(False)
+                    self.error_list[i][j].setEnabled(False)
 
         if self.spectrum is None:
             self.btnFit.setEnabled(False)
@@ -151,10 +162,16 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # fill the available models combo box with model names
         self.cbModel.addItems(map(lambda m: m.name, self.models))
 
+        self.gen_models_paths = []
+        for fpath in glob.glob(os.path.join(Settings.general_models_dir, '*.json'), recursive=True):
+            fname = os.path.splitext(os.path.split(fpath)[1])[0]
+            self.gen_models_paths.append(fpath)
+            self.cbGenModels.addItem(fname)
+
         # abbr is name that is needed for lmfit.fitting method
         self.methods = [
-            {'name': 'Levenberg–Marquardt', 'abbr': 'leastsq'},
             {'name': 'Trust Region Reflective method', 'abbr': 'least_squares'},
+            {'name': 'Levenberg–Marquardt', 'abbr': 'leastsq'},
             {'name': 'Differential evolution', 'abbr': 'differential_evolution'},
             {'name': 'Nelder-Mead, Simplex method (no error)', 'abbr': 'nelder'},
             {'name': 'L-BFGS-B (no error)', 'abbr': 'lbfgsb'},
@@ -168,6 +185,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.model_changed()
 
         self.current_model = None
+        self.current_general_model = None
+        self.general_model_params = None
         self.fit_result = None
         self.plotted_functions = []
         self.plotted_function_spectra = []
@@ -202,17 +221,62 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.leX0.setText("{:.4g}".format(x0))
         self.leX1.setText("{:.4g}".format(x1))
 
+    def cbGenModel_changed(self):
+        self.current_general_model = GeneralModel.load(self.gen_models_paths[self.cbGenModels.currentIndex()])
+        self.pteScheme.setPlainText(self.current_general_model.scheme)
+        self.build_gen_model(load_scheme=False)
+
+    def cbShowBackwardRates_checked_changed(self):
+        if self.current_general_model is None:
+            return
+
+        self.build_gen_model(False)
+
+    def build_gen_model(self, load_scheme=True):
+        if load_scheme:
+            self.current_general_model = GeneralModel.from_text(self.pteScheme.toPlainText())
+
+        comps = self.current_general_model.get_compartments()
+        init_comps_names = list(map(lambda n: f'c0_{n}', comps))
+        rates = self.current_general_model.get_rates(self.cbShowBackwardRates.isChecked(),
+                                                     append_values=True)
+
+        n_params = 2 * len(comps) + len(rates)
+        self.set_field_visible(n_params, 1)
+
+        self.general_model_params = Parameters()
+
+        for i, col in enumerate([init_comps_names, comps]):
+            for j, name in enumerate(col):
+                self.general_model_params.add(name, value=1 if j == 0 else 0,
+                                              vary=bool(i),
+                                              min=-np.inf,
+                                              max=np.inf)
+
+        for name, value in rates:
+            self.general_model_params.add(name, value=value,
+                                          vary=True,
+                                          min=0,
+                                          max=np.inf)
+
+        for i, p in enumerate(self.general_model_params.values()):
+            self.params_list[i][1].setText(p.name)
+            self.value_list[i][1].setText(str(p.value))
+            self.lower_bound_list[i][1].setText(str(p.min))
+            self.upper_bound_list[i][1].setText(str(p.max))
+            self.fixed_list[i][1].setChecked(not p.vary)
+
     def cbCustom_checked_changed(self):
         if self.cbCustom.isChecked():
             self.sbParamsCount.setEnabled(True)
             self.pteEquation.setReadOnly(False)
             for i in range(self.max_count):
-                self.params_list[i].setReadOnly(False)
+                self.params_list[i][0].setReadOnly(False)
         else:
             self.sbParamsCount.setEnabled(False)
             self.pteEquation.setReadOnly(True)
             for i in range(self.max_count):
-                self.params_list[i].setReadOnly(True)
+                self.params_list[i][0].setReadOnly(True)
 
     def update_initial_values(self):
 
@@ -225,7 +289,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if self.spectrum is None:
             # iterate parameters and fill the values
             for i, p in enumerate(self.current_model.params.values()):
-                self.value_list[i].setText("{:.4g}".format(p.value))
+                self.value_list[i][0].setText("{:.4g}".format(p.value))
             return
 
         x0, x1 = self.lr.getRegion()
@@ -240,7 +304,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         # iterate parameters and fill the values
         for i, p in enumerate(self.current_model.params.values()):
-            self.value_list[i].setText("{:.4g}".format(p.value))
+            self.value_list[i][0].setText("{:.4g}".format(p.value))
 
     def model_changed(self):
         # initialize new model
@@ -251,10 +315,10 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         # iterate parameters and fill the fields
         for i, p in enumerate(self.current_model.params.values()):
-            self.params_list[i].setText(p.name)
-            self.lower_bound_list[i].setText(str(p.min))
-            self.upper_bound_list[i].setText(str(p.max))
-            self.fixed_list[i].setChecked(not p.vary)
+            self.params_list[i][0].setText(p.name)
+            self.lower_bound_list[i][0].setText(str(p.min))
+            self.upper_bound_list[i][0].setText(str(p.max))
+            self.fixed_list[i][0].setChecked(not p.vary)
 
         self.update_initial_values()
 
@@ -473,15 +537,19 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         count = int(self.sbParamsCount.value())
 
-        for i in range(self.max_count):
-            visible = count > i
+        self.set_field_visible(count, 0)
 
-            self.params_list[i].setVisible(visible)
-            self.lower_bound_list[i].setVisible(visible)
-            self.value_list[i].setVisible(visible)
-            self.upper_bound_list[i].setVisible(visible)
-            self.fixed_list[i].setVisible(visible)
-            self.error_list[i].setVisible(visible)
+    def set_field_visible(self, n_params, idx=0):
+        for i in range(self.max_count):
+            visible = n_params > i
+
+            self.params_list[i][idx].setVisible(visible)
+            self.lower_bound_list[i][idx].setVisible(visible)
+            self.value_list[i][idx].setVisible(visible)
+            self.upper_bound_list[i][idx].setVisible(visible)
+            self.fixed_list[i][idx].setVisible(visible)
+            self.error_list[i][idx].setVisible(visible)
+
 
     def set_result(self):
         pass

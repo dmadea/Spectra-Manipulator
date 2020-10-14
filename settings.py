@@ -17,6 +17,8 @@ class Settings(object):
 
     # --------SETTINGS----------
 
+    general_models_dir = 'general models\\'
+
     # import options
 
     remove_empty_entries = True
