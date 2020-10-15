@@ -1,5 +1,5 @@
-import warnings
-warnings.filterwarnings("ignore")
+# import warnings
+# warnings.filterwarnings("ignore")
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,6 +12,7 @@ class GeneralModel:
     def __init__(self):
         self.elem_reactions = []  # list of dictionaries of elementary reactions
         self.scheme = ""
+        self.func = None  # function that returns dc_dt for current c and t for build model
 
     @classmethod
     def from_text(cls, scheme):
@@ -31,6 +32,9 @@ class GeneralModel:
             Model representing input reaction scheme.
         """
 
+        if scheme.strip() == '':
+            raise ValueError("Parameter scheme is empty!")
+
         _model = cls()
         _model.scheme = scheme
 
@@ -42,9 +46,9 @@ class GeneralModel:
 
                 # process possible number in front of species, species cannot have numbers in their text
                 for entry in list(filter(None, token.split('+'))):
-                    chars = list(entry)
+                    chars = list(entry.strip())
                     number = ''.join(filter(lambda d: d.isdigit(), chars))
-                    text = ''.join(filter(lambda d: d.isalpha(), chars))
+                    text = ''.join(filter(lambda d: not d.isdigit(), chars))
 
                     entries += [text] if number == '' else int(number) * [text]  # list arithmetics
 
@@ -84,7 +88,7 @@ class GeneralModel:
                     names.append(c)
         return names
 
-    def build_model(self):
+    def build_func(self):
         """
         Builds model and returns the function that takes c, t and rates as an argument
         and can be directly used for odeint method.
@@ -139,6 +143,7 @@ class GeneralModel:
 
             return dc_dt
 
+        self.func = func
         return func
 
     def simulate_model(self, times, j=None):
@@ -152,7 +157,7 @@ class GeneralModel:
             j = np.asarray(j)
             assert j.shape[0] == len(comp)
 
-        solution = odeint(self.build_model(), j, times)
+        solution = odeint(self.build_func(), j, times)
 
         plt.xlabel('Time')
         plt.ylabel('Concentration')
@@ -175,6 +180,18 @@ class GeneralModel:
                 rates.append([name, el['backward_rate']] if append_values else name)
 
         return rates
+
+    def set_rates(self, rate_matrix):
+        """rate_matrix is a (r x 2) matrix where r is number of elementary reactions.
+        first column is forward rate, second backward rate. rate_matrix can be list of
+        lists."""
+
+        assert len(rate_matrix) == len(self.elem_reactions)
+
+        for el, (f_rate, b_rate) in zip(self.elem_reactions, rate_matrix):
+            el['forward_rate'] = f_rate
+            el['backward_rate'] = b_rate
+
 
     @classmethod
     def load(cls, fpath='general models/mod1.json'):
@@ -205,13 +222,13 @@ class GeneralModel:
 
 
 def main():
-    SIR = 'A = B = C = D = E = F = G = A'
+    SIR = 'PS = PS_GS\nPS + T_GS = T + PS_GS\nPS + T_GS = PS_GS\nT = T_GS'
     model = GeneralModel.from_text(SIR)
 
-    # model.elem_reactions[1]['forward_rate'] = 0.5
-    # # model.elem_reactions[1]['backward_rate'] = 0.5
-    # model.elem_reactions[2]['forward_rate'] = 0.2
-    # model.elem_reactions[3]['forward_rate'] = 0.2
+    model.elem_reactions[0]['forward_rate'] = 0.2
+    model.elem_reactions[1]['forward_rate'] = 0.7
+    model.elem_reactions[2]['forward_rate'] = 0.5
+    model.elem_reactions[3]['forward_rate'] = 0.1
 
     #
     # model.add_elementary_reaction(['Susceptible', 'Infected'], ['Infected', 'Infected'], 0.5)
@@ -223,11 +240,11 @@ def main():
     # model.add_elementary_reaction('Infected', 'Dead', 0.01)
     # model.add_elementary_reaction('Recovered', 'Susceptible', 0.01)
 
-    times = np.linspace(0, 50, 1000, dtype=np.float64)
+    times = np.linspace(0, 10, 1000, dtype=np.float64)
 
-    model.simulate_model(times)
+    model.simulate_model(times, [1, 0, 5, 0])
 
-    # model.save(fpath='general models/Pandemic_SIR.json')
+    model.save(fpath='general models/Photosensitization.json')
 
 
 if __name__ == '__main__':

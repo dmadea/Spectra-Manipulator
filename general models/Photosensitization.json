@@ -1,0 +1,48 @@
+[
+    "PS = PS_GS\nPS + T_GS = T + PS_GS\nPS + T_GS = PS_GS\nT = T_GS",
+    [
+        {
+            "from_comp": [
+                "PS"
+            ],
+            "to_comp": [
+                "PS_GS"
+            ],
+            "forward_rate": 0.2,
+            "backward_rate": 0
+        },
+        {
+            "from_comp": [
+                "PS",
+                "T_GS"
+            ],
+            "to_comp": [
+                "T",
+                "PS_GS"
+            ],
+            "forward_rate": 0.7,
+            "backward_rate": 0
+        },
+        {
+            "from_comp": [
+                "PS",
+                "T_GS"
+            ],
+            "to_comp": [
+                "PS_GS"
+            ],
+            "forward_rate": 0.5,
+            "backward_rate": 0
+        },
+        {
+            "from_comp": [
+                "T"
+            ],
+            "to_comp": [
+                "T_GS"
+            ],
+            "forward_rate": 0.1,
+            "backward_rate": 0
+        }
+    ]
+]

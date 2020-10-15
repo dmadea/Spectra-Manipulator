@@ -756,7 +756,7 @@ class Spectrum(object):
             y_data = func_operation(self.data[:, 1], other)
             other_str = str(other)
 
-        return Spectrum.from_xy_values(self.data[:, 0], y_data), other_str
+        return Spectrum.from_xy_values(self.data[:, 0], np.nan_to_num(y_data)), other_str
 
     def __add__(self, other):
         if isinstance(other, SpectrumList):

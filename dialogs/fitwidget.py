@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from dialogs.gui_fit_widget import Ui_Form
 
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QMessageBox, QLineEdit, QCheckBox
+from PyQt5.QtWidgets import QMessageBox, QLineEdit, QCheckBox, QFileDialog
 import numpy as np
 
 from spectrum import Spectrum
@@ -102,6 +102,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.cbGenModels.currentIndexChanged.connect(self.cbGenModel_changed)
         self.btnBuildModel.clicked.connect(lambda: self.build_gen_model(True))
         self.cbShowBackwardRates.stateChanged.connect(self.cbShowBackwardRates_checked_changed)
+        self.btnSaveCustomModel.clicked.connect(self.save_general_model_as)
 
         self.sbParamsCount.setMaximum(self.max_count)
 
@@ -216,6 +217,41 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         except ValueError:
             pass
 
+    def save_general_model_as(self):
+        if self.current_general_model is None:
+            return
+        curr_model_path = self.gen_models_paths[self.cbGenModels.currentIndex()]
+        fil = "Json (*.json)"
+
+        filepath = QFileDialog.getSaveFileName(caption="Save Custom Kinetic Model",
+                                               directory=curr_model_path,
+                                               filter=fil, initialFilter=fil)
+        if filepath[0] == '':
+            return
+
+        self.transfer_rates_to_model()
+        self.current_general_model.save(filepath[0])
+
+    def transfer_rates_to_model(self):
+        if self.current_general_model is None:
+            return
+
+        n_comps = len(self.current_general_model.get_compartments())
+        n_params = len(self.current_general_model.elem_reactions)
+
+        rates = np.zeros((n_params, 2), dtype=np.float64)
+
+        show_bw_rates = self.cbShowBackwardRates.isChecked()
+
+        forward_idxs = range(2*n_comps, 2*n_comps + n_params * (2 if show_bw_rates else 1), (2 if show_bw_rates else 1))
+
+        for i, idx in enumerate(forward_idxs):
+            rates[i, 0] = float(self.value_list[idx][1].text())
+            if show_bw_rates:
+                rates[i, 1] = float(self.value_list[idx + 1][1].text())
+
+        self.current_general_model.set_rates(rates)
+
     def updatePlot(self):
         x0, x1 = self.lr.getRegion()
         self.leX0.setText("{:.4g}".format(x0))
@@ -230,7 +266,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if self.current_general_model is None:
             return
 
-        self.build_gen_model(False)
+        self.build_gen_model(load_scheme=False)
 
     def build_gen_model(self, load_scheme=True):
         if load_scheme:
@@ -261,7 +297,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         for i, p in enumerate(self.general_model_params.values()):
             self.params_list[i][1].setText(p.name)
-            self.value_list[i][1].setText(str(p.value))
+            self.value_list[i][1].setText(f"{p.value:.5g}")
             self.lower_bound_list[i][1].setText(str(p.min))
             self.upper_bound_list[i][1].setText(str(p.max))
             self.fixed_list[i][1].setChecked(not p.vary)
