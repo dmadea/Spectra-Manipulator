@@ -1,0 +1,37 @@
+[
+    "E + S = ES = EP = E + P",
+    [
+        {
+            "from_comp": [
+                "E",
+                "S"
+            ],
+            "to_comp": [
+                "ES"
+            ],
+            "forward_rate": 1.0,
+            "backward_rate": 0.3
+        },
+        {
+            "from_comp": [
+                "ES"
+            ],
+            "to_comp": [
+                "EP"
+            ],
+            "forward_rate": 1.0,
+            "backward_rate": 0.7
+        },
+        {
+            "from_comp": [
+                "EP"
+            ],
+            "to_comp": [
+                "E",
+                "P"
+            ],
+            "forward_rate": 1.0,
+            "backward_rate": 0.5
+        }
+    ]
+]

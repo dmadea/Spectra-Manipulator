@@ -1,5 +1,5 @@
 [
-    "S + I = 2 I\nI = R\nI = D",
+    "S + I = I + E\nE = I = R",
     [
         {
             "from_comp": [
@@ -8,9 +8,19 @@
             ],
             "to_comp": [
                 "I",
+                "E"
+            ],
+            "forward_rate": 0.5,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "E"
+            ],
+            "to_comp": [
                 "I"
             ],
-            "forward_rate": 1.0,
+            "forward_rate": 0.5,
             "backward_rate": 0.0
         },
         {
@@ -21,16 +31,6 @@
                 "R"
             ],
             "forward_rate": 0.1,
-            "backward_rate": 0.0
-        },
-        {
-            "from_comp": [
-                "I"
-            ],
-            "to_comp": [
-                "D"
-            ],
-            "forward_rate": 0.01,
             "backward_rate": 0.0
         }
     ]

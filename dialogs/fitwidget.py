@@ -19,6 +19,7 @@ from console import Console
 # import lmfit
 from lmfit import fit_report, report_fit, Minimizer, report_ci, conf_interval, conf_interval2d, Parameters
 import matplotlib.pyplot as plt
+from scipy.integrate import odeint
 
 import fitmodels
 import userfitmodels
@@ -33,6 +34,7 @@ import glob
 import os
 
 from settings import Settings
+from misc import int_default_color_scheme
 
 
 class FitWidget(QtWidgets.QWidget, Ui_Form):
@@ -229,8 +231,33 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if filepath[0] == '':
             return
 
-        self.transfer_rates_to_model()
+        self.current_general_model.set_rates(self.get_params_from_fields()[2])
         self.current_general_model.save(filepath[0])
+
+    def get_params_from_fields(self):
+        if self.current_general_model is None:
+            return
+
+        n_comps = len(self.current_general_model.get_compartments())
+        n_params = len(self.current_general_model.elem_reactions)
+
+        init_cond = np.empty(n_comps, dtype=np.float64)
+        coefs = np.empty(n_comps, dtype=np.float64)
+        rates = np.zeros((n_params, 2), dtype=np.float64)
+
+        for i, (i_idx, coef_idx) in enumerate(zip(range(n_comps), range(n_comps, 2*n_comps))):
+            init_cond[i] = float(self.value_list[i_idx][1].text())
+            coefs[i] = float(self.value_list[coef_idx][1].text())
+
+        show_bw_rates = self.cbShowBackwardRates.isChecked()
+        forward_idxs = range(2*n_comps, 2*n_comps + n_params * (2 if show_bw_rates else 1), (2 if show_bw_rates else 1))
+
+        for i, idx in enumerate(forward_idxs):
+            rates[i, 0] = float(self.value_list[idx][1].text())
+            if show_bw_rates:
+                rates[i, 1] = float(self.value_list[idx + 1][1].text())
+
+        return init_cond, coefs, rates
 
     def transfer_rates_to_model(self):
         if self.current_general_model is None:
@@ -272,8 +299,10 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if load_scheme:
             self.current_general_model = GeneralModel.from_text(self.pteScheme.toPlainText())
 
+        self.current_general_model.build_func()
+
         comps = self.current_general_model.get_compartments()
-        init_comps_names = list(map(lambda n: f'c0_{n}', comps))
+        init_comps_names = list(map(lambda n: f'[{n}]0', comps))
         rates = self.current_general_model.get_rates(self.cbShowBackwardRates.isChecked(),
                                                      append_values=True)
 
@@ -282,21 +311,25 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         self.general_model_params = Parameters()
 
-        for i, col in enumerate([init_comps_names, comps]):
-            for j, name in enumerate(col):
-                self.general_model_params.add(name, value=1 if j == 0 else 0,
+        k = 0
+        for i in [0, 1]:
+            for j in range(len(comps)):
+                self.general_model_params.add(f'param{k}', value=1 if j == 0 else 0,
                                               vary=bool(i),
-                                              min=-np.inf,
+                                              min=-np.inf if j == 1 else 0,
                                               max=np.inf)
-
+                k += 1
+        rates_names = []
         for name, value in rates:
-            self.general_model_params.add(name, value=value,
+            rates_names.append(name)
+            self.general_model_params.add(f'param{k}', value=value,
                                           vary=True,
                                           min=0,
                                           max=np.inf)
+            k += 1
 
-        for i, p in enumerate(self.general_model_params.values()):
-            self.params_list[i][1].setText(p.name)
+        for i, (p, name) in enumerate(zip(self.general_model_params.values(), init_comps_names + comps + rates_names)):
+            self.params_list[i][1].setText(name)
             self.value_list[i][1].setText(f"{p.value:.5g}")
             self.lower_bound_list[i][1].setText(str(p.min))
             self.upper_bound_list[i][1].setText(str(p.max))
@@ -511,12 +544,16 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                                     residuals_item=self.residual_spectrum)
 
     def plot_function(self):
-        try:
 
-            self._plot_function()
-        except Exception as e:
-            Logger.message(e.__str__())
-            QMessageBox.warning(self, 'Plotting Error', e.__str__(), QMessageBox.Ok)
+        self._plot_function()
+        # try:
+        #
+        #     self._plot_function()
+        # except Exception as e:
+        #     Logger.message(e.__str__())
+        #     QMessageBox.warning(self, 'Plotting Error', e.__str__(), QMessageBox.Ok)
+
+    # def _simul_custom_model(self, j, rates):
 
     def _plot_function(self):
         x0, x1 = self.lr.getRegion()
@@ -530,23 +567,53 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         else:
             x_data = np.linspace(x0, x1, num=Settings.FP_num_of_points)
 
-        self._setup_model()
-
-        # get params from field to current model
-        for i in range(self.current_model.par_count()):
-            param = self.params_list[i].text()
-            self.current_model.params[param].value = float(self.value_list[i].text())
-
-        # calculate the y values according to our model
-        y_data = self.current_model.wrapper_func(x_data, self.current_model.params)
-
+        tab_idx = self.tabWidget.currentIndex()
         params = ""
 
-        for i in range(self.current_model.par_count()):
-            param = self.params_list[i].text()
-            params += f"{param}={self.value_list[i].text()}, "
+        if tab_idx == 0:  # equation-based model
+            self._setup_model()
 
-        params = params[:-2]  # remove last 2 characters, the space and comma
+            par_count = self.current_model.par_count()
+
+            # get params from field to current model
+            for i in range(par_count):
+                param = self.params_list[i][0].text()
+                self.current_model.params[param].value = float(self.value_list[i][0].text())
+
+            # calculate the y values according to our model
+            y_data = self.current_model.wrapper_func(x_data, self.current_model.params)
+        else:  # custom kinetic model
+            if self.current_general_model is None:
+                self.cbGenModel_changed()
+
+            init, coefs, rates = self.get_params_from_fields()
+            par_count = 2 * init.shape[0] + rates.shape[0]
+            n_params = len(init)
+
+            n = 0
+            if x_data[0] >= 0:  # initial conditions are valid for time=0
+                n = 100  # prepend x values with 100 points if not starting with zero time
+                x_data = np.concatenate((np.linspace(0, x_data[0], n, endpoint=False), x_data))
+
+            sol = odeint(self.current_general_model.func, init, x_data, args=(rates,))[n:, :]
+            x_data = x_data[n:]
+
+            if self.cbPlotAllComps.isChecked():
+                spectra = []
+                for i in range(n_params):
+                    name = self.params_list[i+n_params][tab_idx].text()
+                    self.plotted_functions.append(self.plot_widget.plotItem.plot(x_data, sol[:, i],
+                                                                             pen=pg.mkPen(color=int_default_color_scheme(i),
+                                                                                          width=1),
+                                                                             name=name))
+                    spectra.append(Spectrum.from_xy_values(x_data, sol[:, i], name=name))
+                self.plotted_function_spectra.append(spectra)
+                return
+
+            y_data = (sol * coefs).sum(axis=1, keepdims=False)
+
+        params = ', '.join([f"{self.params_list[i][tab_idx].text()}={self.value_list[i][tab_idx].text()}" for i in range(par_count)])
+
         name = f"Func plot: {params}"
         self.plotted_functions.append(self.plot_widget.plotItem.plot(x_data, y_data,
                                                                      pen=pg.mkPen(color=QColor(0, 0, 0, 255),
@@ -566,8 +633,13 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             if ch == checkbox:
                 break
 
-        self.lower_bound_list[i].setEnabled(True if value == Qt.Unchecked else False)
-        self.upper_bound_list[i].setEnabled(True if value == Qt.Unchecked else False)
+        enabled = True if value == Qt.Unchecked else False
+
+        self.lower_bound_list[i][0].setEnabled(enabled)
+        self.upper_bound_list[i][0].setEnabled(enabled)
+
+        self.lower_bound_list[i][1].setEnabled(enabled)
+        self.upper_bound_list[i][1].setEnabled(enabled)
 
     def params_count_changed(self):
 
@@ -585,7 +657,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             self.upper_bound_list[i][idx].setVisible(visible)
             self.fixed_list[i][idx].setVisible(visible)
             self.error_list[i][idx].setVisible(visible)
-
 
     def set_result(self):
         pass

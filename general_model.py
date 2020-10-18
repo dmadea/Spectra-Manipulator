@@ -1,10 +1,11 @@
-# import warnings
-# warnings.filterwarnings("ignore")
+import warnings
+warnings.filterwarnings("ignore")
 
 import numpy as np
 import matplotlib.pyplot as plt
 import json
 from scipy.integrate import odeint
+import re
 
 
 class GeneralModel:
@@ -18,10 +19,10 @@ class GeneralModel:
     def from_text(cls, scheme):
         """
         Expected format is single or multiline or separated by comma, reactions are denoted with equal sign,
-        which allows for forward and backward rates. Names of species are case sensitive and cannot contain numbers.
+        which allows for forward and backward rates. Names of species are case sensitive and can contain numbers.
         Eg. decay of triplet benzophenone with mixed 1st and 2nd order (self TT annihilation),
         here zero represents the ground state BP:
-            BP = zero, 2BP = BP + zero
+            BP3 = BP_GS, 2BP3 = BP3 + BP_GS
 
         Eg. pandemic SIR model:
             Susceptible + Infected = 2Infected, Infected = Recovered, Infected = Dead
@@ -37,6 +38,8 @@ class GeneralModel:
 
         _model = cls()
         _model.scheme = scheme
+        # find name containing chars and numbers that can start with a number
+        pattern = re.compile(r'(\d)([\w\d]+)|([\w\d]+)')
 
         for line in filter(None, scheme.replace('\n', ',').split(',')):  # filter removes empty entries from split
             tokens = []
@@ -46,11 +49,17 @@ class GeneralModel:
 
                 # process possible number in front of species, species cannot have numbers in their text
                 for entry in list(filter(None, token.split('+'))):
-                    chars = list(entry.strip())
-                    number = ''.join(filter(lambda d: d.isdigit(), chars))
-                    text = ''.join(filter(lambda d: not d.isdigit(), chars))
+                    string = ''.join(filter(lambda d: not d.isspace(), list(entry)))  # remove white space chars
 
-                    entries += [text] if number == '' else int(number) * [text]  # list arithmetics
+                    match = re.match(pattern, string)
+
+                    groups = list(match.groups())
+
+                    # groups[2] is None means we start the name with a number
+                    number = int(groups[0]) if groups[2] is None else 1
+                    name = groups[1] if groups[2] is None else groups[2]
+
+                    entries += number * [name]  # list arithmetics
 
                 tokens.append(entries)
 
@@ -146,7 +155,7 @@ class GeneralModel:
         self.func = func
         return func
 
-    def simulate_model(self, times, j=None):
+    def simulate_model(self, times, j=None, plot=False):
         """j = initial population vector"""
         comp = self.get_compartments()
 
@@ -158,6 +167,9 @@ class GeneralModel:
             assert j.shape[0] == len(comp)
 
         solution = odeint(self.build_func(), j, times)
+
+        if not plot:
+            return solution
 
         plt.xlabel('Time')
         plt.ylabel('Concentration')
@@ -172,11 +184,11 @@ class GeneralModel:
         rates = []
 
         for el in self.elem_reactions:
-            name = f"k_{''.join(el['from_comp'])}_{''.join(el['to_comp'])}"
+            name = f"k({','.join(el['from_comp'])}\u2192{','.join(el['to_comp'])})"
             rates.append([name, el['forward_rate']] if append_values else name)
 
             if get_backwards_rates:
-                name = f"k_{''.join(el['to_comp'])}_{''.join(el['from_comp'])}"
+                name = f"k({','.join(el['to_comp'])}\u2192{','.join(el['from_comp'])})"
                 rates.append([name, el['backward_rate']] if append_values else name)
 
         return rates
@@ -222,13 +234,18 @@ class GeneralModel:
 
 
 def main():
-    SIR = 'PS = PS_GS\nPS + T_GS = T + PS_GS\nPS + T_GS = PS_GS\nT = T_GS'
-    model = GeneralModel.from_text(SIR)
+    SIR = 'PS = 2PS_GS\nPS + T_GS = T + PS_GS\nPS + T_GS = PS_GS\nT = T_GS'
 
-    model.elem_reactions[0]['forward_rate'] = 0.2
-    model.elem_reactions[1]['forward_rate'] = 0.7
-    model.elem_reactions[2]['forward_rate'] = 0.5
-    model.elem_reactions[3]['forward_rate'] = 0.1
+    SIR = 'BP3 = BP_GS, 2BP3 = BP3 + BP_GS'
+
+    model = GeneralModel.from_text(SIR)
+    #
+    # model.elem_reactions[0]['forward_rate'] = 0.2
+    # model.elem_reactions[1]['forward_rate'] = 0.7
+    # model.elem_reactions[2]['forward_rate'] = 0.5
+    # model.elem_reactions[3]['forward_rate'] = 0.1
+
+    model.print_model()
 
     #
     # model.add_elementary_reaction(['Susceptible', 'Infected'], ['Infected', 'Infected'], 0.5)
@@ -242,9 +259,9 @@ def main():
 
     times = np.linspace(0, 10, 1000, dtype=np.float64)
 
-    model.simulate_model(times, [1, 0, 5, 0])
+    model.simulate_model(times)
 
-    model.save(fpath='general models/Photosensitization.json')
+    # model.save(fpath='general models/Photosensitization.json')
 
 
 if __name__ == '__main__':
