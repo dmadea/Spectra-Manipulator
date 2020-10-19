@@ -11,6 +11,7 @@ import re
 class GeneralModel:
 
     def __init__(self):
+        self.initial_conditions = {}
         self.elem_reactions = []  # list of dictionaries of elementary reactions
         self.scheme = ""
         self.func = None  # function that returns dc_dt for current c and t for build model
@@ -59,12 +60,19 @@ class GeneralModel:
                     number = int(groups[0]) if groups[2] is None else 1
                     name = groups[1] if groups[2] is None else groups[2]
 
+                    if number < 1:
+                        number = 1
+
                     entries += number * [name]  # list arithmetics
 
                 tokens.append(entries)
 
             for reactants, products in zip(tokens[:-1], tokens[1:]):
                 _model.add_elementary_reaction(reactants, products)
+
+        comps = _model.get_compartments()
+        init = [1 if i == 0 else 0 for i in range(len(comps))]
+        _model.initial_conditions = dict(zip(comps, init))
 
         return _model
 
@@ -155,21 +163,11 @@ class GeneralModel:
         self.func = func
         return func
 
-    def simulate_model(self, times, j=None, plot=False):
-        """j = initial population vector"""
+    def simulate_model(self, times):
         comp = self.get_compartments()
-
-        if j is None:
-            j = np.zeros(len(comp))
-            j[0] = 1
-        else:
-            j = np.asarray(j)
-            assert j.shape[0] == len(comp)
+        j = np.asarray(list(self.initial_conditions.values()))  # assuming the order is the same as form self.get_compartments
 
         solution = odeint(self.build_func(), j, times)
-
-        if not plot:
-            return solution
 
         plt.xlabel('Time')
         plt.ylabel('Concentration')
@@ -204,14 +202,13 @@ class GeneralModel:
             el['forward_rate'] = f_rate
             el['backward_rate'] = b_rate
 
-
     @classmethod
     def load(cls, fpath='general models/mod1.json'):
         _model = cls()
 
         try:
             with open(fpath, "r") as file:
-                _model.scheme, _model.elem_reactions = json.load(file)
+                _model.scheme, _model.initial_conditions, _model.elem_reactions = json.load(file).values()
 
         except Exception as ex:
             print('Error loading model:\n' + ex.__str__())
@@ -219,30 +216,46 @@ class GeneralModel:
         return _model
 
     def save(self, fpath='general models/mod1.json'):
-
         try:
             with open(fpath, "w") as file:
-                json.dump([self.scheme, self.elem_reactions], file, sort_keys=False, indent=4, separators=(',', ': '))
+
+                to_dump = dict(scheme=self.scheme,
+                               initial_conditions=self.initial_conditions,
+                               elementary_reactions=self.elem_reactions)
+
+                json.dump(to_dump, file, sort_keys=False, indent=4, separators=(',', ': '))
 
         except Exception as ex:
             print('Error saving model:\n' + ex.__str__())
 
     def print_model(self):
+        print(f'Scheme: {self.scheme}')
+        print(f'Initial conditions: {self.initial_conditions}')
+
         for el in self.elem_reactions:
             print(f"Elementary reaction: {' + '.join(el['from_comp'])} \u2192 {' + '.join(el['to_comp'])}, "
                   f"forward_rate: {el['forward_rate']}, backward_rate: {el['backward_rate']}")
 
 
 def main():
-    SIR = 'PS = 2PS_GS\nPS + T_GS = T + PS_GS\nPS + T_GS = PS_GS\nT = T_GS'
+    SIR = 'S + I = I + E\nE = I = R = S'
 
-    SIR = 'BP3 = BP_GS, 2BP3 = BP3 + BP_GS'
+    # SIR = 'BP3 = BP_GS, 2BP3 = BP3 + BP_GS'
 
     model = GeneralModel.from_text(SIR)
+    model.initial_conditions['I'] = 0.0001
+    model.initial_conditions['S'] = 1
+
     #
-    # model.elem_reactions[0]['forward_rate'] = 0.2
-    # model.elem_reactions[1]['forward_rate'] = 0.7
-    # model.elem_reactions[2]['forward_rate'] = 0.5
+    model.elem_reactions[0]['forward_rate'] = 2
+    model.elem_reactions[1]['forward_rate'] = 0.1
+    model.elem_reactions[2]['forward_rate'] = 0.2
+    model.elem_reactions[3]['forward_rate'] = 0.01
+
+    #
+    # model.elem_reactions[0]['backward_rate'] = 0.2
+    # model.elem_reactions[1]['backward_rate'] = 0.7
+    # model.elem_reactions[2]['backward_rate'] = 0.5
     # model.elem_reactions[3]['forward_rate'] = 0.1
 
     model.print_model()
@@ -257,11 +270,11 @@ def main():
     # model.add_elementary_reaction('Infected', 'Dead', 0.01)
     # model.add_elementary_reaction('Recovered', 'Susceptible', 0.01)
 
-    times = np.linspace(0, 10, 1000, dtype=np.float64)
+    times = np.linspace(0, 200, 1000, dtype=np.float64)
 
     model.simulate_model(times)
 
-    # model.save(fpath='general models/Photosensitization.json')
+    model.save(fpath='general models/Pandemic SEIRS.json')
 
 
 if __name__ == '__main__':

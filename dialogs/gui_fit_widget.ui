@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>439</width>
-    <height>658</height>
+    <width>444</width>
+    <height>591</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <item>
       <widget class="QTabWidget" name="tabWidget">
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
@@ -72,9 +72,9 @@
            <item>
             <widget class="QPlainTextEdit" name="pteEquation">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
+               <verstretch>4</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
@@ -131,9 +131,9 @@
            <item>
             <widget class="QScrollArea" name="scrollArea_2">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
+               <verstretch>10</verstretch>
               </sizepolicy>
              </property>
              <property name="horizontalScrollBarPolicy">
@@ -147,8 +147,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>383</width>
-                <height>85</height>
+                <width>388</width>
+                <height>86</height>
                </rect>
               </property>
               <layout class="QGridLayout" name="gridLayout_6">
@@ -274,9 +274,9 @@ bound</string>
            <item>
             <widget class="QPlainTextEdit" name="pteScheme">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+              <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
                <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
+               <verstretch>4</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
@@ -327,13 +327,19 @@ bound</string>
            <item>
             <widget class="QScrollArea" name="scrollArea">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
+               <verstretch>10</verstretch>
               </sizepolicy>
+             </property>
+             <property name="verticalScrollBarPolicy">
+              <enum>Qt::ScrollBarAsNeeded</enum>
              </property>
              <property name="horizontalScrollBarPolicy">
               <enum>Qt::ScrollBarAlwaysOff</enum>
+             </property>
+             <property name="sizeAdjustPolicy">
+              <enum>QAbstractScrollArea::AdjustIgnored</enum>
              </property>
              <property name="widgetResizable">
               <bool>true</bool>
@@ -343,23 +349,20 @@ bound</string>
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>383</width>
-                <height>85</height>
+                <width>388</width>
+                <height>134</height>
                </rect>
               </property>
               <layout class="QGridLayout" name="gridLayout_5">
                <item row="1" column="0">
                 <layout class="QGridLayout" name="cusModelGridLayout">
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="label_16">
+                 <item row="0" column="5">
+                  <widget class="QLabel" name="label_17">
                    <property name="text">
-                    <string>Param</string>
+                    <string>Error</string>
                    </property>
                    <property name="alignment">
                     <set>Qt::AlignCenter</set>
-                   </property>
-                   <property name="margin">
-                    <number>0</number>
                    </property>
                   </widget>
                  </item>
@@ -367,6 +370,16 @@ bound</string>
                   <widget class="QLabel" name="label_15">
                    <property name="text">
                     <string>Fixed</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="2">
+                  <widget class="QLabel" name="label_20">
+                   <property name="text">
+                    <string>&lt;= Value &lt;=</string>
                    </property>
                    <property name="alignment">
                     <set>Qt::AlignCenter</set>
@@ -384,23 +397,16 @@ bound</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="0" column="2">
-                  <widget class="QLabel" name="label_20">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_16">
                    <property name="text">
-                    <string>&lt;= Value &lt;=</string>
+                    <string>Param</string>
                    </property>
                    <property name="alignment">
                     <set>Qt::AlignCenter</set>
                    </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="5">
-                  <widget class="QLabel" name="label_17">
-                   <property name="text">
-                    <string>Error</string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
+                   <property name="margin">
+                    <number>0</number>
                    </property>
                   </widget>
                  </item>
@@ -512,7 +518,7 @@ bound</string>
         <enum>Qt::Vertical</enum>
        </property>
        <property name="sizeType">
-        <enum>QSizePolicy::Expanding</enum>
+        <enum>QSizePolicy::Ignored</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>

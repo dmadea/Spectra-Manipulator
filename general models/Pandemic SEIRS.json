@@ -1,54 +1,52 @@
 {
-    "scheme": "PS = 2PS_GS\nPS + T_GS = T + PS_GS\nPS + T_GS = PS_GS\nT = T_GS",
+    "scheme": "S + I = I + E\nE = I = R = S",
     "initial_conditions": {
-        "PS": 1,
-        "PS_GS": 0,
-        "T_GS": 0,
-        "T": 0
+        "S": 1,
+        "I": 0.0001,
+        "E": 0,
+        "R": 0
     },
     "elementary_reactions": [
         {
             "from_comp": [
-                "PS"
+                "S",
+                "I"
             ],
             "to_comp": [
-                "PS_GS",
-                "PS_GS"
+                "I",
+                "E"
             ],
-            "forward_rate": 1,
+            "forward_rate": 2,
             "backward_rate": 0
         },
         {
             "from_comp": [
-                "PS",
-                "T_GS"
+                "E"
             ],
             "to_comp": [
-                "T",
-                "PS_GS"
+                "I"
             ],
-            "forward_rate": 1,
+            "forward_rate": 0.1,
             "backward_rate": 0
         },
         {
             "from_comp": [
-                "PS",
-                "T_GS"
+                "I"
             ],
             "to_comp": [
-                "PS_GS"
+                "R"
             ],
-            "forward_rate": 1,
+            "forward_rate": 0.2,
             "backward_rate": 0
         },
         {
             "from_comp": [
-                "T"
+                "R"
             ],
             "to_comp": [
-                "T_GS"
+                "S"
             ],
-            "forward_rate": 1,
+            "forward_rate": 0.01,
             "backward_rate": 0
         }
     ]

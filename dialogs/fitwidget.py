@@ -231,7 +231,9 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if filepath[0] == '':
             return
 
-        self.current_general_model.set_rates(self.get_params_from_fields()[2])
+        init, _, rates = self.get_params_from_fields()
+        self.current_general_model.set_rates(rates)
+        self.current_general_model.initial_conditions = dict(zip(self.current_general_model.get_compartments(), init))
         self.current_general_model.save(filepath[0])
 
     def get_params_from_fields(self):
@@ -259,25 +261,29 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         return init_cond, coefs, rates
 
-    def transfer_rates_to_model(self):
-        if self.current_general_model is None:
-            return
-
-        n_comps = len(self.current_general_model.get_compartments())
-        n_params = len(self.current_general_model.elem_reactions)
-
-        rates = np.zeros((n_params, 2), dtype=np.float64)
-
-        show_bw_rates = self.cbShowBackwardRates.isChecked()
-
-        forward_idxs = range(2*n_comps, 2*n_comps + n_params * (2 if show_bw_rates else 1), (2 if show_bw_rates else 1))
-
-        for i, idx in enumerate(forward_idxs):
-            rates[i, 0] = float(self.value_list[idx][1].text())
-            if show_bw_rates:
-                rates[i, 1] = float(self.value_list[idx + 1][1].text())
-
-        self.current_general_model.set_rates(rates)
+    # def transfer_data_to_model(self):
+    #     if self.current_general_model is None:
+    #         return
+    #
+    #     comps = self.current_general_model.get_compartments()
+    #     n_comps = len(comps)
+    #     n_params = len(self.current_general_model.elem_reactions)
+    #
+    #     for i, com in enumerate(comps):
+    #         self.current_general_model.inital_conditions[com] = float(self.value_list[i][1].text())
+    #
+    #     rates = np.zeros((n_params, 2), dtype=np.float64)
+    #
+    #     show_bw_rates = self.cbShowBackwardRates.isChecked()
+    #
+    #     forward_idxs = range(2*n_comps, 2*n_comps + n_params * (2 if show_bw_rates else 1), (2 if show_bw_rates else 1))
+    #
+    #     for i, idx in enumerate(forward_idxs):
+    #         rates[i, 0] = float(self.value_list[idx][1].text())
+    #         if show_bw_rates:
+    #             rates[i, 1] = float(self.value_list[idx + 1][1].text())
+    #
+    #     self.current_general_model.set_rates(rates)
 
     def updatePlot(self):
         x0, x1 = self.lr.getRegion()

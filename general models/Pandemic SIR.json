@@ -1,6 +1,12 @@
-[
-    "S + I = 2 I\nI = R\nI = D",
-    [
+{
+    "scheme": "S + I = 2 I\nI = R\nI = D",
+    "initial_conditions": {
+        "S": 1,
+        "I": 0.0001,
+        "R": 0,
+        "D": 0
+    },
+    "elementary_reactions": [
         {
             "from_comp": [
                 "S",
@@ -10,8 +16,8 @@
                 "I",
                 "I"
             ],
-            "forward_rate": 1.0,
-            "backward_rate": 0.0
+            "forward_rate": 0.8,
+            "backward_rate": 0
         },
         {
             "from_comp": [
@@ -20,8 +26,8 @@
             "to_comp": [
                 "R"
             ],
-            "forward_rate": 0.1,
-            "backward_rate": 0.0
+            "forward_rate": 0.2,
+            "backward_rate": 0
         },
         {
             "from_comp": [
@@ -31,7 +37,7 @@
                 "D"
             ],
             "forward_rate": 0.01,
-            "backward_rate": 0.0
+            "backward_rate": 0
         }
     ]
-]
+}
