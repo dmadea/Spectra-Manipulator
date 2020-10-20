@@ -1,10 +1,10 @@
 {
-    "scheme": "PS = 2PS_GS\nPS + T_GS = T + PS_GS\nPS + T_GS = PS_GS\nT = T_GS",
+    "scheme": "PS = PS_GS  # decay of triplet PS to its GS\nPS + T_GS = T + PS_GS  # energy transfer\nPS + T_GS = PS_GS  # selfquenching of PS by substrate in GS\nT = T_GS  # decay of triplet substrate to its GS",
     "initial_conditions": {
-        "PS": 1,
-        "PS_GS": 0,
-        "T_GS": 0,
-        "T": 0
+        "PS": 1.0,
+        "PS_GS": 0.0,
+        "T_GS": 1.0,
+        "T": 0.0
     },
     "elementary_reactions": [
         {
@@ -12,11 +12,10 @@
                 "PS"
             ],
             "to_comp": [
-                "PS_GS",
                 "PS_GS"
             ],
-            "forward_rate": 1,
-            "backward_rate": 0
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
         },
         {
             "from_comp": [
@@ -27,8 +26,8 @@
                 "T",
                 "PS_GS"
             ],
-            "forward_rate": 1,
-            "backward_rate": 0
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
         },
         {
             "from_comp": [
@@ -38,8 +37,8 @@
             "to_comp": [
                 "PS_GS"
             ],
-            "forward_rate": 1,
-            "backward_rate": 0
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
         },
         {
             "from_comp": [
@@ -48,8 +47,8 @@
             "to_comp": [
                 "T_GS"
             ],
-            "forward_rate": 1,
-            "backward_rate": 0
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
         }
     ]
 }

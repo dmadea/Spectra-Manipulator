@@ -318,13 +318,22 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.general_model_params = Parameters()
 
         k = 0
-        for i in [0, 1]:
-            for j in range(len(comps)):
-                self.general_model_params.add(f'param{k}', value=1 if j == 0 else 0,
-                                              vary=bool(i),
-                                              min=-np.inf if j == 1 else 0,
-                                              max=np.inf)
-                k += 1
+        # initial conditions
+        for init in self.current_general_model.initial_conditions.values():
+            self.general_model_params.add(f'param{k}', value=init,
+                                          vary=False,
+                                          min=0,
+                                          max=np.inf)
+            k += 1
+        # coefficients
+        for i in range(len(comps)):
+            self.general_model_params.add(f'param{k}', value=1 if i == 0 else 0,
+                                          vary=True,
+                                          min=-np.inf,
+                                          max=np.inf)
+            k += 1
+
+        # rates
         rates_names = []
         for name, value in rates:
             rates_names.append(name)

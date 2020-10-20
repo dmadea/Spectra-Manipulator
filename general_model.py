@@ -23,10 +23,13 @@ class GeneralModel:
         which allows for forward and backward rates. Names of species are case sensitive and can contain numbers.
         Eg. decay of triplet benzophenone with mixed 1st and 2nd order (self TT annihilation),
         here zero represents the ground state BP:
-            BP3 = BP_GS, 2BP3 = BP3 + BP_GS
+            BP3 = BP_GS  # decay of triplet BP to GS
+            2BP3 = BP3 + BP_GS  # selfquenching of triplet BP
 
         Eg. pandemic SIR model:
-            Susceptible + Infected = 2Infected, Infected = Recovered, Infected = Dead
+            Susceptible + Infected = 2Infected
+            Infected = Recovered
+            Infected = Dead
 
         :param scheme:
             input text-based model
@@ -43,6 +46,8 @@ class GeneralModel:
         pattern = re.compile(r'(\d)([\w\d]+)|([\w\d]+)')
 
         for line in filter(None, scheme.replace('\n', ',').split(',')):  # filter removes empty entries from split
+
+            line = list(filter(None, line.split('#')))[0]  # remove comments, take only the characters before possible #
             tokens = []
 
             for token in filter(None, line.split('=')):  # remove empty entries
