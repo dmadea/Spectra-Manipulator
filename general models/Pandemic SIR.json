@@ -1,10 +1,10 @@
 {
-    "scheme": "S + I = 2 I\nI = R\nI = D",
+    "scheme": "S + I = 2 I  # Susceptible + Infected -> 2 Infected\nI = R           # Infected -> Recovered\nI = D           # Infected -> Dead",
     "initial_conditions": {
-        "S": 1,
+        "S": 1.0,
         "I": 0.0001,
-        "R": 0,
-        "D": 0
+        "R": 0.0,
+        "D": 0.0
     },
     "elementary_reactions": [
         {
@@ -17,7 +17,7 @@
                 "I"
             ],
             "forward_rate": 0.8,
-            "backward_rate": 0
+            "backward_rate": 0.0
         },
         {
             "from_comp": [
@@ -27,7 +27,7 @@
                 "R"
             ],
             "forward_rate": 0.2,
-            "backward_rate": 0
+            "backward_rate": 0.0
         },
         {
             "from_comp": [
@@ -37,7 +37,7 @@
                 "D"
             ],
             "forward_rate": 0.01,
-            "backward_rate": 0
+            "backward_rate": 0.0
         }
     ]
 }

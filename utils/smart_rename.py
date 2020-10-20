@@ -1,7 +1,5 @@
 
 
-
-
 def smart_rename(expression, text, counter=0):
     """
     Returns the expression text specially parsed. It can contain two types of expression,

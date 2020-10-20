@@ -1,5 +1,5 @@
-import warnings
-warnings.filterwarnings("ignore")
+# import warnings
+# warnings.filterwarnings("ignore")
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,7 +19,7 @@ class GeneralModel:
     @classmethod
     def from_text(cls, scheme):
         """
-        Expected format is single or multiline or separated by comma, reactions are denoted with equal sign,
+        Expected format is single or multiline, reactions are denoted with equal sign,
         which allows for forward and backward rates. Names of species are case sensitive and can contain numbers.
         Eg. decay of triplet benzophenone with mixed 1st and 2nd order (self TT annihilation),
         here zero represents the ground state BP:
@@ -45,7 +45,7 @@ class GeneralModel:
         # find name containing chars and numbers that can start with a number
         pattern = re.compile(r'(\d)([\w\d]+)|([\w\d]+)')
 
-        for line in filter(None, scheme.replace('\n', ',').split(',')):  # filter removes empty entries from split
+        for line in filter(None, scheme.split('\n')):  # filter removes empty entries from split
 
             line = list(filter(None, line.split('#')))[0]  # remove comments, take only the characters before possible #
             tokens = []
@@ -113,7 +113,7 @@ class GeneralModel:
     def build_func(self):
         """
         Builds model and returns the function that takes c, t and rates as an argument
-        and can be directly used for odeint method.
+        and can be directly used for odeint numerical integration method.
         """
 
         comps = self.get_compartments()
@@ -242,49 +242,49 @@ class GeneralModel:
                   f"forward_rate: {el['forward_rate']}, backward_rate: {el['backward_rate']}")
 
 
-def main():
-    SIR = 'S + I = I + E\nE = I = R = S'
+# def main():
+#     SIR = 'S + I = I + E\nE = I = R = S'
+#
+#     # SIR = 'BP3 = BP_GS, 2BP3 = BP3 + BP_GS'
+#
+#     model = GeneralModel.from_text(SIR)
+#     model.initial_conditions['I'] = 0.0001
+#     model.initial_conditions['S'] = 1
+#
+#     #
+#     model.elem_reactions[0]['forward_rate'] = 2
+#     model.elem_reactions[1]['forward_rate'] = 0.1
+#     model.elem_reactions[2]['forward_rate'] = 0.2
+#     model.elem_reactions[3]['forward_rate'] = 0.01
+#
+#     #
+#     # model.elem_reactions[0]['backward_rate'] = 0.2
+#     # model.elem_reactions[1]['backward_rate'] = 0.7
+#     # model.elem_reactions[2]['backward_rate'] = 0.5
+#     # model.elem_reactions[3]['forward_rate'] = 0.1
+#
+#     model.print_model()
+#
+#     #
+#     # model.add_elementary_reaction(['Susceptible', 'Infected'], ['Infected', 'Infected'], 0.5)
+#     # model.add_elementary_reaction('Infected', 'Recovered', 0.1)
+#     # model.add_elementary_reaction('Infected', 'Dead', 0.01)
+#
+#     # model.add_elementary_reaction(['A', 'B'], ['B'], 0.5)
+#     # model.add_elementary_reaction('Infected', 'Recovered', 0.1)
+#     # model.add_elementary_reaction('Infected', 'Dead', 0.01)
+#     # model.add_elementary_reaction('Recovered', 'Susceptible', 0.01)
+#
+#     times = np.linspace(0, 200, 1000, dtype=np.float64)
+#
+#     model.simulate_model(times)
+#
+#     model.save(fpath='general models/Pandemic SEIRS.json')
 
-    # SIR = 'BP3 = BP_GS, 2BP3 = BP3 + BP_GS'
-
-    model = GeneralModel.from_text(SIR)
-    model.initial_conditions['I'] = 0.0001
-    model.initial_conditions['S'] = 1
-
-    #
-    model.elem_reactions[0]['forward_rate'] = 2
-    model.elem_reactions[1]['forward_rate'] = 0.1
-    model.elem_reactions[2]['forward_rate'] = 0.2
-    model.elem_reactions[3]['forward_rate'] = 0.01
-
-    #
-    # model.elem_reactions[0]['backward_rate'] = 0.2
-    # model.elem_reactions[1]['backward_rate'] = 0.7
-    # model.elem_reactions[2]['backward_rate'] = 0.5
-    # model.elem_reactions[3]['forward_rate'] = 0.1
-
-    model.print_model()
-
-    #
-    # model.add_elementary_reaction(['Susceptible', 'Infected'], ['Infected', 'Infected'], 0.5)
-    # model.add_elementary_reaction('Infected', 'Recovered', 0.1)
-    # model.add_elementary_reaction('Infected', 'Dead', 0.01)
-
-    # model.add_elementary_reaction(['A', 'B'], ['B'], 0.5)
-    # model.add_elementary_reaction('Infected', 'Recovered', 0.1)
-    # model.add_elementary_reaction('Infected', 'Dead', 0.01)
-    # model.add_elementary_reaction('Recovered', 'Susceptible', 0.01)
-
-    times = np.linspace(0, 200, 1000, dtype=np.float64)
-
-    model.simulate_model(times)
-
-    model.save(fpath='general models/Pandemic SEIRS.json')
-
-
-if __name__ == '__main__':
-
-    main()
+#
+# if __name__ == '__main__':
+#
+#     main()
 
     # reaction = 'A + B = C = D = E\n A + E=B'
     # reaction = 'BP = zero, 2 BP = zero + BP'

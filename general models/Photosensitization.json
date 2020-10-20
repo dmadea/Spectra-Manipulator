@@ -1,5 +1,5 @@
 {
-    "scheme": "PS = PS_GS  # decay of triplet PS to its GS\nPS + T_GS = T + PS_GS  # energy transfer\nPS + T_GS = PS_GS  # selfquenching of PS by substrate in GS\nT = T_GS  # decay of triplet substrate to its GS",
+    "scheme": "PS = PS_GS                     # decay of triplet PS to its GS\nPS + T_GS = T + PS_GS # energy transfer\nPS + T_GS = PS_GS        # selfquenching of PS by substrate in GS\nT = T_GS                       # decay of triplet substrate to its GS",
     "initial_conditions": {
         "PS": 1.0,
         "PS_GS": 0.0,

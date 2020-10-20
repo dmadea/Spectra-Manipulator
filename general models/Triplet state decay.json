@@ -1,0 +1,43 @@
+{
+    "scheme": "T = GS             # 1st order decay\n2T = T + GS    # triplet triplet annihilation with itself\nT + GS = 2GS  # selfquenching",
+    "initial_conditions": {
+        "T": 1.0,
+        "GS": 10.0
+    },
+    "elementary_reactions": [
+        {
+            "from_comp": [
+                "T"
+            ],
+            "to_comp": [
+                "GS"
+            ],
+            "forward_rate": 0.1,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "T",
+                "T"
+            ],
+            "to_comp": [
+                "T",
+                "GS"
+            ],
+            "forward_rate": 0.1,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "T",
+                "GS"
+            ],
+            "to_comp": [
+                "GS",
+                "GS"
+            ],
+            "forward_rate": 0.1,
+            "backward_rate": 0.0
+        }
+    ]
+}
