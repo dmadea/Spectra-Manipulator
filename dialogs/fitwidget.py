@@ -629,6 +629,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
             return sol
 
+        # for x_data[0] == 0
         return odeint(self.current_general_model.func, j, x_data, args=(rates,))
 
     def _plot_function(self):
