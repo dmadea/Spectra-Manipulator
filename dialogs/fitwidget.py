@@ -475,14 +475,12 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 self.plotted_function_spectra = []
 
     def fit(self):
-        self._fit()
 
-        # try:
-        #
-        #     self._fit()
-        # except Exception as e:
-        #     Logger.message(e.__str__())
-        #     QMessageBox.warning(self, 'Fitting Error', e.__str__(), QMessageBox.Ok)
+        try:
+            self._fit()
+        except Exception as e:
+            Logger.message(e.__str__())
+            QMessageBox.warning(self, 'Fitting Error', e.__str__(), QMessageBox.Ok)
 
     # def remove_last_fit(self):
     #     if self.plot_fit is not None and self.plot_residuals is not None:
@@ -609,19 +607,27 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
     def plot_function(self):
 
-        self._plot_function()
-        # try:
-        #
-        #     self._plot_function()
-        # except Exception as e:
-        #     Logger.message(e.__str__())
-        #     QMessageBox.warning(self, 'Plotting Error', e.__str__(), QMessageBox.Ok)
+        # self._plot_function()
+        try:
+
+            self._plot_function()
+        except Exception as e:
+            Logger.message(e.__str__())
+            QMessageBox.warning(self, 'Plotting Error', e.__str__(), QMessageBox.Ok)
 
     def _simul_custom_model(self, j, rates, x_data):
-        if x_data[0] >= 0:  # initial conditions are valid for time=0
+        if x_data[0] > 0:  # initial conditions are valid for time=0
             n = 100  # prepend x values with 100 points if not starting with zero time
             x_prepended = np.concatenate((np.linspace(0, x_data[0], n, endpoint=False), x_data))
             return odeint(self.current_general_model.func, j, x_prepended, args=(rates,))[n:, :]
+
+        elif x_data[0] < 0:
+            x_pos = x_data[x_data >= 0]  # find x >= 0
+            sol = np.zeros((x_data.shape[0], j.shape[0]), dtype=np.float64)
+            if x_pos.shape[0] > 1:  # simulate only for at least 2 positive values
+                sol[(x_data < 0).sum():, :] = self._simul_custom_model(j, rates, x_pos)  # use recursion here
+
+            return sol
 
         return odeint(self.current_general_model.func, j, x_data, args=(rates,))
 
@@ -638,7 +644,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             x_data = np.linspace(x0, x1, num=Settings.FP_num_of_points)
 
         tab_idx = self.tabWidget.currentIndex()
-        params = ""
 
         if tab_idx == 0:  # equation-based model
             self._setup_model()
@@ -723,23 +728,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
     def set_result(self):
         pass
-
-    #
-    # # TODO-->>>
-    # def print_diff_eq(self):
-    #     if self.current_model is None:
-    #         return
-    #
-    #     # self.current_model._print_diff_equations()
-    #
-    #     # command = f"ax = plt.axes([0, 0, 0.1, 0.2])\nax.set_xticks([])\nax.set_yticks([])" \
-    #     #     f"\nax.axis('off')\nplt.text(0.3, 0.4, \"${self.current_model._print_diff_equations()}$\", size=30)"
-    #     #
-    #     #
-    #     # Console.execute_command(command)
-    #     # #
-    #     # Console.execute_command("plt\n%matplotlib inline")
-    #     # self.current_model.print_diff_equations()
 
     def print_report(self):
         if self.fit_result is None:
