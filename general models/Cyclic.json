@@ -1,0 +1,106 @@
+{
+    "scheme": "A = B = C = D = E = F = G = H = I = A",
+    "initial_conditions": {
+        "A": 1.0,
+        "B": 0.0,
+        "C": 0.0,
+        "D": 0.0,
+        "E": 0.0,
+        "F": 0.0,
+        "G": 0.0,
+        "H": 0.0,
+        "I": 0.0
+    },
+    "elementary_reactions": [
+        {
+            "from_comp": [
+                "A"
+            ],
+            "to_comp": [
+                "B"
+            ],
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "B"
+            ],
+            "to_comp": [
+                "C"
+            ],
+            "forward_rate": 0.8,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "C"
+            ],
+            "to_comp": [
+                "D"
+            ],
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "D"
+            ],
+            "to_comp": [
+                "E"
+            ],
+            "forward_rate": 0.8,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "E"
+            ],
+            "to_comp": [
+                "F"
+            ],
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "F"
+            ],
+            "to_comp": [
+                "G"
+            ],
+            "forward_rate": 0.8,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "G"
+            ],
+            "to_comp": [
+                "H"
+            ],
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "H"
+            ],
+            "to_comp": [
+                "I"
+            ],
+            "forward_rate": 0.8,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "I"
+            ],
+            "to_comp": [
+                "A"
+            ],
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
+        }
+    ]
+}
