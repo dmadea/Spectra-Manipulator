@@ -401,9 +401,9 @@ def load_kinetic(dir_name, spectra_dir_name='spectra', times_fname='times.txt', 
     # load blank spectrum if available
     blank_fpath = os.path.join(dir_name, blank_spectrum)
     if os.path.isfile(blank_fpath):
+        last_idx = root.__len__() - 1
         tw.import_files(blank_fpath)
-        # idx_add += 1
-        add_to_list(root[group_idx] - root[-1])
+        add_to_list(root[group_idx] - root[last_idx + 1])
         if times is not None:
             root[-1].set_names(times)
         blank_used = True
