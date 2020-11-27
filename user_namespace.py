@@ -7,6 +7,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt  # we plot graphs with this library
 from matplotlib import cm
 from matplotlib.ticker import *
+from matplotlib import colors as c
 
 from spectrum import Spectrum, SpectrumList
 # from copy import deepcopy
@@ -83,6 +84,49 @@ class MinorSymLogLocator(Locator):
     def tick_values(self, vmin, vmax):
         raise NotImplementedError('Cannot get tick locations for a '
                                   '%s type.' % type(self))
+
+
+def setup_wavenumber_axis(ax, x_label=WN_LABEL,
+                          x_major_locator=None, x_minor_locator=AutoMinorLocator(5), factor=1e3):
+    secondary_ax = ax.secondary_xaxis('top', functions=(lambda x: factor / x, lambda x: 1 / (factor * x)))
+
+    secondary_ax.tick_params(which='major', direction='in')
+    secondary_ax.tick_params(which='minor', direction='in')
+
+    if x_major_locator:
+        secondary_ax.xaxis.set_major_locator(x_major_locator)
+
+    if x_minor_locator:
+        secondary_ax.xaxis.set_minor_locator(x_minor_locator)
+
+    secondary_ax.set_xlabel(x_label)
+
+    return secondary_ax
+
+
+def set_main_axis(ax, x_label=WL_LABEL, y_label="Absorbance", xlim=(None, None), ylim=(None, None),
+                  x_major_locator=None, x_minor_locator=None, y_major_locator=None, y_minor_locator=None):
+    ax.set_ylabel(y_label)
+    ax.set_xlabel(x_label)
+    if xlim[0] is not None:
+        ax.set_xlim(xlim)
+    if ylim[0] is not None:
+        ax.set_ylim(ylim)
+
+    if x_major_locator:
+        ax.xaxis.set_major_locator(x_major_locator)
+
+    if x_minor_locator:
+        ax.xaxis.set_minor_locator(x_minor_locator)
+
+    if y_major_locator:
+        ax.yaxis.set_major_locator(y_major_locator)
+
+    if y_minor_locator:
+        ax.yaxis.set_minor_locator(y_minor_locator)
+
+    ax.tick_params(axis='both', which='major', direction='in')
+    ax.tick_params(axis='both', which='minor', direction='in')
 
 
 def add_to_list(spectra):
@@ -529,6 +573,66 @@ def plot_kinetics(group_item, n_spectra=50, linscale=1, linthresh=100, cmap='jet
         plt.savefig(fname=filepath, format=ext, transparent=transparent, dpi=dpi)
 
     plt.show()
+
+
+def plot_kinetics_no_colorbar(group_item, x_lim=(None, None), y_lim=(None, None), selected_spectra=(0, 5, -1),
+                              x_label='Time / s',  y_label='$A$',  cmap='jet', darkens_factor_cmap=1, colors=None,
+                              x_major_locator=None, x_minor_locator=None,
+                              y_major_locator=None, y_minor_locator=None,
+                              add_wn_axis=True,  lw=1.5, ls='-', plot_zero_line=True,
+                              legend_loc='best', legend_spacing=0.2, legend_columns=1, legend_column_spacing=2,
+                              legend_entry_prefix='pH = ', legend_entry_postfix='', show_legend_line=True,
+                              fig_size=(5.5, 4.5),
+                              dpi=500, filepath=None, transparent=True):
+
+    fig, ax = plt.subplots(1, 1, figsize=fig_size)
+
+    set_main_axis(ax, x_label=x_label, y_label=y_label, xlim=x_lim, ylim=y_lim,
+                  x_major_locator=x_major_locator, x_minor_locator=x_minor_locator,
+                  y_major_locator=y_major_locator, y_minor_locator=y_minor_locator)
+
+    if add_wn_axis:
+        _ = setup_wavenumber_axis(ax, x_major_locator=MultipleLocator(0.5))
+
+    x = group_item[0].data[:, 0]
+    n_spectra = selected_spectra.__len__()
+
+    _cmap = cm.get_cmap(cmap, n_spectra)
+
+    if plot_zero_line:
+        line_x0 = x_lim[0] if x_lim[0] is not None else x[0]
+        line_x1 = x_lim[1] if x_lim[1] is not None else x[-1]
+
+        ax.axhline(0, line_x0, line_x1, ls='--', color='black', lw=1)
+
+    for i in range(n_spectra):
+        if colors is None:
+            color = np.asarray(c.to_rgb(_cmap(i))) * darkens_factor_cmap
+            color[color > 1] = 1
+        else:
+            color = colors[i % len(colors)]
+
+        ax.plot(group_item[i].x, group_item[i].y, color=color, lw=lw, ls=ls,
+                label=f'{legend_entry_prefix}{group_item[i].name}{legend_entry_postfix}')
+
+    l = ax.legend(loc=legend_loc, frameon=False, labelspacing=legend_spacing, ncol=legend_columns,
+                  handlelength=None if show_legend_line else 0, handletextpad=None if show_legend_line else 0,
+                  columnspacing=legend_column_spacing)
+
+    for i, text in enumerate(l.get_texts()):
+        # text.set_ha('right')
+        text.set_color(_cmap(i))
+
+    ax.set_axisbelow(False)
+    ax.yaxis.set_ticks_position('both')
+
+    plt.tight_layout()
+
+    if filepath:
+        ext = os.path.splitext(filepath)[1].lower()[1:]
+        plt.savefig(fname=filepath, format=ext, transparent=transparent, dpi=dpi)
+    else:
+        plt.show()
 
 
 def plot_fit(data_item, fit_item, residuals_item, symlog=False, linscale=1, linthresh=100,
