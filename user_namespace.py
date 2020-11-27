@@ -575,48 +575,49 @@ def plot_kinetics(group_item, n_spectra=50, linscale=1, linthresh=100, cmap='jet
     plt.show()
 
 
-def plot_kinetics_no_colorbar(group_item, x_lim=(None, None), y_lim=(None, None), selected_spectra=(0, 5, -1),
-                              x_label='Time / s',  y_label='$A$',  cmap='jet', darkens_factor_cmap=1, colors=None,
+def plot_kinetics_no_colorbar(group_item, x_lim=(None, None), y_lim=(None, None), slice_to_plot=slice(0, -1, 5),
+                              x_label='Time / s', y_label='$A$', cmap='jet', darkens_factor_cmap=1, colors=None,
                               x_major_locator=None, x_minor_locator=None,
                               y_major_locator=None, y_minor_locator=None,
-                              add_wn_axis=True,  lw=1.5, ls='-', plot_zero_line=True,
+                              add_wn_axis=True, lw=1.5, ls='-', plot_zero_line=True,
+                              label_format_fcn=lambda name: name,
                               legend_loc='best', legend_spacing=0.2, legend_columns=1, legend_column_spacing=2,
-                              legend_entry_prefix='pH = ', legend_entry_postfix='', show_legend_line=True,
+                              legend_entry_prefix='pH = ', legend_entry_postfix='', plot_legend_line=True,
                               fig_size=(5.5, 4.5),
                               dpi=500, filepath=None, transparent=True):
 
     fig, ax = plt.subplots(1, 1, figsize=fig_size)
 
-    set_main_axis(ax, x_label=x_label, y_label=y_label, xlim=x_lim, ylim=y_lim,
+    x = group_item[0].data[:, 0]
+    sel_items = group_item[slice_to_plot]
+
+    x_range = (x_lim[0] if x_lim[0] is not None else x[0], x_lim[1] if x_lim[1] is not None else x[-1])
+
+    set_main_axis(ax, x_label=x_label, y_label=y_label, xlim=x_range, ylim=y_lim,
                   x_major_locator=x_major_locator, x_minor_locator=x_minor_locator,
                   y_major_locator=y_major_locator, y_minor_locator=y_minor_locator)
 
     if add_wn_axis:
         _ = setup_wavenumber_axis(ax, x_major_locator=MultipleLocator(0.5))
 
-    x = group_item[0].data[:, 0]
-    n_spectra = selected_spectra.__len__()
-
-    _cmap = cm.get_cmap(cmap, n_spectra)
+    _cmap = cm.get_cmap(cmap, len(sel_items))
 
     if plot_zero_line:
-        line_x0 = x_lim[0] if x_lim[0] is not None else x[0]
-        line_x1 = x_lim[1] if x_lim[1] is not None else x[-1]
 
-        ax.axhline(0, line_x0, line_x1, ls='--', color='black', lw=1)
+        ax.axhline(0, x_range[0], x_range[1], ls='--', color='black', lw=1)
 
-    for i in range(n_spectra):
+    for i, item in enumerate(sel_items):
         if colors is None:
             color = np.asarray(c.to_rgb(_cmap(i))) * darkens_factor_cmap
             color[color > 1] = 1
         else:
             color = colors[i % len(colors)]
 
-        ax.plot(group_item[i].x, group_item[i].y, color=color, lw=lw, ls=ls,
-                label=f'{legend_entry_prefix}{group_item[i].name}{legend_entry_postfix}')
+        ax.plot(item.x, item.y, color=color, lw=lw, ls=ls,
+                label=f'{legend_entry_prefix}{label_format_fcn(item.name)}{legend_entry_postfix}')
 
     l = ax.legend(loc=legend_loc, frameon=False, labelspacing=legend_spacing, ncol=legend_columns,
-                  handlelength=None if show_legend_line else 0, handletextpad=None if show_legend_line else 0,
+                  handlelength=None if plot_legend_line else 0, handletextpad=None if plot_legend_line else 0,
                   columnspacing=legend_column_spacing)
 
     for i, text in enumerate(l.get_texts()):
