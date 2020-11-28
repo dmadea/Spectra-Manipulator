@@ -36,7 +36,7 @@ class PyMimeData(QMimeData):
     @classmethod
     def coerce(cls, md):
         """ Coerce a QMimeData instance to a PyMimeData instance if
-possible.
+        possible.
         """
         # See if the data is already of the right type.  If it is then
         # print('coarse PyMimeData')

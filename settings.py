@@ -1,5 +1,7 @@
 import json
 from logger import Logger
+import sys
+import os
 
 
 class Settings(object):
@@ -8,16 +10,18 @@ class Settings(object):
     # settings that starts with '_' will not be saved into a file
     # static variables
 
-    _filepath = "config.json"
+    _config_filename = "config.json"
     _inst_default_settings = None  # default settings instance
 
     # Simple Spectra Manipulator version
-    __version__ = "0.1.0"
-    __last_release__ = "16.5.2019"
+    __version__ = "0.1.1"
+    __last_release__ = "28.11.2020"
 
     # --------SETTINGS----------
 
     general_models_dir = 'general models\\'
+    REG_PROGRAM_NAME = 'SimpleSpectraManipulator.projectfile'
+    PROJECT_EXTENSION = '.smpj'
 
     # import options
 
@@ -154,18 +158,23 @@ class Settings(object):
         return filtered
 
     @classmethod
+    def get_config_filepath(cls):
+        curr_dir = os.path.dirname(os.path.realpath(__file__))
+        return os.path.join(curr_dir, cls._config_filename)
+
+    @classmethod
     def save(cls):
 
         sett_dict = cls._get_attributes()
 
         try:
 
-            with open(cls._filepath, "w") as file:
+            with open(cls.get_config_filepath(), "w") as file:
                 json.dump(sett_dict, file, sort_keys=False, indent=4, separators=(',', ': '))
 
         except Exception as ex:
             Logger.message("Error saving settings to file {}. Error message:\n{}".format(
-                Settings._filepath, ex.__str__()))
+                Settings._config_filename, ex.__str__()))
 
     @classmethod
     def load(cls):
@@ -174,7 +183,7 @@ class Settings(object):
             Settings._inst_default_settings = Settings()
 
         try:
-            with open(cls._filepath, "r") as file:
+            with open(cls.get_config_filepath(), "r") as file:
                 data = json.load(file)
 
             # instance = object.__new__(cls)
@@ -185,7 +194,7 @@ class Settings(object):
         except Exception as ex:
             Logger.message(
                 "Error loading settings from file {}, setting up default settings. Error message:\n{}".format(
-                    Settings._filepath, ex.__str__()))
+                    Settings._config_filename, ex.__str__()))
             Settings.save()
 
 # Settings.save()

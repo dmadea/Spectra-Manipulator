@@ -67,6 +67,7 @@ class Main(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dockTreeWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.var_widget)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.console)
+
         # fixing the resize bug https://stackoverflow.com/questions/48119969/qdockwidget-splitter-jumps-when-qmainwindow-resized
         self.resizeDocks([self.dockTreeWidget], [270], Qt.Horizontal)
         # self.resizeDocks([self.var_widget], [250], Qt.Vertical)
@@ -95,6 +96,9 @@ class Main(QMainWindow):
         self.grpView.update_settings()
 
         self.update_recent_files()
+
+        if len(sys.argv) > 1:  # open project or file if opened with an argument
+            self.open_project(filepath=sys.argv[1], open_dialog=False)
 
     def add_star(self):
         if not self.windowTitle().startswith('*'):
@@ -128,17 +132,18 @@ class Main(QMainWindow):
         for i in range(num):
             filepath = Settings.recent_project_filepaths[i]
             head, tail = os.path.split(filepath)
-            text = os.path.split(head)[1] + '\\' + os.path.splitext(tail)[0]
+            text = os.path.split(head)[1] + '/' + os.path.splitext(tail)[0]
             self.menuBar().recent_file_actions[i].setText(text)
-            self.menuBar().recent_file_actions[i].setData(filepath)
+            self.menuBar().recent_file_actions[i].setData(filepath)  # save filepath as data to QAction
             self.menuBar().recent_file_actions[i].setVisible(True)
+            self.menuBar().recent_file_actions[i].setStatusTip(filepath)  # show filepath in statusbar when hovered
 
     def add_recent_file(self, filepath):
         # if there is the same filepath in the list, remove this entry
         if filepath in Settings.recent_project_filepaths:
             Settings.recent_project_filepaths.remove(filepath)
 
-        Settings.recent_project_filepaths.insert(0, filepath)
+        Settings.recent_project_filepaths.insert(0, filepath.replace('\\', '/'))  # keep the style the same, so with /
         while len(Settings.recent_project_filepaths) > len(self.menuBar().recent_file_actions):
             # remove last one
             Settings.recent_project_filepaths = Settings.recent_project_filepaths[:-1]
@@ -318,7 +323,6 @@ class Main(QMainWindow):
     def intLineStyle(self, counter):
         styles = [Qt.SolidLine, Qt.DashLine, Qt.DotLine, Qt.DashDotLine, Qt.DashDotDotLine]
         return styles[counter % len(styles)]
-
 
     def get_user_gradient(self):
         """Gradient in a format of

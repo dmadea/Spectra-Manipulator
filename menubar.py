@@ -63,7 +63,6 @@ class MenuBar(QMenuBar):
         self.exit_act.triggered.connect(self.parent().close)
         self.file_menu.addAction(self.exit_act)
 
-
         # ---Utilities---
 
         self.utilities_plot_menu = self.addMenu("&Utilities")
@@ -71,7 +70,6 @@ class MenuBar(QMenuBar):
         self.function_plotter_act = QAction("&Function plotter", self)
         self.function_plotter_act.triggered.connect(self.open_function_plotter)
         self.utilities_plot_menu.addAction(self.function_plotter_act)
-
 
 
         # ---Export Plot----
@@ -115,7 +113,7 @@ class MenuBar(QMenuBar):
 <h3>Simple Spectra Manipulator</h3>
 <p>Version:&nbsp;<span style="color: #ff00ff;"><strong>{Settings.__version__}</strong></span></p><p>Last release: <strong><span style="color: #ff0000;">{Settings.__last_release__}</span></strong></p>
 <p><span style="color: #000000;">This software is distributed under the <span style="color: #339966;"><strong>MIT open-source licence&nbsp;</strong></span></span></p>
-<p>Copyright (c) 2019 Dominik Madea</p>
+<p>Copyright (c) 2020 Dominik Madea</p>
 <p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:</p>
 <p>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</p>
 <p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>"""

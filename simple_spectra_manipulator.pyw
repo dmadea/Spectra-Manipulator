@@ -7,7 +7,7 @@ from main import Main
 import sys, os
 if sys.executable.endswith("pythonw.exe"):
   sys.stdout = open(os.devnull, "w")
-  sys.stderr = open(os.path.join(os.getenv("TEMP"), "stderr-"+os.path.basename(sys.argv[0])), "w")
+  sys.stderr = open(os.path.join(os.getenv("TEMP"), "stderr-" + os.path.basename(sys.argv[0])), "w")
 
 
 application = QApplication(sys.argv)

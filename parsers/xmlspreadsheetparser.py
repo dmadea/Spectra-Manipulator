@@ -6,7 +6,7 @@ import numpy as np
 def parse_XML_Spreadsheet(xml_text):
     def float_try_parse(num):
         try:
-            return float(num.replace('.', '.').strip())
+            return float(num.replace(',', '.').strip())
         except ValueError:
             return None
 

@@ -1,10 +1,5 @@
 
 
-# import logging
-
-
-
-
 class Logger(object):
 
     _instance = None
@@ -24,19 +19,19 @@ class Logger(object):
         cls._instance.console_message(text)
 
     @classmethod
-    def status_message(cls, text):
+    def status_message(cls, text, delay=3000):
         if cls._instance is None:
             return
 
-        cls._instance.statusbar_message(text, 3000)
+        cls._instance.statusbar_message(text, delay)
 
     @classmethod
-    def message(cls, text):
+    def message(cls, text, delay=3000):
         if cls._instance is None:
             return
 
         cls._instance.console_message(text)
-        cls._instance.statusbar_message(text, 3000)
+        cls._instance.statusbar_message(text, delay)
 
 
 
