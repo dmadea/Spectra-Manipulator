@@ -4,12 +4,12 @@ import os
 from settings import Settings
 
 ROOT_PATH = r"Software\Classes"
-REG_PATH_EXT = ROOT_PATH + f"\\{Settings.PROJECT_EXTENSION}"  # \.smpj
+REG_PATH_EXT = f"{ROOT_PATH}\\{Settings.PROJECT_EXTENSION}"  # \.smpj
 
 
 def associate_project_file():
     if sys.platform != 'win32':
-        print("Association of smpj project files files only implemented for Windows systems.")
+        print(f"Association of {Settings.PROJECT_EXTENSION} project files files only implemented for Windows systems.")
         return
 
     import winreg as reg
@@ -22,7 +22,7 @@ def associate_project_file():
     # @= "blergcorp.blergapp.v1"
 
     try:
-        REG_PATH_PROGRAM = ROOT_PATH + f"\\{Settings.REG_PROGRAM_NAME}\\shell\\open\\command"
+        REG_PATH_PROGRAM = f"{ROOT_PATH}\\{Settings.REG_PROGRAM_NAME}\\shell\\open\\command"
 
         reg.CreateKey(reg.HKEY_CURRENT_USER, REG_PATH_EXT)
         registry_key_ext = reg.OpenKey(reg.HKEY_CURRENT_USER, REG_PATH_EXT, 0, reg.KEY_WRITE)
@@ -36,7 +36,7 @@ def associate_project_file():
 
         py_exec = sys.executable  # find python executable and change it to python without console if possible
         if py_exec.endswith('python.exe'):
-            py_exec = os.path.join(os.path.dirname(sys.executable), 'pythonw.exe')
+            py_exec = os.path.join(os.path.dirname(sys.executable), 'pythonw.exe')  # use pythonw.exe
 
         executable = f"\"{py_exec}\" \"{prog_path}\" \"%1\""  # path is "[pythonw.exe]" "[ssm.pyw]" "[path-to-file-arg]"
 
@@ -51,7 +51,7 @@ def associate_project_file():
         print(ex.__str__())
 
 
-def delete_subkey(key0: int, key1: str, key2=""):
+def _delete_subkey(key0: int, key1: str, key2=""):
     # from https://stackoverflow.com/questions/38205784/python-how-to-delete-registry-key-and-subkeys-from-hklm-getting-error-5
     import winreg as reg
 
@@ -74,7 +74,7 @@ def delete_subkey(key0: int, key1: str, key2=""):
             reg.DeleteKey(open_key, subkey)
             print(f"Removed {currentkey}\\{subkey}")
         except:
-            delete_subkey(key0, currentkey, subkey)
+            _delete_subkey(key0, currentkey, subkey)
             # no extra delete here since each call
             # to deleteSubkey will try to delete itself when its empty.
 
@@ -85,16 +85,16 @@ def delete_subkey(key0: int, key1: str, key2=""):
 
 def remove_project_file_association():
     if sys.platform != 'win32':
-        print("Association of smpj project files files only implemented for Windows systems.")
+        print(f"Association of {Settings.PROJECT_EXTENSION} project files files only implemented for Windows systems.")
         return
 
     import winreg as reg
 
     try:
-        REG_PATH_PROGRAM = ROOT_PATH + f"\\{Settings.REG_PROGRAM_NAME}"
+        REG_PATH_PROGRAM = f"{ROOT_PATH}\\{Settings.REG_PROGRAM_NAME}"
 
-        delete_subkey(reg.HKEY_CURRENT_USER, REG_PATH_EXT)
-        delete_subkey(reg.HKEY_CURRENT_USER, REG_PATH_PROGRAM)
+        _delete_subkey(reg.HKEY_CURRENT_USER, REG_PATH_EXT)
+        _delete_subkey(reg.HKEY_CURRENT_USER, REG_PATH_PROGRAM)
 
     except Exception as ex:
         print(ex.__str__())

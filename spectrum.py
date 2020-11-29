@@ -28,7 +28,7 @@ def group2mat(spectra):
     Returns
     -------
     out : tuple
-        x_values, converted_names, matrix"""
+        x_values, converted_names as y values, matrix with [x, y] dimension"""
 
     header_vals_temp = []
 
@@ -251,7 +251,7 @@ class Spectrum(object):
 
     @property
     def x(self):
-        """Returns the x values in this spectrum.
+        """Returns the x values of this spectrum.
 
         :return: ndarray
         """
@@ -259,7 +259,7 @@ class Spectrum(object):
 
     @x.setter
     def x(self, array):
-        """Sets the x values in this spectrum.
+        """Sets the x values of this spectrum.
 
         :return: ndarray
         """
@@ -267,7 +267,7 @@ class Spectrum(object):
 
     @property
     def y(self):
-        """Returns the y values in this spectrum.
+        """Returns the y values of this spectrum.
 
         :return: ndarray
         """
@@ -275,7 +275,7 @@ class Spectrum(object):
 
     @y.setter
     def y(self, array):
-        """Sets the y values in this spectrum.
+        """Sets the y values of this spectrum.
 
         :return: ndarray
         """
@@ -431,7 +431,7 @@ class Spectrum(object):
         return self
 
     def integrate(self, int_constant=0, redraw_spectra=True):
-        """Integrates the spectrum using trapezoidal integration method, spectrum y values will
+        """Integrates the spectrum using treapezoidal integration method, spectrum y values will
         be replaced by integrated values.
 
         Parameters
@@ -439,7 +439,7 @@ class Spectrum(object):
         int_constant : {int, float}
             Integration constant, default 0.
         redraw_spectra : bool
-            If True (default), spectra will be redrawn.
+            If True (default), spectra will be rdrawn.
         """
         self.data[:, 1] = cumtrapz(self.data[:, 1], self.data[:, 0], initial=int_constant)
 
@@ -522,7 +522,10 @@ class Spectrum(object):
         """
 
         if x0 > x1:
-            raise ValueError(f"Argument error, x0 ({x0}) cannot be larger than x1 ({x1}).")
+            x0, x1 = x1, x0
+
+        # if x0 > x1:
+        #     raise ValueError(f"Argument error, x0 ({x0}) cannot be larger than x1 ({x1}).")
 
         # get nearby indexes of user defined x values
         start_idx = Spectrum.find_nearest_idx(self.data[:, 0], x0)
