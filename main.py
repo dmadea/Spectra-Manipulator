@@ -27,8 +27,8 @@ from dialogs.settingsdialog import SettingsDialog
 from dialogs.export_spectra_as import ExportSpectraAsDialog
 import numpy as np
 
-import cProfile
-import pstats
+# import cProfile
+# import pstats
 
 
 class Main(QMainWindow):
@@ -39,7 +39,15 @@ class Main(QMainWindow):
 
         self.setWindowTitle("Untitled - Simple Spectra Manipulator")
 
-        self.resize(1000, 600)
+        w, h = 1000, 600
+
+        # setup window size based on current resolution
+        if sys.platform == 'win32':
+            from win32api import GetSystemMetrics
+            w, h = int(GetSystemMetrics(0) * 0.45), int(GetSystemMetrics(1) * 0.45)
+
+        print(w, h)
+        self.resize(w, h)
 
         self.console = Console(self)
 
@@ -69,9 +77,9 @@ class Main(QMainWindow):
         self.addDockWidget(Qt.BottomDockWidgetArea, self.console)
 
         # fixing the resize bug https://stackoverflow.com/questions/48119969/qdockwidget-splitter-jumps-when-qmainwindow-resized
-        self.resizeDocks([self.dockTreeWidget], [270], Qt.Horizontal)
+        self.resizeDocks([self.dockTreeWidget], [int(w / 4)], Qt.Horizontal)
         # self.resizeDocks([self.var_widget], [250], Qt.Vertical)
-        self.resizeDocks([self.console], [200], Qt.Vertical)
+        self.resizeDocks([self.console], [int(h / 3)], Qt.Vertical)
         self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
 
         self.coor_label = QLabel()
@@ -81,9 +89,6 @@ class Main(QMainWindow):
         self.createStatusBar()
         self.logger = Logger(self.console.showMessage, self.statusBar().showMessage)
 
-        # self.treeWidget.itemCheckStateChanged.connect(self.item_checked_changed)
-        # self.treeWidget.itemEdited.connect(self.item_edited)
-        # self.treeWidget.itemsDeleted.connect(self.items_deleted)
         self.tree_widget.redraw_spectra.connect(self.redraw_all_spectra)
         self.tree_widget.state_changed.connect(self.add_star)
 
@@ -97,7 +102,8 @@ class Main(QMainWindow):
 
         self.update_recent_files()
 
-        if len(sys.argv) > 1:  # open project or file if opened with an argument
+        # open project or file if opened with an argument
+        if len(sys.argv) > 1:
             self.open_project(filepath=sys.argv[1], open_dialog=False)
 
     def add_star(self):
@@ -116,10 +122,6 @@ class Main(QMainWindow):
 
         statusBar.addPermanentWidget(self.console_button)
         self.console_button.isChecked()
-
-        # self.grpView.coordinates_func = self.lblCoordinates.setText
-        #
-        # self.lblCoordinates.setText('')
 
     def update_current_file(self, filepath):
         self.current_file = filepath
@@ -266,7 +268,7 @@ class Main(QMainWindow):
         if self.tree_widget.top_level_items_count() == 0:
             return
 
-        filter = "Project files (*.smpj)"
+        filter = f"Project files (*.{Settings.PROJECT_EXTENSION})"
 
         filepath = QFileDialog.getSaveFileName(caption="Save project",
                                                directory=Settings.save_project_dialog_path if self.current_file is None else self.current_file,

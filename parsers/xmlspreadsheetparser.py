@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET
 from spectrum import Spectrum
 import numpy as np
 
-
+# bizare stuff...
 def parse_XML_Spreadsheet(xml_text):
     def float_try_parse(num):
         try:

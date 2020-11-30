@@ -55,7 +55,7 @@
 https://github.com/pyqtgraph/pyqtgraph/pull/641/commits/d09fe6bd478770862dffc3157f25e2dfcfa2a4ed
 
 
-uprava dev distribuce pyqtgraph dev-0.11
+uprava pyqtgraph v pyqtgraphmodif
 file pyqtgraph.graphicsItems.PlotItem.PlotItem.py was modified
 added option wheater to draw legend or not, modified two functions, "plot" and "addItem"
 

@@ -1,7 +1,8 @@
-import numpy as np
-import os
 
-from copy import deepcopy
+import numpy as np
+# import os
+
+# from copy import deepcopy
 import math
 
 from scipy.signal import savgol_filter
@@ -827,260 +828,28 @@ class SpectrumList:
     #     if redraw_spectra:
     #         self._redraw_all_spectra()
 
-    # def _iterate_items(self):
-    #     for node in self:
-    #         if isinstance(node, SpectrumList):
-    #             for sp in node:
-    #                 if not isinstance(sp, Spectrum):
-    #                     raise ValueError("Objects in list have to be type of Spectrum.")
-    #                 yield sp
-    #             continue
-    #         if isinstance(node, Spectrum):
-    #             yield node
-    #             continue
-    #         raise ValueError("Objects in list have to be type of Spectrum.")
+    #
+    def get_y_values_at_x(self, x):
+        """Returns y values at particular x value as an ndarray in this group of spectra.
 
-    # def gradient(self, edge_order=1):
-    #     """
-    #     Calculates a gradients using central differences and replaces the original values.
-    #
-    #     Parameters
-    #     ----------
-    #     edge_order : int
-    #         1 or 2, Gradient is calculated using N-th order accurate differences at the boundaries. Default: 1.
-    #     """
-    #     for sp in self:
-    #         sp.gradient(edge_order, False)
-    #
-    #     self._redraw_all_spectra()
-    #     self._update_view()
-    #
-    #     return self
-    #
-    # def differentiate(self, n=1):
-    #     """
-    #     Calculates a derivatives for this group, replaces the values and redraws the spectra.
-    #     Length of the spectrum decreases by 1.
-    #     """
-    #     for sp in self:
-    #         sp.differentiate(n, False)
-    #
-    #     self._redraw_all_spectra()
-    #     self._update_view()
-    #
-    #     return self
-    #
-    # def integrate(self, int_constant=0):
-    #     """Integrates the group of spectra using trapezoidal integration method, spectra's y values will
-    #     be replaced by integrated values and redraws the spectra.
-    #
-    #     Parameters
-    #     ----------
-    #     int_constant : {int, float}
-    #         Integration constant, default 0.
-    #     """
-    #
-    #     for sp in self:
-    #         sp.integrate(int_constant, False)
-    #
-    #     self._redraw_all_spectra()
-    #
-    #     return self
-    #
-    # def integral(self, x0=None, x1=None):
-    #     """Calculates cumulative integral for each spectrum in this group at specified x range [x0, x1] by trapezoidal integration method.
-    #     If x0, x1 are None, all spectra will be integrated. Result is returned as ndarray.
-    #
-    #     Parameters
-    #     ----------
-    #     x0 : {int, float, None}
-    #         First x value. If both x0 and x1 are None, all spectra will be integrated.
-    #     x1 : {int, float, None}
-    #         Last x value. If both x0 and x1 are None, all spectra will be integrated.
-    #
-    #     Returns
-    #     -------
-    #     out : numpy.ndarray
-    #         Array of integrals.
-    #     """
-    #
-    #     results = []
-    #
-    #     for sp in self:
-    #         results.append(sp.integral(x0, x1))
-    #
-    #     return np.asarray(results, dtype=np.float64)
-    #
-    # def find_maximum(self, x0=None, x1=None):
-    #     """Returns an array of points (x and y value), which belongs to a maximum y value in a specified x range [x0, x1].
-    #     First column contains x values, the second y values.
-    #
-    #     Parameters
-    #     ----------
-    #     x0 : {int, float, None}
-    #         First x value. If both x0 and x1 are None, all spectra will be searched.
-    #     x1 : {int, float, None}
-    #         Last x value. If both x0 and x1 are None, all spectra will be searched.
-    #
-    #     Returns
-    #     -------
-    #     out : ndarray
-    #         A highest points in spectra.
-    #     """
-    #     results = []
-    #
-    #     for sp in self:
-    #         results.append(sp.find_maximum(x0, x1))
-    #
-    #     return np.asarray(results, dtype=np.float64)
-    #
-    # def get_y_values_at_x(self, x):
-    #     """Returns y values at particular x value as an ndarray in this group of spectra.
-    #
-    #     Parameters
-    #     ----------
-    #     x : {int, float}
-    #         The x value.
-    #
-    #     Returns
-    #     -------
-    #     out : ndarray
-    #         Array of y values at this x value.
-    #     """
-    #
-    #     ret_list = []
-    #
-    #     for sp in self:
-    #         idx = Spectrum.find_nearest_idx(sp.data[:, 0], x)
-    #         ret_list.append(sp.data[idx, 1])
-    #
-    #     return np.asarray(ret_list, dtype=np.float64)
+        Parameters
+        ----------
+        x : {int, float}
+            The x value.
 
+        Returns
+        -------
+        out : ndarray
+            Array of y values at this x value.
+        """
 
-    # def power_spectrum(self):
-    #     """Calculates the power spectrum using FFT and replaces the data values and redraws the spectra. Power spectrum is normalized to 1.
-    #     """
-    #
-    #     for sp in self:
-    #         sp.power_spectrum(False)
-    #
-    #     self._redraw_all_spectra()
-    #     self._update_view()
-    #
-    #     return self
-    #
-    # def savgol(self, window_length, poly_order):
-    #     """
-    #     Applies Savitysky-Golay filter to a group of spectra and redraws the spectra. Based on `scipy.signal.savgol_filter <https://docs.scipy.org/doc/scipy-0.15.1/reference/generated/scipy.signal.savgol_filter.html>`_.
-    #
-    #     Parameters
-    #     ----------
-    #     window_length : int
-    #         Length of window that is used in the algorithm, must be positive odd integer.
-    #     poly_order : int
-    #         Polynomial order used in the algorithm, must be >= 1.
-    #     """
-    #
-    #     for sp in self:
-    #         sp.savgol(window_length, poly_order, False)
-    #
-    #     self._redraw_all_spectra()
-    #
-    #     return self
-    #
-    # def baseline_correct(self, x0, x1):
-    #     """Subtracts the average of y data from the specified x range [x0, x1] from y values for each spectrum in
-    #     this group and redraws the spectra.
-    #
-    #     Parameters
-    #     ----------
-    #     x0 : {int, float}
-    #         First x value.
-    #     x1 : {int, float}
-    #         Last x value.
-    #     """
-    #     for sp in self:
-    #         sp.baseline_correct(x0, x1, False)
-    #
-    #     self._redraw_all_spectra()
-    #
-    #     return self
-    #
-    # def cut(self, x0, x1):
-    #     """Cuts all spectra in this group to x range [x0, x1] and redraws the spectra.
-    #
-    #     Parameters
-    #     ----------
-    #     x0 : {int, float}
-    #         First x value.
-    #     x1 : {int, float}
-    #         Last x value.
-    #     """
-    #     for sp in self:
-    #         sp.cut(x0, x1, False)
-    #
-    #     self._redraw_all_spectra()
-    #     self._update_view()
-    #
-    #     return self
-    #
-    # def interpolate(self, spacing=1, kind='linear'):
-    #     """Interpolates the spectra in this group and redraws them, based on `scipy.interpolation.interp1d <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html#scipy.interpolate.interp1d>`_.
-    #
-    #     Parameters
-    #     ----------
-    #     spacing : {int, float}
-    #         Sets the spacing between output x values, default 1.
-    #     kind : str
-    #         Sets the kind of interpolation method used, eg. 'linear', 'quadratic', etc. For more, refer to
-    #         `interp1d documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html#scipy.interpolate.interp1d>`_.
-    #         Default 'linear'.
-    #     """
-    #     for sp in self:
-    #         sp.interpolate(spacing, kind, False)
-    #
-    #     self._redraw_all_spectra()
-    #     self._update_view()
-    #
-    #     return self
-    #
-    # def normalize(self, x0, x1):
-    #     """Finds an y maximum at specified x range [x0, x1] and divide all y values by this maximum. This
-    #     operation is perfomred for each spectrum in this group. The spectra are redrawn.
-    #
-    #     Parameters
-    #     ----------
-    #     x0 : {int, float}
-    #         First x value.
-    #     x1 : {int, float}
-    #         Last x value.
-    #     """
-    #     for sp in self:
-    #         sp.normalize(x0, x1, False)
-    #
-    #     self._redraw_all_spectra()
-    #
-    #     return self
-    #
-    # def extend_by_zeros(self, x0, x1):
-    #     """
-    #     Extends spectra in this group to a new x range [x0, x1] by zeros and redraws the spectra. The original data will
-    #     be replaced. Spacing will be determined from data of current spectrum.
-    #
-    #     Parameters
-    #     ----------
-    #     x0 : {int, float}
-    #         New fist x value.
-    #     x1 : {int, float}
-    #         New last x value.
-    #     """
-    #     for sp in self:
-    #         sp.extend_by_zeros(x0, x1, False)
-    #
-    #     self._redraw_all_spectra()
-    #     self._update_view()
-    #
-    #     return self
+        ret_list = []
+
+        for sp in self:
+            idx = find_nearest_idx(sp.data[:, 0], x)
+            ret_list.append(sp.data[idx, 1])
+
+        return np.asarray(ret_list, dtype=np.float64)
 
     def get_transpose(self, max_items=1000):
         """

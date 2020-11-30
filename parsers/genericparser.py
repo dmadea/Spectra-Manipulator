@@ -30,7 +30,7 @@ class GenericParser(object):
 
         # for line in it:
         #     # Do stuff...
-        pass
+        raise NotImplemented("This method has to be implemented.")
 
     def __iter__(self):
         """Return an line iterator that iterates through loaded data, either opened file, or string data"""

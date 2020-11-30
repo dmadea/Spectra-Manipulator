@@ -85,6 +85,10 @@ class Settings(object):
 
     color_scheme = 0  # 0 - default, 1 - HSV, 2 - user defined
 
+    # plotwidget settings
+
+    coordinates_sig_figures = 4  # number of significant figures displayed in status bar for cooridnates
+
     # HSV_color_scheme = True
     hues = 9
     values = 1

@@ -2,8 +2,6 @@ from spectrum import Spectrum
 import numpy as np
 from parsers.genericparser import GenericParser
 
-# from logger import Logger
-
 
 class DXFileParser(GenericParser):
 
@@ -71,7 +69,6 @@ class DXFileParser(GenericParser):
             wavelength = self.float_try_parse(split[0])
             absorbance = self.float_try_parse(split[1])
             if wavelength is None or absorbance is None:
-                # count += 1
                 self._parse_data(data, name)
                 continue
 
