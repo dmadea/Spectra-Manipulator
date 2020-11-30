@@ -121,7 +121,7 @@ class Spectrum(object):
 
     op_funcs = ['find_maximum', 'integral']
 
-    def __init__(self, data, name='', filepath=None):
+    def __init__(self, data, name='', filepath=None, assume_sorted=False):
         """
         Class that holds the spectrum object as a 2D array (dimensions n x 2) where n is a number
         of points in spectrum and includes various functions used for data manipulation with them.
@@ -137,11 +137,15 @@ class Spectrum(object):
         filepath : {str, None}
             If the spectrum was imported from file, this variable stored the path to the file it was imported from.
         """
-        # sort according to first column,numpy matrix, 1. column wavelength, 2. column absorbance
-        self.data = np.asarray(data[data[:, 0].argsort()], dtype=np.float64) if data is not None else None
+
+        if assume_sorted:
+            self.data = np.asarray(data, dtype=np.float64) if data is not None else None
+        else:
+            # sort according to first column,numpy matrix, 1. column wavelength, 2. column absorbance
+            self.data = np.asarray(data[data[:, 0].argsort()], dtype=np.float64) if data is not None else None
+
         self.filepath = filepath
         self.name = name
-
 
     @classmethod
     def from_xy_values(cls, x_values, y_values, name=''):

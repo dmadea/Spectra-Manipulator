@@ -46,7 +46,7 @@
         <enum>QTabWidget::Rounded</enum>
        </property>
        <property name="currentIndex">
-        <number>2</number>
+        <number>0</number>
        </property>
        <property name="elideMode">
         <enum>Qt::ElideNone</enum>
@@ -93,6 +93,13 @@ If delimiter field is empty, lines will be splitted by any whitespace (' ', '\n'
               <item row="0" column="0">
                <layout class="QVBoxLayout" name="verticalLayout_10">
                 <item>
+                 <widget class="QCheckBox" name="cbRemoveEmptyEntries">
+                  <property name="text">
+                   <string>Remove empty entries for each parsed line</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
                  <layout class="QHBoxLayout" name="horizontalLayout_3">
                   <item>
                    <widget class="QLabel" name="label_12">
@@ -111,11 +118,32 @@ If delimiter field is empty, lines will be splitted by any whitespace (' ', '\n'
                  </layout>
                 </item>
                 <item>
-                 <widget class="QCheckBox" name="cbRemoveEmptyEntries">
+                 <widget class="QCheckBox" name="cbSkipNaNColumns">
                   <property name="text">
-                   <string>Remove empty entries for each parsed line</string>
+                   <string>Skip columns that contain NaN (Not a Number) values</string>
                   </property>
                  </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="horizontalLayout_5">
+                  <item>
+                   <widget class="QLabel" name="label_13">
+                    <property name="text">
+                     <string>Replacement for NaN values:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QSpinBox" name="sbNaNReplacement">
+                    <property name="minimum">
+                     <number>-999999</number>
+                    </property>
+                    <property name="maximum">
+                     <number>9999997</number>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </item>
                </layout>
               </item>

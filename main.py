@@ -221,12 +221,12 @@ class Main(QMainWindow):
 
         if open_dialog:
             # filter = "Data Files (*.txt, *.csv, *.dx)|*.txt;*.csv;*.dx|All Files (*.*)|*.*"
-            filter = "Project files (*.smpj);;All Files (*.*)"
-            initial_filter = "Project files (*.smpj)"
+            _filter = f"Project files (*.{Settings.PROJECT_EXTENSION});;All Files (*.*)"
+            initial_filter = f"Project files (*.{Settings.PROJECT_EXTENSION})"
 
             filepaths = QFileDialog.getOpenFileName(caption="Open project",
                                                     directory=Settings.open_project_dialog_path,
-                                                    filter=filter,
+                                                    filter=_filter,
                                                     initialFilter=initial_filter)
             if filepaths[0] == '':
                 return
@@ -234,10 +234,14 @@ class Main(QMainWindow):
             Settings.open_project_dialog_path = os.path.split(filepaths[0])[0]
             filepath = filepaths[0]
 
-        try:
-            project = Project.deserialize(filepath)
-        except:
+        if not os.path.exists(filepath):
+            Logger.message(f"File {filepath} does not exist.")
+            if filepath in Settings.recent_project_filepaths:
+                Settings.recent_project_filepaths.remove(filepath)
+
             return
+
+        project = Project.deserialize(filepath)
 
         if self.tree_widget.top_level_items_count() != 0:
             reply = QMessageBox.question(self, 'Open project', "Do you want to merge the project with current project? "

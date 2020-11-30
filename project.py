@@ -77,7 +77,6 @@ class Project(object):
         #     raise
         except Exception as err:
             Logger.message("Unable to load {}.\n{}".format(filepath, err.__str__()))
-            raise
 
 
 

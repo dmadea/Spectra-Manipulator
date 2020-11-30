@@ -7,7 +7,7 @@ class GeneralParser(GenericParser):
 
     def __init__(self, filepath=None, str_data=None, delimiter='\t', decimal_sep='.', remove_empty_entries=True,
                  skip_col_num=0, general_import_spectra_name_from_filename=False,
-                 general_if_header_is_empty_use_filename=True):
+                 general_if_header_is_empty_use_filename=True, skip_nan_columns=False, nan_replacement=0):
         super(GeneralParser, self).__init__(filepath, str_data, delimiter, decimal_sep)
 
         self._spectra_buffer = []
@@ -15,34 +15,42 @@ class GeneralParser(GenericParser):
         self.skip_col_num = skip_col_num
         self.general_import_spectra_name_from_filename = general_import_spectra_name_from_filename
         self.general_if_header_is_empty_use_filename = general_if_header_is_empty_use_filename
+        self.skip_nan_columns = skip_nan_columns
+        self.nan_replacement = nan_replacement
 
-    def float_try_parse(self, num_list):
-        return [GenericParser.float_try_parse(self, num) for num in num_list]
-
-    def _parse_data(self, data, names):
+    def _parse_chunk(self, data, names):
         if len(data) < 2:
             data.clear()
             names.clear()
             return False
 
         col_count = len(data[0])
-        # row_count = len(data)
 
         if len(names) < len(data[0]):  # resize names of spectra so that len(names) == len(data[0])
             names += [''] * (col_count - len(names))
 
+        # convert parsed data to numpy matrix for easier manipulation
+        # by setting a dtype=np.float64, invalid entries will become np.nan
+        np_data = np.asarray(data, dtype=np.float64)
+
+        if self.skip_nan_columns:
+            nan_cols = np.isnan(np_data).sum(axis=0, keepdims=False)
+            value_cols_idxs = np.argwhere(nan_cols == 0).squeeze()
+            np_data = np_data[:, value_cols_idxs]
+            names = [names[i] for i in value_cols_idxs]   # names is a list, not ndarray
+        else:
+            np_data = np.nan_to_num(np_data, nan=self.nan_replacement)  # convert nan values to used defined
+
+        # sort according to first column (x values)
+        np_data = np_data[np_data[:, 0].argsort()]
+
         spectra = []
-
-        np_data = np.asarray(data, dtype=np.float64)  # convert parsed data to numpy matrix for easier manipulation
-
-        for i in range(1, col_count):
-            # skip columns that contains NAN values
-            if any(np.isnan(np_data[:, i])):
-                continue
-
+        for i in range(1, np_data.shape[1]):
+            # separate the matrix to individual spectra, x values are from first column, the data are from i-th column
             sp_data = np_data[:, [0, i]]
 
-            sp = Spectrum(sp_data, self.filepath, names[i].strip(), self.name_of_file)
+            sp = Spectrum(sp_data, self.filepath, names[i].strip(), self.name_of_file)  # TODO add assume sorted arg.
+            # sp = Spectrum(sp_data, self.filepath, names[i].strip(), self.name_of_file, assume_sorted=True)
             spectra.append(sp)
 
         # for single spectrum, non-concacenated data
@@ -84,7 +92,7 @@ class GeneralParser(GenericParser):
             # line is a parsed list - ['entry1', 'entry2', .... ]
 
             if len(line) < 2:
-                self._parse_data(data, names)
+                self._parse_chunk(data, names)
                 continue
 
             if len(line) != 0:
@@ -95,16 +103,16 @@ class GeneralParser(GenericParser):
                 if self.remove_empty_entries:
                     line = list(filter(None, line))
 
-            l_values = self.float_try_parse(line)
+            l_values = [self.float_try_parse(num) for num in line]
 
             if l_values[0] is None:
-                self._parse_data(data, names)
+                self._parse_chunk(data, names)
                 names = line
 
                 continue
 
             data.append(l_values)
 
-        self._parse_data(data, names)
+        self._parse_chunk(data, names)
 
         return self._spectra_buffer

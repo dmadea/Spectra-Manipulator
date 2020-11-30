@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt
 from dialogs.gui_settings import Ui_Dialog
 
 from settings import Settings
-from logger import Logger
+# from logger import Logger
 
 
 class SettingsDialog(QtWidgets.QDialog, Ui_Dialog):
@@ -23,25 +23,24 @@ class SettingsDialog(QtWidgets.QDialog, Ui_Dialog):
         self.tabWidget.setCurrentIndex(Settings.gui_settings_last_tab_index)
         self.dx_if_title_is_empty_use_filename.stateChanged.connect(self.dx_if_title_is_empty_use_filename_checked_changed)
         self.general_if_header_is_empty_use_filename.stateChanged.connect(self.general_if_header_is_empty_use_filename_checked_changed)
-        # self.rbSkipColumns.toggled.connect(self.rbSkipColumns_changed)
 
         self.rbDefaultColorScheme.toggled.connect(self.schemes_changes)
         self.rbHSVColorScheme.toggled.connect(self.schemes_changes)
         self.rbUserColorScheme.toggled.connect(self.schemes_changes)
+        self.cbSkipNaNColumns.toggled.connect(self.cbSkipNaNColumns_toggled)
 
         self.btnRestoreDefaultSettings.clicked.connect(self.restore_default_settings)
 
-        # try:
         self.load_settings()
-        # except:
-        #     Logger.message("Loading of settings failed, default settings loaded.")
-        #     self.restore_default_settings()
 
         SettingsDialog.is_opened = True
         SettingsDialog._instance = self
 
         self.show()
         self.exec()
+
+    def cbSkipNaNColumns_toggled(self):
+        self.sbNaNReplacement.setEnabled(not self.cbSkipNaNColumns.isChecked())
 
     def restore_default_settings(self):
         Settings.set_default_settings()
@@ -83,7 +82,6 @@ class SettingsDialog(QtWidgets.QDialog, Ui_Dialog):
 
 
     # def rbDefaultColorScheme_checked_changed(self):
-
 
     def dx_if_title_is_empty_use_filename_checked_changed(self):
         if self.dx_if_title_is_empty_use_filename.checkState() == Qt.Checked:
@@ -138,6 +136,9 @@ class SettingsDialog(QtWidgets.QDialog, Ui_Dialog):
         self.rb_general_import_from_header.setChecked(not Settings.general_import_spectra_name_from_filename)
         self.general_if_header_is_empty_use_filename.setCheckState(
             self.check_state(Settings.general_if_header_is_empty_use_filename))
+
+        self.cbSkipNaNColumns.setChecked(Settings.skip_nan_columns)
+        self.sbNaNReplacement.setValue(Settings.nan_replacement)
 
         # perform change
         self.dx_if_title_is_empty_use_filename_checked_changed()
@@ -202,7 +203,6 @@ class SettingsDialog(QtWidgets.QDialog, Ui_Dialog):
         self.txbUserColorScheme.setPlainText(Settings.user_defined_grad)
         self.chbReverseZOrder.setChecked(self.check_state(Settings.reverse_z_order))
 
-
     def save_settings(self):
         if self.csv_imp_decimal_sep.text() == "" or self.general_imp_decimal_sep.text() == "" or \
                 self.dx_imp_decimal_sep.text() == "" or self.clip_imp_decimal_sep.text() == "" or \
@@ -227,6 +227,9 @@ class SettingsDialog(QtWidgets.QDialog, Ui_Dialog):
         Settings.general_import_spectra_name_from_filename = self.general_import_spectra_name_from_filename.isChecked()
         Settings.general_if_header_is_empty_use_filename = self.DEcheck_state(
             self.general_if_header_is_empty_use_filename.checkState())
+
+        Settings.skip_nan_columns = self.cbSkipNaNColumns.isChecked()
+        Settings.nan_replacement = float(self.sbNaNReplacement.value())
 
         Settings.clip_imp_delimiter = self.DEtextualize_special_chars(self.clip_imp_delimiter.text())
         Settings.clip_imp_decimal_sep = self.DEtextualize_special_chars(self.clip_imp_decimal_sep.text())

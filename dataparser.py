@@ -44,7 +44,10 @@ def parse_text(text):
                                remove_empty_entries=Settings.remove_empty_entries,
                                skip_col_num=Settings.skip_columns_num,
                                general_import_spectra_name_from_filename=Settings.general_import_spectra_name_from_filename,
-                               general_if_header_is_empty_use_filename=Settings.general_if_header_is_empty_use_filename)
+                               general_if_header_is_empty_use_filename=Settings.general_if_header_is_empty_use_filename,
+                               skip_nan_columns=Settings.skip_nan_columns,
+                               nan_replacement=Settings.nan_replacement)
+
     spectra = txt_parser.parse()
     if spectra is None or len(spectra) == 0:
         Logger.message("No lines were parsed, check delimiter, decimal separator and number of skipped columns in settings.")
@@ -61,7 +64,9 @@ def _parse_file(filepath):
                                    remove_empty_entries=Settings.remove_empty_entries,
                                    skip_col_num=Settings.skip_columns_num,
                                    general_import_spectra_name_from_filename=Settings.general_import_spectra_name_from_filename,
-                                   general_if_header_is_empty_use_filename=Settings.general_if_header_is_empty_use_filename)
+                                   general_if_header_is_empty_use_filename=Settings.general_if_header_is_empty_use_filename,
+                                   skip_nan_columns=Settings.skip_nan_columns,
+                                   nan_replacement=Settings.nan_replacement)
         return txt_parser.parse()
     # DX file
     elif ext == '.dx':
@@ -77,5 +82,8 @@ def _parse_file(filepath):
                                    remove_empty_entries=Settings.remove_empty_entries,
                                    skip_col_num=Settings.skip_columns_num,
                                    general_import_spectra_name_from_filename=Settings.general_import_spectra_name_from_filename,
-                                   general_if_header_is_empty_use_filename=Settings.general_if_header_is_empty_use_filename)
+                                   general_if_header_is_empty_use_filename=Settings.general_if_header_is_empty_use_filename,
+                                   skip_nan_columns=Settings.skip_nan_columns,
+                                   nan_replacement=Settings.nan_replacement)
+
         return txt_parser.parse()

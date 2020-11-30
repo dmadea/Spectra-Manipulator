@@ -27,6 +27,8 @@ class Settings(object):
 
     remove_empty_entries = True
     skip_columns_num = 0
+    skip_nan_columns = False
+    nan_replacement = 0
 
     csv_imp_delimiter = ','
     csv_imp_decimal_sep = '.'
