@@ -17,6 +17,7 @@ import pstats
 
 import numpy as np
 
+# possible workaround - https://stackoverflow.com/questions/34419072/how-to-improve-selection-performance-with-pyside-qtcore-qabstractitemmodel-and-q
 
 # this was tough to get together, I could not use the TreeWidget with StandardItemModel,
 # because iteration over items sometime gave not my item (SpectrumItem or SpectrumItemGroup) with my data,
@@ -256,13 +257,11 @@ class Model(QAbstractItemModel):
 
     def take_all_children(self, group_item):
         parent_index = self.indexFromNode(group_item)
-        # row = item.parent.rowOfChild(item)
         self.beginRemoveRows(parent_index, 0, len(group_item.children) - 1)
-        shallow_copy = group_item.children
-        group_item.children = []
+        ref_children_list = group_item.children
+        group_item.children = []  # reassign to empty list
         self.endRemoveRows()
-        # item.setParent(None)
-        return shallow_copy
+        return ref_children_list
 
     def take_item(self, item):
         parent_index = self.indexFromNode(item.parent)
@@ -272,6 +271,23 @@ class Model(QAbstractItemModel):
         self.endRemoveRows()
         # item.setParent(None)
         return item
+
+    def move_item(self, item, destination_group, row_to_place=None):
+
+        destination_parent = self.indexFromNode(destination_group)
+        source_parent = self.indexFromNode(item.parent)
+        row = item.parent.rowOfChild(item)
+
+        self.beginMoveRows(source_parent, row, row, destination_parent,
+                           0 if row_to_place is None else row_to_place)
+
+        if item.parent != destination_group:
+            item.parent.removeChildAtRow(row)
+            item.setParent(destination_group)
+        else:
+            destination_group.move_child(row, row_to_place)
+
+        self.endMoveRows()
 
     def add_items(self, items, parent_item, row=None):
         for item in reversed(items):
@@ -391,7 +407,7 @@ class Model(QAbstractItemModel):
 
         # row = 0
 
-        assert row != - 1
+        # assert row != - 1
         return self.createIndex(row, 0, parent)
 
     def update_tristate(self):
@@ -506,14 +522,16 @@ class TreeView(QTreeView):
         self.acceptDrops()
         self.showDropIndicator()
 
-        self.myModel.dataChanged.connect(self.change)
+        # self.myModel.dataChanged.connect(self.change)
+        self.myModel.dataChanged.connect(lambda topLeftIndex, bottomRightIndex: self.update(topLeftIndex))
+
+        # self.update(topLeftIndex)
         self.myModel.data_dropped_signal.connect(self.save_state)
 
         self.expandAll()
 
-    # to be implemented
     def save_state(self):
-        pass
+        raise NotImplementedError("TODO")
 
     # https://stackoverflow.com/questions/50391050/how-to-remove-row-from-qtreeview-using-qabstractitemmodel
     def delete_selected_items(self):
@@ -588,7 +606,6 @@ class TreeView(QTreeView):
 
         # emit deleted event and if at least one of the deleted items were checked -> redraw spectra
         self.items_deleted_signal.emit(item_was_checked)
-
         self.save_state()
 
     def keyPressEvent(self, e):
@@ -697,7 +714,6 @@ class TreeView(QTreeView):
         row = group_item.row()
         self.myModel.add_items(children, self.myModel.root, row + 1)
 
-        group_item = None
         del group_item
 
         self.myModel.removeRow(row, QModelIndex())
@@ -710,17 +726,31 @@ class TreeView(QTreeView):
         if not np.iterable(items):
             raise ValueError("Argument items must be iterable.")
 
+        # add group to the end of root
         group_item = SpectrumItemGroup('', parent=self.myModel.root) if group is None else group
         self.myModel.insertRows(self.myModel.root.__len__(), 1, QModelIndex())
 
-        for item in items:
+        group_item_index = self.myModel.createIndex(self.myModel.root.__len__(), 0, group_item)
+
+        for i, item in enumerate(items):
             if row_to_place is None:
                 row_to_place = item.parent.row() if item.is_in_group() else item.row()
 
-            self.myModel.add_item(self.myModel.take_item(item), group_item)
+            # QModelIndex() if parent is None else self.myModel.createIndex(parent.rowOfChild(node), 0, node)
 
-        taken_group_item = self.myModel.take_item(group_item)
-        self.myModel.add_item(taken_group_item, self.myModel.root, row_to_place)
+            row = item.parent.rowOfChild(item)
+            source_parent = self.myModel.indexFromNode(item.parent)
+
+            self.myModel.beginMoveRows(source_parent, row, row, group_item_index, i)
+
+            item.parent.removeChildAtRow(row)
+            item.setParent(group_item)
+
+            self.myModel.endMoveRows()
+
+            # self.myModel.move_item(item, group_item, i)
+
+        self.myModel.move_item(group_item, self.myModel.root, row_to_place)
 
         index = self.myModel.indexFromNode(group_item)
 
@@ -742,45 +772,6 @@ class TreeView(QTreeView):
         iterator = self.myModel.iterate_selected_items(skip_groups=True,
                                                         skip_childs_in_selected_groups=False)
         self.add_items_to_group(iterator)
-
-
-    # def add_selected_items_to_group(self):
-    #
-    #     if len(self.selectedIndexes()) == 0:
-    #         return
-    #
-    #     group_item = SpectrumItemGroup('', parent=self.myModel.root)
-    #     self.myModel.insertRows(self.myModel.root.__len__(), 1, QModelIndex())
-    #
-    #     row = None  # row where the new group will be placed
-    #
-    #     # taken_items = []
-    #
-    #     for item in self.myModel.iterate_selected_items(skip_groups=True,
-    #                                                     skip_childs_in_selected_groups=False):
-    #         if row is None:
-    #             row = item.parent.row() if item.is_in_group() else item.row()
-    #
-    #         self.myModel.add_item(self.myModel.take_item(item), group_item)
-    #
-    #         # taken_items.append(self.myModel.take_item(item))
-    #
-    #     # self.myModel.add_items(taken_items, group_item)
-    #
-    #     # # move the group to the top of the list
-    #     taken_group_item = self.myModel.take_item(group_item)
-    #     self.myModel.add_item(taken_group_item, self.myModel.root, row)
-    #
-    #     index = self.myModel.indexFromNode(group_item)
-    #
-    #     self.expand(index)
-    #     self.myModel.update_tristate()
-    #     self.setup_info()
-    #
-    #     # set edit mode of the group item
-    #     self.edit(index)
-    #
-    #     self.save_state()
 
     def import_spectra(self, spectra):
         if spectra is None:
@@ -813,12 +804,8 @@ class TreeView(QTreeView):
             self.setup_info()
             self.save_state()
 
-    def change(self, topLeftIndex, bottomRightIndex):
-        self.update(topLeftIndex)
-        # self.expandAll()
-        # print("changing")
-        # self.expanded(None)
-        self.setup_info()
+    # def change(self, topLeftIndex, bottomRightIndex):
+    #     self.update(topLeftIndex)
 
     def clear(self):
         """Removes all items from the TreeView"""

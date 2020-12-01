@@ -19,7 +19,7 @@ class SafeUnpickler(pickle.Unpickler):
         depending on the system, PyMod objects are rebuilt using only the name of their classes.
         """
 
-        if name == 'SpectrumList':
+        if name == 'SpectrumList':  # for backward compatibility
             return list
         # Try the standard routine of pickle.
         __import__(module)
@@ -28,7 +28,7 @@ class SafeUnpickler(pickle.Unpickler):
         return klass
 
 
-class Project(object):
+class Project:
 
     def __init__(self, spectra_list, *args):
 

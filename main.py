@@ -27,8 +27,8 @@ from dialogs.settingsdialog import SettingsDialog
 from dialogs.export_spectra_as import ExportSpectraAsDialog
 import numpy as np
 
-# import cProfile
-# import pstats
+import cProfile
+import pstats
 
 
 class Main(QMainWindow):
@@ -46,7 +46,7 @@ class Main(QMainWindow):
             from win32api import GetSystemMetrics
             w, h = int(GetSystemMetrics(0) * 0.45), int(GetSystemMetrics(1) * 0.45)
 
-        print(w, h)
+        # print(w, h)
         self.resize(w, h)
 
         self.console = Console(self)
@@ -485,9 +485,9 @@ if __name__ == "__main__":
 
     sys.exit(app.exec_())
 
-    # cProfile.run('app.exec_()', 'profdata')
-    # cProfile.runctx('app.exec_()', None, locals())
+    #### cProfile.run('app.exec_()', 'profdata')
+    # cProfile.runctx('app.exec_()', None, locals(), filename='profdata')
     # p = pstats.Stats('profdata')
-    # p.sort_stats('time').print_stats()
+    # p.sort_stats('cumtime').print_stats(100)
 
 # print(QtWidgets.QStyleFactory.keys())

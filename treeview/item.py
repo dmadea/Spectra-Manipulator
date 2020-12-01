@@ -3,7 +3,7 @@ from spectrum import Spectrum, SpectrumList
 from user_namespace import add_to_list, update_view, redraw_all_spectra
 
 
-class GenericItem(object):
+class GenericItem:
 
     def __init__(self, name, info, parent=None):
 
@@ -41,6 +41,9 @@ class GenericItem(object):
             # print("index error")
             return
 
+    def move_child(self, row_of_child: int, to_row=0):
+        self.children.insert(to_row, self.children.pop(row_of_child))
+
     def rowOfChild(self, child):
         for i, item in enumerate(self.children):
             if item == child:
@@ -49,8 +52,11 @@ class GenericItem(object):
 
     def removeChildAtRow(self, row):
         # try:
-        value = self.children[row]
-        self.children.remove(value)
+
+        del self.children[row]
+
+        # value = self.children[row]
+        # self.children.remove(value)
         # except:
         #     pass
 
