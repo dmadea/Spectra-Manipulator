@@ -357,7 +357,7 @@ class TreeWidget(TreeView):
         if items_count == 0:
             return
 
-        selected_node = self.myModel.nodeFromIndex(self.selectedIndexes()[0])
+        selected_node = self.myModel.node_from_index(self.selectedIndexes()[0])
         if isinstance(selected_node, SpectrumItemGroup):
             return
 
@@ -374,7 +374,7 @@ class TreeWidget(TreeView):
         if items_count == 0:
             return
 
-        selected_node = self.myModel.nodeFromIndex(self.selectedIndexes()[0])
+        selected_node = self.myModel.node_from_index(self.selectedIndexes()[0])
         if isinstance(selected_node, SpectrumItemGroup):
             selected_node = selected_node[0]  # select spectrum
 
@@ -492,7 +492,7 @@ class TreeWidget(TreeView):
         # pos is local position on QTreeWidget
         # cursor.pos() is position on screen
 
-        item = self.myModel.nodeFromIndex(self.indexAt(pos))
+        item = self.myModel.node_from_index(self.indexAt(pos))
 
         # print(pos, item.text(0) if item is not None else "None")
 
@@ -540,6 +540,42 @@ class TreeWidget(TreeView):
         set_style = sel_it_menu.addAction("Set Style")
         set_style.triggered.connect(self.set_style)
 
+        # sort group menu
+
+        sort_group_menu = QMenu("Sort Group")
+
+        sort_group_ascending = QAction("Ascending", self)
+        sort_group_descending = QAction("Descending", self)
+
+        sort_group_menu.addAction(sort_group_ascending)
+        sort_group_menu.addAction(sort_group_descending)
+        sort_group_ascending.triggered.connect(lambda: self.sort_selected_group(ascending=True))
+        sort_group_descending.triggered.connect(lambda: self.sort_selected_group(ascending=False))
+
+        # sort top level items menu
+
+        sort_top_level_items_menu = QMenu("Sort Top-level Items")
+
+        sort_tli_ascending = QAction("Ascending", self)
+        sort_tli_descending = QAction("Descending", self)
+
+        sort_top_level_items_menu.addAction(sort_tli_ascending)
+        sort_top_level_items_menu.addAction(sort_tli_descending)
+        sort_tli_ascending.triggered.connect(lambda: self.sort_tree_view(ascending=True))
+        sort_tli_descending.triggered.connect(lambda: self.sort_tree_view(ascending=False))
+
+        # sort all items also withing all groups
+
+        sort_all_menu = QMenu("Sort All Items and Groups")
+
+        sort_all_ascending = QAction("Ascending", self)
+        sort_all_descending = QAction("Descending", self)
+
+        sort_all_menu.addAction(sort_all_ascending)
+        sort_all_menu.addAction(sort_all_descending)
+        sort_all_ascending.triggered.connect(lambda: self.sort_tree_view(sort_groups=True, ascending=True))
+        sort_all_descending.triggered.connect(lambda: self.sort_tree_view(sort_groups=True, ascending=False))
+
         # clicked into blank
         if item is self.myModel.root:
             create_group = menu.addAction("Create a New Group")
@@ -548,10 +584,10 @@ class TreeWidget(TreeView):
             uncheck_all = menu.addAction("Uncheck All Items")
             uncheck_all.triggered.connect(self.uncheck_all)
 
-            sort_tree_view = menu.addAction("Sort Tree View")
-            sort_tree_view.triggered.connect(self.sort_tree_view)
+            menu.addSeparator()
 
-
+            menu.addMenu(sort_top_level_items_menu)
+            menu.addMenu(sort_all_menu)
         else:
             # Clicked on item
             if isinstance(item, SpectrumItem):
@@ -563,24 +599,24 @@ class TreeWidget(TreeView):
 
                 menu.addMenu(sel_it_menu)
 
-                sort_tree_view = menu.addAction("Sort Tree View")
-                sort_tree_view.triggered.connect(self.sort_tree_view)
+                menu.addSeparator()
 
             # Clicked on group
             else:
                 ungroup = menu.addAction("Ungroup")
-                ungroup.triggered.connect(self.ungroup)
+                ungroup.triggered.connect(self.ungroup_selected_group)
 
                 uncheck_all = menu.addAction("Uncheck All Items")
                 uncheck_all.triggered.connect(self.uncheck_all)
 
                 menu.addMenu(sel_it_menu)
 
-                sort_group = menu.addAction("Sort Group")
-                sort_group.triggered.connect(self.sort_group)
+                menu.addSeparator()
 
-                sort_tree_view = menu.addAction("Sort Tree View")
-                sort_tree_view.triggered.connect(self.sort_tree_view)
+                menu.addMenu(sort_group_menu)
+
+            menu.addMenu(sort_top_level_items_menu)
+            menu.addMenu(sort_all_menu)
 
             menu.addSeparator()
 

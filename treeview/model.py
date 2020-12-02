@@ -119,7 +119,7 @@ class Model(QAbstractItemModel):
         # first we have to sort the selected items because the are not sorted...
         for i in range(0, len(indexes), 2):
             idx = indexes[i]
-            item = self.nodeFromIndex(indexes[i])
+            item = self.node_from_index(indexes[i])
 
             order = int(100000000)
             if item.is_top_level():
@@ -185,7 +185,7 @@ class Model(QAbstractItemModel):
         return mimeData
 
     def canDropMimeData(self, mimedata, action, row, column, parentIndex):
-        parentNode = self.nodeFromIndex(parentIndex)
+        parentNode = self.node_from_index(parentIndex)
         # print(action, row, column, parentNode.name)
         if self.coarsed_mimeData is None and not isinstance(mimedata, PyMimeData):
 
@@ -235,7 +235,7 @@ class Model(QAbstractItemModel):
             return True
 
         dragNodes = mimedata.instance()
-        parentNode = self.nodeFromIndex(parentIndex)
+        parentNode = self.node_from_index(parentIndex)
 
         row_to_insert = len(parentNode) if row == -1 else row
 
@@ -256,7 +256,7 @@ class Model(QAbstractItemModel):
         return True
 
     def take_all_children(self, group_item):
-        parent_index = self.indexFromNode(group_item)
+        parent_index = self.index_from_node(group_item)
         self.beginRemoveRows(parent_index, 0, len(group_item.children) - 1)
         ref_children_list = group_item.children
         group_item.children = []  # reassign to empty list
@@ -264,7 +264,7 @@ class Model(QAbstractItemModel):
         return ref_children_list
 
     def take_item(self, item):
-        parent_index = self.indexFromNode(item.parent)
+        parent_index = self.index_from_node(item.parent)
         row = item.parent.rowOfChild(item)
         self.beginRemoveRows(parent_index, row, row)
         item.parent.removeChildAtRow(row)
@@ -272,10 +272,27 @@ class Model(QAbstractItemModel):
         # item.setParent(None)
         return item
 
+    # def move_items(self, items):
+    #
+    #     source_parent = self.myModel.index_from_node(last_parent)
+    #
+    #     self.myModel.beginMoveRows(source_parent, first_row, last_row, group_item_index, i)
+    #
+    #     chunk = last_parent.children[first_row:last_row + 1]
+    #     del last_parent.children[first_row:last_row + 1]
+    #
+    #     for child in chunk:
+    #         child.setParent(group_item)
+    #
+    #     # item.parent.removeChildAtRow(row)
+    #     # item.setParent(group_item)
+    #
+    #     self.myModel.endMoveRows()
+
     def move_item(self, item, destination_group, row_to_place=None):
 
-        destination_parent = self.indexFromNode(destination_group)
-        source_parent = self.indexFromNode(item.parent)
+        destination_parent = self.index_from_node(destination_group)
+        source_parent = self.index_from_node(item.parent)
         row = item.parent.rowOfChild(item)
 
         self.beginMoveRows(source_parent, row, row, destination_parent,
@@ -293,12 +310,12 @@ class Model(QAbstractItemModel):
         for item in reversed(items):
             item.setParent(parent_item, row)
         self.insertRows(row if row is not None else len(parent_item.children), len(items),
-                        self.indexFromNode(parent_item))
+                        self.index_from_node(parent_item))
 
     def add_item(self, item, parent_item, row=None):
         """Add child to group a correspondingly updates the view, if row=None, child will be appended at the end."""
         item.setParent(parent_item, row)
-        self.insertRow(row if row is not None else len(parent_item.children), self.indexFromNode(parent_item))
+        self.insertRow(row if row is not None else len(parent_item.children), self.index_from_node(parent_item))
 
     def insertRow(self, row, parentIndex):
         return self.insertRows(row, 1, parentIndex)
@@ -313,7 +330,7 @@ class Model(QAbstractItemModel):
 
     def removeRows(self, row, count, parentIndex, update_tristate=True):
         self.beginRemoveRows(parentIndex, row, (row + (count - 1)))
-        node = self.nodeFromIndex(parentIndex)
+        node = self.node_from_index(parentIndex)
         # print(count)
         del node.children[row:row + count]
 
@@ -328,10 +345,10 @@ class Model(QAbstractItemModel):
         return True
 
     def index(self, row, column, parent):
-        node = self.nodeFromIndex(parent)
+        node = self.node_from_index(parent)
         return self.createIndex(row, column, node.childAtRow(row))
 
-    def indexFromNode(self, node):
+    def index_from_node(self, node):
         if node is None:
             return QModelIndex()
 
@@ -349,7 +366,7 @@ class Model(QAbstractItemModel):
         if role == Qt.TextAlignmentRole:
             return QVariant(int(Qt.AlignTop | Qt.AlignLeft))
 
-        node = self.nodeFromIndex(index)
+        node = self.node_from_index(index)
 
         if node is None:
             return QVariant()
@@ -380,7 +397,7 @@ class Model(QAbstractItemModel):
         return self.columns
 
     def rowCount(self, parent):
-        node = self.nodeFromIndex(parent)
+        node = self.node_from_index(parent)
         if node is None:
             return 0
         return len(node)
@@ -389,7 +406,7 @@ class Model(QAbstractItemModel):
         if not index.isValid():
             return QModelIndex()
 
-        node = self.nodeFromIndex(index)
+        node = self.node_from_index(index)
 
         if node is None:
             return QModelIndex()
@@ -438,7 +455,7 @@ class Model(QAbstractItemModel):
     def setData(self, index, value, role=None):
         if index.column() == 0:
             if role == Qt.EditRole:
-                node = self.nodeFromIndex(index)
+                node = self.node_from_index(index)
                 node.name = value
                 self.dataChanged.emit(index, index, [Qt.EditRole])
                 self.item_edited_signal.emit(node.isChecked())
@@ -448,7 +465,7 @@ class Model(QAbstractItemModel):
             # unchecked, checked and partially checked...
             if role == Qt.CheckStateRole:
                 # print("role == Qt.CheckStateRole:")
-                node = self.nodeFromIndex(index)
+                node = self.node_from_index(index)
                 node.check_state = value
 
                 if isinstance(node, SpectrumItemGroup):
@@ -478,7 +495,7 @@ class Model(QAbstractItemModel):
 
         return super(Model, self).setData(index, value, role)
 
-    def nodeFromIndex(self, index):
+    def node_from_index(self, index):
         return index.internalPointer() if index.isValid() else self.root
 
 
@@ -492,10 +509,9 @@ class ItemDelegate(QStyledItemDelegate):
 
 
 class TreeView(QTreeView):
-    selecting = False
-    deleting = False
 
-    # checking_selected_items = False
+    selecting = False  # this has to be static, method selectionChanged is called before __init__, wtf ??
+    deleting = False
 
     items_deleted_signal = pyqtSignal(bool)
 
@@ -596,7 +612,7 @@ class TreeView(QTreeView):
 
             parent = temp[0].parent
             row = parent.rowOfChild(temp[0])
-            parent_index = self.myModel.indexFromNode(parent)
+            parent_index = self.myModel.index_from_node(parent)
             self.myModel.removeRows(row, len(temp), parent_index, update_tristate=False)
 
         self.deleting = False
@@ -607,6 +623,95 @@ class TreeView(QTreeView):
         # emit deleted event and if at least one of the deleted items were checked -> redraw spectra
         self.items_deleted_signal.emit(item_was_checked)
         self.save_state()
+
+
+    def add_items_to_group(self, items, group=None, row_to_place=None, edit=True):
+        """edit - if place cursor in a new group item to edit the name"""
+
+        if not np.iterable(items):
+            raise ValueError("Argument items must be iterable.")
+
+        # add group to the end of root
+        group_item = SpectrumItemGroup('', parent=self.myModel.root) if group is None else group
+        self.myModel.insertRows(self.myModel.root.__len__(), 1, QModelIndex())
+
+        group_item_index = self.myModel.createIndex(self.myModel.root.__len__(), 0, group_item)
+
+        def _move_items(parent, first_row, last_row, group_item_index, row_to_put):
+            source_parent = self.myModel.index_from_node(parent)
+
+            self.myModel.beginMoveRows(source_parent, first_row, last_row, group_item_index, row_to_put)
+
+            chunk = parent.children[first_row:last_row + 1]  # take the reference
+            del parent.children[first_row:last_row + 1]  # delete them from from list
+
+            for child in chunk:
+                child.setParent(group_item)
+
+            self.myModel.endMoveRows()
+
+        last_parent = None
+        first_row = -1
+        last_row = -1
+        i = 0
+
+        for item in items:
+            if row_to_place is None:
+                row_to_place = item.parent.row() if item.is_in_group() else item.row()
+
+            current_parent = item.parent
+
+            if last_parent is None:
+                last_parent = current_parent
+
+            current_row = current_parent.rowOfChild(item)
+
+            if first_row == -1:
+                first_row = current_row
+
+            if last_row == -1:
+                last_row = current_row
+
+            if current_parent != last_parent or current_row - last_row > 1:  # move chunk of items
+
+                n_items = (last_row - first_row + 1)
+                _move_items(last_parent, first_row, last_row, group_item_index, i - n_items)
+
+                # current row will be changed because we removed n_items
+                first_row = current_row if current_parent != last_parent else current_row - n_items
+                last_row = first_row
+            else:
+                last_row = current_row
+
+            last_parent = current_parent
+            i += 1
+
+        # process last chunk
+        _move_items(last_parent, first_row, last_row, group_item_index, i - (last_row - first_row + 1))
+
+        # move the group to correct place
+        self.myModel.move_item(group_item, self.myModel.root, row_to_place)
+
+        index = self.myModel.index_from_node(group_item)
+
+        self.expand(index)
+        self.myModel.update_tristate()
+        self.setup_info()
+
+        # set edit mode of the group item
+        if edit:
+            self.edit(index)
+
+        self.save_state()
+
+    def add_selected_items_to_group(self):
+
+        if len(self.selectedIndexes()) == 0:
+            return
+
+        iterator = self.myModel.iterate_selected_items(skip_groups=True,
+                                                        skip_childs_in_selected_groups=False)
+        self.add_items_to_group(iterator)
 
     def keyPressEvent(self, e):
         pass
@@ -661,22 +766,22 @@ class TreeView(QTreeView):
         for item in self.myModel.iterate_items(ItemIterator.All):
             item.check_state = Qt.Unchecked
 
-        # self.myModel.update_tristate()
         self.myModel.dataChanged.emit(QModelIndex(), QModelIndex())
         self.myModel.checked_changed_signal.emit()
 
     def create_group(self):
         group_item = SpectrumItemGroup('', parent=self.myModel.root)
         self.myModel.insertRows(self.myModel.root.__len__(), 1, QModelIndex())
-        self.edit(self.myModel.indexFromNode(group_item))
+        self.edit(self.myModel.index_from_node(group_item))
 
-    def sort_tree_view(self, sort_groups=False):
+    def sort_tree_view(self, sort_groups=False, ascending=True):
 
         if self.myModel.root.__len__() == 0:
             return
 
         self.myModel.layoutAboutToBeChanged.emit([])
-        self.myModel.root.children = sorted(self.myModel.root.children, key=lambda child: child.name)
+        step = 1 if ascending else -1
+        self.myModel.root.children = sorted(self.myModel.root.children, key=lambda child: child.name)[::step]
         self.myModel.layoutChanged.emit([])
 
         if sort_groups:
@@ -684,27 +789,31 @@ class TreeView(QTreeView):
             for group in self.myModel.iterate_items(ItemIterator.Groups):
                 if group.__len__() == 0:
                     continue
-                group.children = sorted(group.children, key=lambda child: child.name)
+                group.children = sorted(group.children, key=lambda child: child.name)[::step]
             self.myModel.layoutChanged.emit([])
 
+        self.clearSelection()
         self.save_state()
 
-    def sort_group(self):
-        """If group_item is None, current item, expecting it is a SpectrumItemGroup, will be sorted."""
-        # if group_item is None:
-        group_item = self.myModel.nodeFromIndex(self.currentIndex())
-        # assert isinstance(group_item, SpectrumItemGroup)
-        if group_item.__len__() == 0:
-            return
+    def sort_selected_group(self, ascending=True):
+        self.sort_group(self.myModel.node_from_index(self.currentIndex()), ascending)
+
+    def sort_group(self, group_item, ascending=True):
         # help from documentation for emitting signals:
         # http://doc.qt.io/qt-5/qabstractitemmodel.html#layoutAboutToBeChanged
-        self.myModel.layoutAboutToBeChanged.emit([])
-        group_item.children = sorted(group_item.children, key=lambda child: child.name)
-        self.myModel.layoutChanged.emit([])
-        self.save_state()
+        if group_item.__len__() == 0:
+            return
 
-    def ungroup(self):
-        group_item = self.myModel.nodeFromIndex(self.currentIndex())
+        self.myModel.layoutAboutToBeChanged.emit([])
+        step = 1 if ascending else -1
+        group_item.children = sorted(group_item.children, key=lambda child: child.name)[::step]
+        self.myModel.layoutChanged.emit([])
+        self.clearSelection()
+
+    def ungroup_selected_group(self):
+        self.ungroup(self.myModel.node_from_index(self.currentIndex()))
+
+    def ungroup(self, group_item):
         assert isinstance(group_item, SpectrumItemGroup)
 
         if group_item.__len__() == 0:
@@ -719,59 +828,6 @@ class TreeView(QTreeView):
         self.myModel.removeRow(row, QModelIndex())
 
         self.save_state()
-
-    def add_items_to_group(self, items, group=None, row_to_place=None, edit=True):
-        """edit - if place cursor in a new group item to edit the name"""
-
-        if not np.iterable(items):
-            raise ValueError("Argument items must be iterable.")
-
-        # add group to the end of root
-        group_item = SpectrumItemGroup('', parent=self.myModel.root) if group is None else group
-        self.myModel.insertRows(self.myModel.root.__len__(), 1, QModelIndex())
-
-        group_item_index = self.myModel.createIndex(self.myModel.root.__len__(), 0, group_item)
-
-        for i, item in enumerate(items):
-            if row_to_place is None:
-                row_to_place = item.parent.row() if item.is_in_group() else item.row()
-
-            # QModelIndex() if parent is None else self.myModel.createIndex(parent.rowOfChild(node), 0, node)
-
-            row = item.parent.rowOfChild(item)
-            source_parent = self.myModel.indexFromNode(item.parent)
-
-            self.myModel.beginMoveRows(source_parent, row, row, group_item_index, i)
-
-            item.parent.removeChildAtRow(row)
-            item.setParent(group_item)
-
-            self.myModel.endMoveRows()
-
-            # self.myModel.move_item(item, group_item, i)
-
-        self.myModel.move_item(group_item, self.myModel.root, row_to_place)
-
-        index = self.myModel.indexFromNode(group_item)
-
-        self.expand(index)
-        self.myModel.update_tristate()
-        self.setup_info()
-
-        # set edit mode of the group item
-        if edit:
-            self.edit(index)
-
-        self.save_state()
-
-    def add_selected_items_to_group(self):
-
-        if len(self.selectedIndexes()) == 0:
-            return
-
-        iterator = self.myModel.iterate_selected_items(skip_groups=True,
-                                                        skip_childs_in_selected_groups=False)
-        self.add_items_to_group(iterator)
 
     def import_spectra(self, spectra):
         if spectra is None:
@@ -844,19 +900,19 @@ class TreeView(QTreeView):
         self.myModel.dataChanged.emit(QModelIndex(), QModelIndex())
         self.save_state()
 
-    def select_item(self, item):
-        self.selecting = True
-
-        flags = QItemSelectionModel.Select
-        selection = QItemSelection()
-
-        start_index = self.myModel.createIndex(item.row(), 0, item)
-        end_index = self.myModel.createIndex(item.row(), 1, item)
-
-        selection.select(start_index, end_index)
-        self.selectionModel().select(selection, flags)
-
-        self.selecting = False
+    # def select_item(self, item):
+    #     self.selecting = True
+    #
+    #     flags = QItemSelectionModel.Select
+    #     selection = QItemSelection()
+    #
+    #     start_index = self.myModel.createIndex(item.row(), 0, item)
+    #     end_index = self.myModel.createIndex(item.row(), 1, item)
+    #
+    #     selection.select(start_index, end_index)
+    #     self.selectionModel().select(selection, flags)
+    #
+    #     self.selecting = False
 
     def selectionChanged(self, selected, deselected):
 
