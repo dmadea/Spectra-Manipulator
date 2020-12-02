@@ -1,7 +1,7 @@
 
 import sys
 import os
-from settings import Settings
+from SSM.settings import Settings
 
 ROOT_PATH = r"Software\Classes"
 REG_PATH_EXT = f"{ROOT_PATH}\\{Settings.PROJECT_EXTENSION}"  # \.smpj

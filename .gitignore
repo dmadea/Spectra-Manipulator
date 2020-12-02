@@ -62,11 +62,11 @@ target/
 
 
 
-fit_script.py
-test.py
+SSM/fit_script.py
+SSM/test.py
 # ui_convert.py
-config.json
-test_docstring.py
+SSM/config.json
+SSM/test_docstring.py
 
 # user defined script
-script.py
+SSM/script.py
