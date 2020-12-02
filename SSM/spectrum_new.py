@@ -1,14 +1,13 @@
 
 import numpy as np
-# import os
-
-# from copy import deepcopy
 import math
 
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 from scipy.fftpack import fft, fftfreq
 from scipy.integrate import cumtrapz, simps
+
+# import functools
 
 
 def find_nearest_idx(array, value):
@@ -586,95 +585,95 @@ class Spectrum(object):
             y = np.asarray(other)
             if y.shape[0] != self.data.shape[0]:
                 raise ValueError(
-                    f"Spectra '{self.name}' and data does not have the same dimension. Unable to perform operation.")
+                    f"Spectrum '{self.name}' and data does not have the same dimension. Unable to perform operation.")
 
             y_data = func_operation(self.data[:, 1], y)
             other_str = str(type(other))
 
-        elif isinstance(other, (float, int)):  # number
+        else:  # number
             y_data = func_operation(self.data[:, 1], other)
             other_str = str(other)
 
-        else:
-            raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
+        # else:
+        #     raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
 
         return Spectrum.from_xy_values(self.data[:, 0], np.nan_to_num(y_data)), other_str
 
     def __add__(self, other):
-        if isinstance(other, SpectrumList):
-            return other.__radd__(self)
+        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
+            return NotImplemented
         sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 + s2)
         sp.name = f"{self.name} + {other_str}"
 
         return sp
 
     def __sub__(self, other):
-        if isinstance(other, SpectrumList):
-            return other.__rsub__(self)
+        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
+            return NotImplemented
         sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 - s2)
         sp.name = f"{self.name} - {other_str}"
 
         return sp
 
     def __mul__(self, other):
-        if isinstance(other, SpectrumList):
-            return other.__rmul__(self)
+        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
+            return NotImplemented
         sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 * s2)
         sp.name = f"{self.name} * {other_str}"
 
         return sp
 
     def __truediv__(self, other):   # self / other
-        if isinstance(other, SpectrumList):
-            return other.__rtruediv__(self)
+        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
+            return NotImplemented
         sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 / s2)
         sp.name = f"{self.name} / {other_str}"
 
         return sp
 
     def __radd__(self, other):   # other + self
-        if not isinstance(other, (int, float, list, tuple, np.ndarray)):
-            raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
+        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
+            return NotImplemented
         sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 + s1)
         sp.name = f"{other_str} + {self.name}"
 
         return sp
 
     def __rsub__(self, other):   # other - self
-        if not isinstance(other, (int, float, list, tuple, np.ndarray)):
-            raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
+        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
+            return NotImplemented
         sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 - s1)
         sp.name = f"{other_str} - {self.name}"
 
         return sp
 
     def __rmul__(self, other):   # other * self
-        if not isinstance(other, (int, float, list, tuple, np.ndarray)):
-            raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
+        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
+            return NotImplemented
         sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 * s1)
         sp.name = f"{other_str} * {self.name}"
 
         return sp
 
     def __rtruediv__(self, other):  # other / self
-        if not isinstance(other, (int, float, list, tuple, np.ndarray)):
-            raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
+        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
+            return NotImplemented
         sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 / s1)
         sp.name = f"{other_str} / {self.name}"
 
         return sp
 
     def __pow__(self, power, modulo=None):  # self ** power
-        if isinstance(power, SpectrumList):
-            return power.__rpow__(self)
+        if not isinstance(power, (Spectrum, int, float, list, tuple, np.ndarray)):
+            return NotImplemented
         sp, other_str = self._arithmetic_operation(power, lambda s1, s2: s1 ** s2)
         sp.name = f"{self.name} ** {other_str}"
 
         return sp
 
     def __rpow__(self, other):  # other ** self
-        if not isinstance(other, (Spectrum, float, int, list, tuple, np.ndarray)):
-            raise ValueError("Cannot perform calculation of Spectrum with {}".format(type(other)))
+        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
+            return NotImplemented
 
         sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 ** s1)
         sp.name = f"{other_str} ** {self.name}"
@@ -690,10 +689,13 @@ class Spectrum(object):
         return self.__copy__()
 
     def __str__(self, separator='\t', decimal_sep='.', new_line='\n', include_header=True):
-        buffer = "Wavelength" + separator + self.name + new_line if include_header else ""
-        buffer += new_line.join(
-            separator.join(str(num).replace('.', decimal_sep) for num in row) for row in self.data)
-        return buffer
+        if self.data is None:
+            return 'Spectrum without data'
+        return f"Spectrum {self.name}, x_range=({self.data[0, 0]}, {self.data[-1, 0]}), n_points={self.data.shape[0]}"
+        # buffer = "Wavelength" + separator + self.name + new_line if include_header else ""
+        # buffer += new_line.join(
+        #     separator.join(str(num).replace('.', decimal_sep) for num in row) for row in self.data)
+        # return buffer
 
     def __copy__(self):
         """Deep copy the current instance as Spectrum object."""
@@ -704,6 +706,9 @@ class Spectrum(object):
 
 
 class SpectrumList:
+
+    # def __new__(cls):
+    #     self = super(SpectrumList, cls).__new__(cls)
 
     def __init__(self, children=None, name=''):
         """
@@ -731,9 +736,6 @@ class SpectrumList:
 
         self.children = [] if children is None else children
         self.name = name
-
-        # exec("def afunc(): return 1")
-        # setattr(self, 'mf', afunc)
 
         # setup functions that modify spectra
         for mf in Spectrum.modif_funcs:
@@ -765,6 +767,9 @@ class SpectrumList:
 
             _func.__doc__ = of_func.__doc__
             setattr(self, of, _func)
+
+        # exec("def afunc(): return 1")
+        # setattr(self, 'mf', afunc)
 
     def __len__(self):
         return self.children.__len__()

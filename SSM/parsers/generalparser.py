@@ -1,6 +1,6 @@
-from ..spectrum import Spectrum
-from .genericparser import GenericParser
 import numpy as np
+from SSM import Spectrum
+from SSM.parsers.genericparser import GenericParser
 
 
 class GeneralParser(GenericParser):

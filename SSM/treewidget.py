@@ -3,28 +3,28 @@ from PyQt5.QtWidgets import QApplication, QMessageBox, QMenu, QAction
 from PyQt5.QtGui import QCursor, QColor
 
 
-from .spectrum import Spectrum  # , SpectrumList
+from SSM import Spectrum  # , SpectrumList
 
-from .dialogs.int_int_inputdialog import IntIntInputDialog
-from .dialogs.interpolate_dialog import InterpolateDialog
-from .dialogs.rename_dialog import RenameDialog
-from .dialogs.fitwidget import FitWidget
-from .dialogs.stylewidget import StyleWidget
+from SSM.dialogs.int_int_inputdialog import IntIntInputDialog
+from SSM.dialogs.interpolate_dialog import InterpolateDialog
+from SSM.dialogs.rename_dialog import RenameDialog
+from SSM.dialogs.fitwidget import FitWidget
+from SSM.dialogs.stylewidget import StyleWidget
 # from dialogs.rangedialog import RangeDialog
-from .dialogs.rangewidget import RangeWidget
-from .dialogs.export_spectra_as import ExportSpectraAsDialog
+from SSM.dialogs.rangewidget import RangeWidget
+from SSM.dialogs.export_spectra_as import ExportSpectraAsDialog
 
-from .settings import Settings
-from .utils.smart_rename import smart_rename
-from .logger import Logger
+from SSM import Settings, Logger
+from SSM.utils.smart_rename import smart_rename
 
-from .treeview.item import SpectrumItemGroup, SpectrumItem
-from .treeview.model import TreeView, ItemIterator
+from SSM.treeview.item import SpectrumItemGroup, SpectrumItem
+from SSM.treeview.model import TreeView, ItemIterator
 
 # from console import Console
 
-from .dataparser import parse_XML_Spreadsheet, parse_text, parse_files
-from .exporter import list_to_string, list_to_files
+from SSM.parsers import parse_XML_Spreadsheet
+from SSM.dataparser import parse_text, parse_files
+from SSM.exporter import list_to_string, list_to_files
 
 
 def get_hierarchic_list(items_iterator):

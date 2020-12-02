@@ -1,6 +1,5 @@
 import pickle
-from .settings import Settings
-from .logger import Logger
+from SSM import Settings, Logger
 import sys
 
 COMPRESS_LEVEL = 3
@@ -59,6 +58,7 @@ class Project:
 
     @staticmethod
     def deserialize(filepath):
+
         try:
             try:
                 # with open(filepath, 'br') as file:
@@ -75,6 +75,7 @@ class Project:
         #     raise
         except Exception as err:
             Logger.message("Unable to load {}.\n{}".format(filepath, err.__str__()))
+
 
 
 

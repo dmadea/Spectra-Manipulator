@@ -1,5 +1,5 @@
 import json
-from .logger import Logger
+from SSM.logger import Logger
 import sys
 import os
 

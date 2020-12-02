@@ -3,12 +3,13 @@
 from PyQt5 import QtGui
 import pyqtgraph as pg
 
-from .pyqtgraphmodif.legend_item_modif import LegendItemModif
-from .pyqtgraphmodif.plot_item_modif import PlotItemModif
+from SSM.pyqtgraphmodif.legend_item_modif import LegendItemModif
+from SSM.pyqtgraphmodif.plot_item_modif import PlotItemModif
 
 from pyqtgraph.exporters import ImageExporter
 from pyqtgraph.exporters import SVGExporter
-from .settings import Settings
+
+from SSM import Settings
 
 from PyQt5.QtCore import Qt
 # from PyQt5.QtGui import QColor

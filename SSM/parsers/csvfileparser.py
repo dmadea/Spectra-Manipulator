@@ -1,5 +1,5 @@
 import csv
-from .generalparser import GeneralParser
+from SSM.parsers.generalparser import GeneralParser
 
 
 class CSVFileParser(GeneralParser):

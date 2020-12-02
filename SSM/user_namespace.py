@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Iterable
-from SSM.settings import Settings
+from SSM import Settings, Spectrum
 import os
 
 import matplotlib as mpl
@@ -9,7 +9,6 @@ from matplotlib import cm
 from matplotlib.ticker import *
 from matplotlib import colors as c
 
-from SSM.spectrum import Spectrum, SpectrumList
 # from copy import deepcopy
 from PyQt5.QtWidgets import QApplication
 from scipy.linalg import lstsq

@@ -1,23 +1,12 @@
 
 import os
 import numpy as np
-
-from .parsers.dxfileparser import DXFileParser
-from .parsers.csvfileparser import CSVFileParser
-from .parsers.generalparser import GeneralParser
-from .parsers.xmlspreadsheetparser import parse_XML_Spreadsheet as _parse_XML_Spreadsheet
-
-from .settings import Settings
-
-from .logger import Logger
-
 from concurrent.futures import ProcessPoolExecutor
 
+from SSM.parsers import GeneralParser, DXFileParser, CSVFileParser
+from SSM import Settings, Logger
+
 # import time
-
-
-def parse_XML_Spreadsheet(xml_text):
-    return _parse_XML_Spreadsheet(xml_text)
 
 
 def _process_filepath(args):
@@ -29,7 +18,14 @@ def _process_filepath(args):
         return "Error occurred while parsing file {}, skipping the file.\nException: {}\n".format(filepath, ex.__str__()), None
 
 
-def parse_files(filepaths):
+def parse_files(filepaths, settings: dict = None):
+    """
+
+
+    :param filepaths:
+    :param settings:
+    :return:
+    """
     if filepaths is None:
         raise ValueError("Filepaths cannot be None.")
     if isinstance(filepaths, str):
@@ -42,6 +38,8 @@ def parse_files(filepaths):
     spectra = []
 
     settings_dict = Settings.get_attributes()
+    if settings is not None:
+        settings_dict.update(settings)
     # start_time = time.time()
 
     # if at least two files are >= 0.5 MB, switch to multiprocess

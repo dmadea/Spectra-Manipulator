@@ -1,12 +1,9 @@
-
 import os
 import sys
 from abc import abstractmethod
-# from logger import Logger
 
-
-# abstract class that every parser must inherits
-class GenericParser(object):
+# abstract class that every parser should inherit
+class GenericParser:
 
     def __init__(self, filepath=None, str_data=None, delimiter='\t', decimal_sep='.'):
         if filepath is None and str_data is None:
@@ -80,3 +77,5 @@ class GenericParser(object):
             return float(num.replace(self.decimal_sep, '.').strip())
         except ValueError:
             return None
+
+

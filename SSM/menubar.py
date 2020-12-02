@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QMenuBar, QAction, QMenu
-from .settings import Settings
-from .dialogs.fitwidget import FitWidget
+from SSM import Settings
+from SSM.dialogs.fitwidget import FitWidget
 
 
 class MenuBar(QMenuBar):

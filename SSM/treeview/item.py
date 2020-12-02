@@ -1,6 +1,6 @@
 from PyQt5.QtCore import Qt
-from spectrum import Spectrum, SpectrumList
-from user_namespace import add_to_list, update_view, redraw_all_spectra
+from SSM import Spectrum, SpectrumList
+from SSM.user_namespace import add_to_list, update_view, redraw_all_spectra
 
 
 class GenericItem:

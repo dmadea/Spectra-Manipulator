@@ -24,6 +24,7 @@ from SSM.console import Console
 from SSM.misc import intColor, intColorGradient, int_default_color_scheme
 
 from SSM.dialogs.settingsdialog import SettingsDialog
+from SSM.treeview.item import SpectrumItemGroup
 
 import numpy as np
 
@@ -211,7 +212,11 @@ class Main(QMainWindow):
 
             return
 
-        project = Project.deserialize(filepath)
+        try:
+            project = Project.deserialize(filepath)
+        except Exception as err:
+            Logger.message("Unable to load {}.\n{}".format(filepath, err.__str__()))
+            return
 
         if self.tree_widget.top_level_items_count() != 0:
             reply = QMessageBox.question(self, 'Open project', "Do you want to merge the project with current project? "

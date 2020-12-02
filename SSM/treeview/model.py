@@ -7,10 +7,10 @@ from PyQt5.QtWidgets import QTreeView, QAbstractItemView, QStyledItemDelegate
 from PyQt5.QtCore import pyqtSignal, QAbstractItemModel, QVariant, QModelIndex, QItemSelection, QItemSelectionModel, Qt
 from PyQt5.QtGui import QFont
 
-from treeview.pymimedata import PyMimeData
-from treeview.item import GenericItem, SpectrumItemGroup, SpectrumItem
+from .pymimedata import PyMimeData
+from .item import GenericItem, SpectrumItemGroup, SpectrumItem
 
-from spectrum import Spectrum, SpectrumList
+# from SSM import Spectrum, SpectrumList
 
 import cProfile
 import pstats

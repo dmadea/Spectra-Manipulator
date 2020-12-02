@@ -3,12 +3,12 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from .stylewidget_gui import Ui_Form
 from PyQt5.QtWidgets import QColorDialog
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QMessageBox, QLineEdit, QCheckBox
-import numpy as np
-
-from ..spectrum import Spectrum
-
-import pyqtgraph as pg
+# from PyQt5.QtWidgets import QMessageBox, QLineEdit, QCheckBox
+# import numpy as np
+#
+# from ..spectrum import Spectrum
+#
+# import pyqtgraph as pg
 
 
 from PyQt5.QtCore import Qt

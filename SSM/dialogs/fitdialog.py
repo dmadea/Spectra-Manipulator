@@ -1,17 +1,15 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from PyQt5.QtCore import Qt
-from dialogs.gui_fit import Ui_Dialog
+from .gui_fit import Ui_Dialog
 
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QMessageBox, QLineEdit, QCheckBox
 import numpy as np
 
-from spectrum import Spectrum
-
 import pyqtgraph as pg
 
-from logger import Logger
+from SSM import Logger, Spectrum
 
 # from user_namespace import UserNamespace
 from console import Console

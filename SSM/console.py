@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QDockWidget, QWidget
 
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
-from .settings import Settings
+from SSM import Settings
 
 
 # great help from here https://stackoverflow.com/questions/11513132/embedding-ipython-qt-console-in-a-pyqt-application/12375397#12375397

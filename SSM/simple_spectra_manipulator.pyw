@@ -2,7 +2,7 @@
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QCoreApplication
-from .main import Main
+from SSM.main import Main
 
 import sys, os
 if sys.executable.endswith("pythonw.exe"):

@@ -7,16 +7,12 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QMessageBox, QLineEdit, QCheckBox, QFileDialog
 import numpy as np
 
-from ..spectrum import Spectrum
+from SSM import Spectrum, Logger, Console, Settings
 
 import pyqtgraph as pg
 
-from ..logger import Logger
-
 # from user_namespace import UserNamespace
-from ..console import Console
 
-# import lmfit
 from lmfit import fit_report, report_fit, Minimizer, report_ci, conf_interval, conf_interval2d, Parameters
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
@@ -35,7 +31,6 @@ from ..utils.syntax_highlighter import PythonHighlighter, KineticModelHighlighte
 import glob
 import os
 
-from ..settings import Settings
 from ..misc import int_default_color_scheme
 
 
