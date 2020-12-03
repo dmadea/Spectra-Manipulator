@@ -1,5 +1,6 @@
 import pickle
-from SSM import Settings, Logger
+from SSM.settings import Settings
+from SSM.logger import Logger
 import sys
 
 COMPRESS_LEVEL = 3
@@ -58,6 +59,8 @@ class Project:
 
     @staticmethod
     def deserialize(filepath):
+        instance = SafeUnpickler(open(filepath, 'rb')).load()
+        return instance
 
         try:
             try:

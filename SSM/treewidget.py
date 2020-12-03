@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QApplication, QMessageBox, QMenu, QAction
 from PyQt5.QtGui import QCursor, QColor
 
 
-from SSM import Spectrum  # , SpectrumList
+from SSM.spectrum import Spectrum  # , SpectrumList
 
 from SSM.dialogs.int_int_inputdialog import IntIntInputDialog
 from SSM.dialogs.interpolate_dialog import InterpolateDialog
@@ -14,7 +14,8 @@ from SSM.dialogs.stylewidget import StyleWidget
 from SSM.dialogs.rangewidget import RangeWidget
 from SSM.dialogs.export_spectra_as import ExportSpectraAsDialog
 
-from SSM import Settings, Logger
+from SSM.settings import Settings
+from SSM.logger import Logger
 from SSM.utils.smart_rename import smart_rename
 
 from SSM.treeview.item import SpectrumItemGroup, SpectrumItem

@@ -1,5 +1,5 @@
 import numpy as np
-from SSM import Spectrum
+from SSM.spectrum import Spectrum
 from SSM.parsers.genericparser import GenericParser
 
 

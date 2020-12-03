@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QMenuBar, QAction, QMenu
-from SSM import Settings
+from SSM.settings import Settings
 from SSM.dialogs.fitwidget import FitWidget
 
 

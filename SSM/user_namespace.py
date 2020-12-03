@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Iterable
-from SSM import Settings, Spectrum
+from SSM.settings import Settings
+from SSM.spectrum import Spectrum
 import os
 
 import matplotlib as mpl
@@ -727,7 +728,7 @@ class UserNamespace:
 
         # execute first commands
         self.main.console.execute_command(
-            "import numpy as np\nfrom user_namespace import *\nfrom spectrum import *\n"
+            "import numpy as np\nfrom SSM.user_namespace import *\nfrom SSM.spectrum import *\n"
             "import matplotlib.pyplot as plt\n%matplotlib inline")
 
         # from IPython.display import display, Math, Latex\n

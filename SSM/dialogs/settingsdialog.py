@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt
 # from PyQt5.QtWidgets import *
 from .gui_settings import Ui_Dialog
 
-from SSM import Settings
+from SSM.settings import Settings
 # from logger import Logger
 
 

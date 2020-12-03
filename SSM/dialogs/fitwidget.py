@@ -7,7 +7,10 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QMessageBox, QLineEdit, QCheckBox, QFileDialog
 import numpy as np
 
-from SSM import Spectrum, Logger, Console, Settings
+from SSM.settings import Settings
+from SSM.logger import Logger
+from SSM.spectrum import Spectrum
+from SSM.console import Console
 
 import pyqtgraph as pg
 

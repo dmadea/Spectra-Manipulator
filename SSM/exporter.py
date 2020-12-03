@@ -3,7 +3,7 @@ import os
 import io
 import numpy as np
 import csv
-from SSM import Spectrum
+from SSM.spectrum import Spectrum
 
 
 def list_to_files(list_of_spectra, dir_path, extension, include_group_name=True, include_header=True,

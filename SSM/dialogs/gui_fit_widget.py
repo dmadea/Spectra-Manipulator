@@ -9,6 +9,7 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from .mylineedit import MyLineEdit
 
 
 class Ui_Form(object):
@@ -357,7 +358,6 @@ class Ui_Form(object):
         self.btnFit.setText(_translate("Form", "Fit"))
         self.btnOK.setText(_translate("Form", "Ok"))
         self.btnClearPlot.setText(_translate("Form", "Clear Plot"))
-from dialogs.mylineedit import MyLineEdit
 
 
 if __name__ == "__main__":

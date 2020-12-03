@@ -1,5 +1,5 @@
 from PyQt5.QtCore import Qt
-from SSM import Spectrum, SpectrumList
+from SSM.spectrum import Spectrum, SpectrumList
 from SSM.user_namespace import add_to_list, update_view, redraw_all_spectra
 
 

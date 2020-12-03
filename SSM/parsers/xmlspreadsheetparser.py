@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-from SSM import Spectrum
+from SSM.spectrum import Spectrum
 import numpy as np
 
 # bizare stuff...

@@ -9,7 +9,7 @@ from SSM.pyqtgraphmodif.plot_item_modif import PlotItemModif
 from pyqtgraph.exporters import ImageExporter
 from pyqtgraph.exporters import SVGExporter
 
-from SSM import Settings
+from SSM.settings import Settings
 
 from PyQt5.QtCore import Qt
 # from PyQt5.QtGui import QColor
