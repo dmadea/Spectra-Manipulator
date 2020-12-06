@@ -2,29 +2,29 @@ import sys
 import os
 from PyQt5 import QtCore
 # from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QCoreApplication
 from PyQt5.QtWidgets import QMessageBox, QMainWindow, QFileDialog, QWidget, QPushButton, QStatusBar, QLabel, \
     QDockWidget, QApplication
+
 from PyQt5.QtGui import QColor, QFont
 from PyQt5 import QtWidgets
 
 import pyqtgraph as pg
 
-from SSM.treewidget import TreeWidget
-from SSM.treeview.model import ItemIterator
-from SSM.project import Project
-from SSM.settings import Settings
-from SSM.logger import Logger
-from SSM.plotwidget import PlotWidget
-# from spectrum import Spectrum
+from .treewidget import TreeWidget, get_hierarchic_list
+from .treeview.model import ItemIterator
+from .project import Project
+from .settings import Settings
+from .logger import Logger
+from .plotwidget import PlotWidget
 
-from SSM.user_namespace import UserNamespace
-from SSM.menubar import MenuBar
-from SSM.console import Console
-from SSM.misc import intColor, intColorGradient, int_default_color_scheme
+from .user_namespace import UserNamespace
+from .menubar import MenuBar
+from .console import Console
+from .misc import intColor, intColorGradient, int_default_color_scheme
 
-from SSM.dialogs.settingsdialog import SettingsDialog
-from SSM.treeview.item import SpectrumItemGroup
+from .dialogs.settingsdialog import SettingsDialog
+from .treeview.item import SpectrumItemGroup
 
 import numpy as np
 
@@ -212,11 +212,11 @@ class Main(QMainWindow):
 
             return
 
-        try:
-            project = Project.deserialize(filepath)
-        except Exception as err:
-            Logger.message("Unable to load {}.\n{}".format(filepath, err.__str__()))
-            return
+        project = Project.deserialize(filepath)
+        # try:
+        # except Exception as err:
+        #     Logger.message("Unable to load {}.\n{}".format(filepath, err.__str__()))
+        #     return
 
         if self.tree_widget.top_level_items_count() != 0:
             reply = QMessageBox.question(self, 'Open project', "Do you want to merge the project with current project? "
@@ -231,7 +231,10 @@ class Main(QMainWindow):
             else:
                 return
 
-        self.tree_widget.import_spectra(project.spectra_list)
+        if not hasattr(project, 'spectra_list') or project.spectra_list is None:  # for backward compatibility
+            self.tree_widget.import_project(project.generic_item)
+        else:  # for backward compatibility, for old project structure
+            self.tree_widget.import_spectra(project.spectra_list)
         self.add_recent_file(filepath)
 
         self.update_current_file(filepath)
@@ -255,10 +258,11 @@ class Main(QMainWindow):
         Settings.save_project_dialog_path = os.path.split(filepath[0])[0]
         Settings.save()
 
-        sp_list = self.tree_widget.get_hierarchic_list(
-            self.tree_widget.myModel.iterate_items(ItemIterator.NoChildren))
+        # sp_list = get_hierarchic_list(
+        #     self.tree_widget.myModel.iterate_items(ItemIterator.NoChildren))
+        # project = Project(spectra_list=sp_list)
 
-        project = Project(sp_list)
+        project = Project(generic_item=self.tree_widget.myModel.root)
         project.serialize(filepath[0])
 
         self.update_current_file(filepath[0])
@@ -271,7 +275,7 @@ class Main(QMainWindow):
             return
 
         if self.current_file is not None:
-            sp_list = self.tree_widget.get_hierarchic_list(
+            sp_list = get_hierarchic_list(
                 self.tree_widget.myModel.iterate_items(ItemIterator.NoChildren))
 
             project = Project(sp_list)
@@ -442,7 +446,7 @@ def my_exception_hook(exctype, value, traceback):
     sys.exit(1)
 
 
-if __name__ == "__main__":
+def main():
     # Back up the reference to the exceptionhook
     sys._excepthook = sys.excepthook
 
@@ -450,17 +454,27 @@ if __name__ == "__main__":
     sys.excepthook = my_exception_hook
 
     app = QApplication(sys.argv)
+
+    QCoreApplication.setOrganizationName("Spectra Manipulator")
+    QCoreApplication.setOrganizationDomain("FreeTimeCoding")
+    QCoreApplication.setApplicationName("Spectra Manipulator")
+
     # app.setStyle('Windows')
     form = Main()
     form.show()
 
     # form.interact()
 
+    app.lastWindowClosed.connect(app.quit)
     sys.exit(app.exec_())
 
     #### cProfile.run('app.exec_()', 'profdata')
     # cProfile.runctx('app.exec_()', None, locals(), filename='profdata')
     # p = pstats.Stats('profdata')
     # p.sort_stats('cumtime').print_stats(100)
+
+
+if __name__ == "__main__":
+    main()
 
 # print(QtWidgets.QStyleFactory.keys())

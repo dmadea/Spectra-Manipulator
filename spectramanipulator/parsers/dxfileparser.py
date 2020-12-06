@@ -1,6 +1,6 @@
 import numpy as np
-from SSM.spectrum import Spectrum
-from SSM.parsers.genericparser import GenericParser
+from spectramanipulator.spectrum import Spectrum
+from spectramanipulator.parsers.genericparser import GenericParser
 
 
 class DXFileParser(GenericParser):

@@ -1,5 +1,5 @@
 import json
-from SSM.logger import Logger
+from spectramanipulator.logger import Logger
 import sys
 import os
 
@@ -13,9 +13,6 @@ class Settings(object):
     _config_filename = "config.json"
     _inst_default_settings = None  # default settings instance
 
-    # Simple Spectra Manipulator version
-    __version__ = "0.1.1"
-    __last_release__ = "28.11.2020"
 
     # not in Settings dialog
     enable_multiprocessing = True  # enables importing files as separate processes
@@ -25,7 +22,7 @@ class Settings(object):
 
     # not in Settings dialog
     general_models_dir = 'general models\\'
-    REG_PROGRAM_NAME = 'SimpleSpectraManipulator.projectfile'
+    REG_PROGRAM_NAME = 'SpectraManipulator.projectfile'
     PROJECT_EXTENSION = '.smpj'
 
     # import options
@@ -134,26 +131,34 @@ class Settings(object):
 
     gui_settings_last_tab_index = 0
 
-    # def __new__(cls):
-    #     try:
-    #         return cls._instance
-    #     except AttributeError:
-    #         cls._instance = super().__new__(cls)
-    #         return cls._instance
+    _project_independent_settings = [
+        'export_spectra_as_dialog_path',
+        'export_spectra_as_dialog_ext',
+        'export_spectra_as_dialog_delimiter',
+        'export_spectra_as_dialog_decimal_sep',
+        'recent_project_filepaths',
+        'import_files_dialog_path',
+        'open_project_dialog_path',
+        'save_project_dialog_path',
+    ]
 
     def __init__(self):
+        """Saves the static attributes to attr and removes project independent settings."""
         self.attr = Settings.get_attributes()
 
         # delete settings that are project independent
 
-        del self.attr['export_spectra_as_dialog_path']
-        del self.attr['export_spectra_as_dialog_ext']
-        del self.attr['export_spectra_as_dialog_delimiter']
-        del self.attr['export_spectra_as_dialog_decimal_sep']
-        del self.attr['recent_project_filepaths']
-        del self.attr['import_files_dialog_path']
-        del self.attr['open_project_dialog_path']
-        del self.attr['save_project_dialog_path']
+        for s in Settings._project_independent_settings:
+            del self.attr[s]
+
+        # del self.attr['export_spectra_as_dialog_path']
+        # del self.attr['export_spectra_as_dialog_ext']
+        # del self.attr['export_spectra_as_dialog_delimiter']
+        # del self.attr['export_spectra_as_dialog_decimal_sep']
+        # del self.attr['recent_project_filepaths']
+        # del self.attr['import_files_dialog_path']
+        # del self.attr['open_project_dialog_path']
+        # del self.attr['save_project_dialog_path']
 
     def set_settings(self):
         """Sets static settings from this instance object (project settings)."""

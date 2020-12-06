@@ -145,7 +145,7 @@ class Spectrum(object):
             self.data = np.asarray(data[data[:, 0].argsort()], dtype=np.float64) if data is not None else None
 
         self.filepath = filepath
-        self.name = name
+        self._name = name
 
     @classmethod
     def from_xy_values(cls, x_values, y_values, name=''):
@@ -172,6 +172,12 @@ class Spectrum(object):
         ValueError
             If *x_values* or *y_values* have not the same dimension or do not contain numbers.
         """
+
+        # check whether the x and y values can be iterated over
+        if not np.iterable(x_values) and not np.iterable(y_values):
+            raise ValueError(
+                "Argument error, x_values and y_values must be iterables and contain numbers.")
+
         try:
             if len(x_values) != len(y_values):
                 raise ValueError("Length of x_values and y_values must match.")
@@ -180,13 +186,25 @@ class Spectrum(object):
             y_data = np.asarray(y_values, dtype=np.float64)
         except ValueError:
             raise
-        except:
-            raise ValueError(
-                "Argument error, x_values and y_values must be iterables and contain numbers.")
 
         data = np.vstack((x_data, y_data)).T
 
         return cls(data, name=name)
+
+    @property
+    def name(self):
+        """Returns the name of this spectrum.
+
+        :return: str
+        """
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        """Sets the name of this spectrum.
+
+        """
+        self._name = value
 
     @property
     def x(self):
@@ -699,10 +717,7 @@ class Spectrum(object):
 
     def __copy__(self):
         """Deep copy the current instance as Spectrum object."""
-        sp = Spectrum(None, filepath=self.filepath, name=self.name)
-
-        sp.data = self.data.copy()
-        return sp
+        return Spectrum(self.data.copy(), filepath=self.filepath, name=self.name, assume_sorted=True)
 
 
 class SpectrumList:
@@ -737,21 +752,23 @@ class SpectrumList:
         self.children = [] if children is None else children
         self.name = name
 
+        self.setup_fcn()
+
+    def setup_fcn(self):
         # setup functions that modify spectra
         for mf in Spectrum.modif_funcs:
 
             # # exec(f"def _func(*args):\n\tfor sp in self:\n\t\tsp.{mf}(*args)\n\n\treturn self", locals(), globals())
             # exec(f"def func(): return 1")
 
-            mf_func = getattr(Spectrum, mf)  # get static function declaration
-
             def _func(*args, **kwargs):
+                mf_func = getattr(Spectrum, mf)  # get static function declaration
                 for sp in self:
                     mf_func(sp, *args, **kwargs)
 
                 return self
 
-            _func.__doc__ = mf_func.__doc__
+            # _func.__doc__ = mf_func.__doc__
             setattr(self, mf, _func)
 
         # setup functions that returns some result
@@ -796,44 +813,6 @@ class SpectrumList:
         for sp, new_name in zip(self, names):
             sp.name = str(new_name)
 
-    # def set_plot_legend(self, plot_legend=True):
-    #     """
-    #     Sets whether to plot legend for this group or not and redraws all spectra.
-    #
-    #     Parameters
-    #     ----------
-    #     plot_legend : bool
-    #         Default True.
-    #     """
-    #
-    #     for sp in self:
-    #         sp.set_plot_legend(plot_legend, False)
-    #
-    # #     self._redraw_all_spectra()
-    #
-    # def set_style(self, color=None, line_width=None, line_type=None, redraw_spectra=True):
-    #     """
-    #     Sets color, line width and line type of all group and redraws all spectra.
-    #
-    #     Parameters
-    #     ----------
-    #     color : {str, tuple}, optional
-    #         Color of the spectrum, use string for common colors (eg. 'black', 'blue', 'red', ...)
-    #         or tuple - red, green, blue, alpha components from 0 - 255, eg. (255, 0, 0, 255).
-    #         If None (default), user defined color scheme will be used.
-    #     line_width : {int, float}, optional
-    #         Sets the line width of the plotted line. If None (default), user defined color scheme will be used.
-    #     line_type : int 0-6, optional
-    #         Sets the line type of the plotted line. See https://doc.qt.io/archives/qt-4.8/qt.html#PenStyle-enum
-    #         for line types. If None (default), user defined color scheme will be used.
-    #     """
-    #
-    #     for sp in self:
-    #         sp.set_style(color, line_width, line_type, False)
-    #     if redraw_spectra:
-    #         self._redraw_all_spectra()
-
-    #
     def get_y_values_at_x(self, x):
         """Returns y values at particular x value as an ndarray in this group of spectra.
 
@@ -862,7 +841,7 @@ class SpectrumList:
         must be convertible to int or float numbers. No text is allowed in these cells, only values.
         All x values of spectra in the group will become names in new group. The transposed group is added to Tree Widget.
         The operation is basically the same as copying the group of spectra to Excel, performs transposition of the matrix
-        and copying back to SSM.
+        and copying back to spectramanipulator.
 
         Parameters
         ----------
@@ -898,8 +877,6 @@ class SpectrumList:
             spectra.append(sp)
 
         return SpectrumList(spectra, name=group_name)
-
-        # self.add_to_list([spectra])
 
     def _arithmetic_operation(self, other, func_operation):
         """

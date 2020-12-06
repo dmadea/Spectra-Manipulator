@@ -1,7 +1,5 @@
 import numpy as np
 from typing import Iterable
-from SSM.settings import Settings
-from SSM.spectrum import Spectrum
 import os
 
 import matplotlib as mpl
@@ -13,6 +11,9 @@ from matplotlib import colors as c
 # from copy import deepcopy
 from PyQt5.QtWidgets import QApplication
 from scipy.linalg import lstsq
+
+from spectramanipulator.settings import Settings
+from spectramanipulator.spectrum import Spectrum
 
 # for backward compatibility of smpj files
 ItemList = list
@@ -728,7 +729,7 @@ class UserNamespace:
 
         # execute first commands
         self.main.console.execute_command(
-            "import numpy as np\nfrom SSM.user_namespace import *\nfrom SSM.spectrum import *\n"
+            "import numpy as np\nfrom spectramanipulator.user_namespace import *\nfrom spectramanipulator.spectrum import *\n"
             "import matplotlib.pyplot as plt\n%matplotlib inline")
 
         # from IPython.display import display, Math, Latex\n

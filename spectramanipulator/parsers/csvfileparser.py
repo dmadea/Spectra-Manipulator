@@ -1,5 +1,5 @@
 import csv
-from SSM.parsers.generalparser import GeneralParser
+from spectramanipulator.parsers.generalparser import GeneralParser
 
 
 class CSVFileParser(GeneralParser):

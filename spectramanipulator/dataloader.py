@@ -3,9 +3,9 @@ import os
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor
 
-from SSM.parsers import GeneralParser, DXFileParser, CSVFileParser
-from SSM.settings import Settings
-from SSM.logger import Logger
+from .parsers import GeneralParser, DXFileParser, CSVFileParser
+from .settings import Settings
+from .logger import Logger
 
 # import time
 

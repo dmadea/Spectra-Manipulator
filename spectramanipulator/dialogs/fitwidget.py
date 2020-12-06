@@ -7,10 +7,10 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QMessageBox, QLineEdit, QCheckBox, QFileDialog
 import numpy as np
 
-from SSM.settings import Settings
-from SSM.logger import Logger
-from SSM.spectrum import Spectrum
-from SSM.console import Console
+from spectramanipulator.settings import Settings
+from spectramanipulator.logger import Logger
+from spectramanipulator.spectrum import Spectrum
+from spectramanipulator.console import Console
 
 import pyqtgraph as pg
 
@@ -20,8 +20,8 @@ from lmfit import fit_report, report_fit, Minimizer, report_ci, conf_interval, c
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 
-import SSM.fitmodels
-import SSM.userfitmodels
+import spectramanipulator.fitmodels
+import spectramanipulator.userfitmodels
 import inspect
 import sys
 from ..general_model import GeneralModel

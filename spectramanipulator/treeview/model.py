@@ -10,7 +10,7 @@ from PyQt5.QtGui import QFont
 from .pymimedata import PyMimeData
 from .item import GenericItem, SpectrumItemGroup, SpectrumItem
 
-# from SSM import Spectrum, SpectrumList
+# from spectramanipulator import Spectrum, SpectrumList
 
 import cProfile
 import pstats
@@ -624,7 +624,6 @@ class TreeView(QTreeView):
         self.items_deleted_signal.emit(item_was_checked)
         self.save_state()
 
-
     def add_items_to_group(self, items, group=None, row_to_place=None, edit=True):
         """edit - if place cursor in a new group item to edit the name"""
 
@@ -632,7 +631,7 @@ class TreeView(QTreeView):
             raise ValueError("Argument items must be iterable.")
 
         # add group to the end of root
-        group_item = SpectrumItemGroup('', parent=self.myModel.root) if group is None else group
+        group_item = SpectrumItemGroup('', '', parent=self.myModel.root) if group is None else group
         self.myModel.insertRows(self.myModel.root.__len__(), 1, QModelIndex())
 
         group_item_index = self.myModel.createIndex(self.myModel.root.__len__(), 0, group_item)
@@ -838,6 +837,7 @@ class TreeView(QTreeView):
         self.myModel.removeRows(0, self.top_level_items_count(), QModelIndex())
 
     def setup_info(self):
+        """TODO --- rewrite more efficient"""
 
         for item in self.myModel.iterate_items(ItemIterator.All):
 
@@ -854,8 +854,8 @@ class TreeView(QTreeView):
                     item.info = "[{}] | {}; {} ({:.4g}, {:.4g})".format(row,
                                                                 item.length(),
                                                                 item.spacing(),
-                                                                item.x_min(),
-                                                                item.x_max())
+                                                                item.x.min(),
+                                                                item.x.max())
                 else:
                     parent = item.parent
                     group_idx = self.myModel.root.rowOfChild(parent)
@@ -863,8 +863,8 @@ class TreeView(QTreeView):
                     item.info = "[{}][{}] | {}; {} ({:.4g}, {:.4g})".format(group_idx, item_idx,
                                                                     item.length(),
                                                                     item.spacing(),
-                                                                    item.x_min(),
-                                                                    item.x_max())
+                                                                    item.x.min(),
+                                                                    item.x.max())
 
     def update_view(self):
         self.myModel.dataChanged.emit(QModelIndex(), QModelIndex())

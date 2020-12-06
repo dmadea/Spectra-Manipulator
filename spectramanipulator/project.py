@@ -1,6 +1,7 @@
 import pickle
-from SSM.settings import Settings
-from SSM.logger import Logger
+from spectramanipulator.settings import Settings
+from spectramanipulator.logger import Logger
+import spectramanipulator
 import sys
 
 COMPRESS_LEVEL = 3
@@ -19,10 +20,18 @@ class SafeUnpickler(pickle.Unpickler):
         depending on the system, PyMod objects are rebuilt using only the name of their classes.
         """
 
-        if name == 'SpectrumList':  # for backward compatibility
+        if name == 'SpectrumList':  # for very old backward compatibility
             return list
+
         # Try the standard routine of pickle.
-        __import__(module)
+        try:
+            # print(module)
+            __import__(module)
+        except ImportError:  # for backward compatibility when the program was not a python Package
+            print(f'import of {module} failed, adding spectramanipulator.')
+            module = f'spectramanipulator.{module}'
+            __import__(module)
+
         mod = sys.modules[module]
         klass = getattr(mod, name)
         return klass
@@ -30,22 +39,23 @@ class SafeUnpickler(pickle.Unpickler):
 
 class Project:
 
-    def __init__(self, spectra_list, *args):
+    def __init__(self, generic_item=None, *args):
 
-        self.spectra_list = spectra_list
-        self.settings = Settings()
+        # self.spectra_list = spectra_list  # used in older program versions
+        self.generic_item = generic_item
+        self.settings = Settings()  # saves the static attributes to instance attributes that are saved
 
         self.args = args
-        self.__version__ = self.settings.__version__
+        self.__version__ = spectramanipulator.__version__
 
     def serialize(self, filepath):
         try:
+            with open(filepath, 'bw') as file:
+                pickle.dump(self, file)
 
-            try:
-                with open(filepath, 'bw') as file:
-                    pickle.dump(self, file)
-            except:
-                pass
+            # try:
+            # except:
+            #     pass
 
             # with bz2.BZ2File(filepath, 'w', compresslevel=COMPRESS_LEVEL) as file:
             #     pickle.dump(self, file)
@@ -59,6 +69,9 @@ class Project:
 
     @staticmethod
     def deserialize(filepath):
+
+        # instance = pickle.load(open(filepath, 'rb'))
+
         instance = SafeUnpickler(open(filepath, 'rb')).load()
         return instance
 

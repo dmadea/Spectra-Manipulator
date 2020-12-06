@@ -9,7 +9,7 @@ import numpy as np
 
 import pyqtgraph as pg
 
-from SSM import Logger, Spectrum
+from spectramanipulator import Logger, Spectrum
 
 # from user_namespace import UserNamespace
 from console import Console

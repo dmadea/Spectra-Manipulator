@@ -176,7 +176,7 @@ class Spectrum(object):
                    plot_legend=plot_legend)
 
     def add_to_list(self):
-        """Adds this spectrum to the Tree Widget. Only works in SSM's Console Widget."""
+        """Adds this spectrum to the Tree Widget. Only works in spectramanipulator's Console Widget."""
         try:
             from user_namespace import add_to_list
             add_to_list(self)
@@ -1057,7 +1057,7 @@ class SpectrumList(object):
         return self.children.__len__()
 
     def add_to_list(self, spectra=None):
-        """Adds this group to the Tree Widget. Only works in SSM's Console Widget.
+        """Adds this group to the Tree Widget. Only works in spectramanipulator's Console Widget.
 
         Parameters
         ----------
@@ -1276,7 +1276,7 @@ class SpectrumList(object):
         must be convertible to int or float numbers. No text is allowed in these cells, only values.
         All x values of spectra in the group will become names in new group. The transposed group is added to Tree Widget.
         The operation is basically the same as copying the group of spectra to Excel, performs transposition of the matrix
-        and copying back to SSM.
+        and copying back to spectramanipulator.
 
         Parameters
         ----------

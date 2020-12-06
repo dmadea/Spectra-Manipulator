@@ -1,7 +1,7 @@
 
 import sys
 import os
-from SSM.settings import Settings
+from spectramanipulator.settings import Settings
 
 ROOT_PATH = r"Software\Classes"
 REG_PATH_EXT = f"{ROOT_PATH}\\{Settings.PROJECT_EXTENSION}"  # \.smpj
@@ -32,13 +32,15 @@ def associate_project_file():
         print(f"Added {REG_PATH_EXT}")
 
         curr_dirr = os.path.dirname(os.path.realpath(__file__))
-        prog_path = os.path.join(curr_dirr, "simple_spectra_manipulator.pyw")
+        prog_path = os.path.join(curr_dirr, "spectramanipulator.pyw")
+        # prog_path = "spectramanipulator"
 
         py_exec = sys.executable  # find python executable and change it to python without console if possible
         if py_exec.endswith('python.exe'):
             py_exec = os.path.join(os.path.dirname(sys.executable), 'pythonw.exe')  # use pythonw.exe
 
-        executable = f"\"{py_exec}\" \"{prog_path}\" \"%1\""  # path is "[pythonw.exe]" "[ssm.pyw]" "[path-to-file-arg]"
+        # executable = f"\"{py_exec}\" \"{prog_path}\" \"%1\""  # path is "[pythonw.exe]" -m "[ssm.pyw]" "[path-to-file-arg]"
+        executable = f"\"{py_exec}\" \"{prog_path}\" \"%1\""  # path is "[pythonw.exe]" -m "[ssm.pyw]" "[path-to-file-arg]"
 
         reg.CreateKey(reg.HKEY_CURRENT_USER, REG_PATH_PROGRAM)
         registry_key_prog = reg.OpenKey(reg.HKEY_CURRENT_USER, REG_PATH_PROGRAM, 0, reg.KEY_WRITE)

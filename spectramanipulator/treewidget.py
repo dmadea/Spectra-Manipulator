@@ -3,29 +3,29 @@ from PyQt5.QtWidgets import QApplication, QMessageBox, QMenu, QAction
 from PyQt5.QtGui import QCursor, QColor
 
 
-from SSM.spectrum import Spectrum  # , SpectrumList
+from spectramanipulator.spectrum import Spectrum  # , SpectrumList
 
-from SSM.dialogs.int_int_inputdialog import IntIntInputDialog
-from SSM.dialogs.interpolate_dialog import InterpolateDialog
-from SSM.dialogs.rename_dialog import RenameDialog
-from SSM.dialogs.fitwidget import FitWidget
-from SSM.dialogs.stylewidget import StyleWidget
+from spectramanipulator.dialogs.int_int_inputdialog import IntIntInputDialog
+from spectramanipulator.dialogs.interpolate_dialog import InterpolateDialog
+from spectramanipulator.dialogs.rename_dialog import RenameDialog
+from spectramanipulator.dialogs.fitwidget import FitWidget
+from spectramanipulator.dialogs.stylewidget import StyleWidget
 # from dialogs.rangedialog import RangeDialog
-from SSM.dialogs.rangewidget import RangeWidget
-from SSM.dialogs.export_spectra_as import ExportSpectraAsDialog
+from spectramanipulator.dialogs.rangewidget import RangeWidget
+from spectramanipulator.dialogs.export_spectra_as import ExportSpectraAsDialog
 
-from SSM.settings import Settings
-from SSM.logger import Logger
-from SSM.utils.smart_rename import smart_rename
+from spectramanipulator.settings import Settings
+from spectramanipulator.logger import Logger
+from spectramanipulator.utils.smart_rename import smart_rename
 
-from SSM.treeview.item import SpectrumItemGroup, SpectrumItem
-from SSM.treeview.model import TreeView, ItemIterator
+from spectramanipulator.treeview.item import SpectrumItemGroup, SpectrumItem, GenericItem
+from spectramanipulator.treeview.model import TreeView, ItemIterator
 
 # from console import Console
 
-from SSM.parsers import parse_XML_Spreadsheet
-from SSM.dataparser import parse_text, parse_files
-from SSM.exporter import list_to_string, list_to_files
+from spectramanipulator.parsers import parse_XML_Spreadsheet
+from spectramanipulator.dataloader import parse_text, parse_files
+from spectramanipulator.exporter import list_to_string, list_to_files
 
 
 def get_hierarchic_list(items_iterator):
@@ -729,6 +729,26 @@ class TreeWidget(TreeView):
             # Ctrl + D
             self.select_every_nth_item()
 
+    def import_project(self, generic_item):
+        if generic_item is None:
+            return
+
+        if not hasattr(generic_item, 'children'):
+            raise ValueError("Argument 'generic_item' must have an attribute 'children'.")
+
+        num_items = len(generic_item.children)
+
+        if num_items == 0:
+            return
+
+        self.myModel.root.children += generic_item.children
+
+        if num_items > 0:
+            # update names and view
+            self.myModel.insertRows(self.myModel.root.__len__(), num_items, QModelIndex())
+            self.setup_info()
+            self.save_state()
+
     def import_spectra(self, spectra):
         if spectra is None:
             return
@@ -744,7 +764,7 @@ class TreeWidget(TreeView):
         for node in spectra:
             if isinstance(node, Spectrum):
                 # child = SpectrumItem(node, node.name, '', parent=self.myModel.root)
-                child = SpectrumItem.init(node, self.myModel.root)
+                SpectrumItem.from_spectrum(node, parent=self.myModel.root)
 
                 add_rows_count += 1
             if isinstance(node, list):  # list of spectra
@@ -752,7 +772,7 @@ class TreeWidget(TreeView):
                 add_rows_count += 1
                 for sp in node:
                     # child = SpectrumItem(sp, sp.name, '', parent=group_item)
-                    child = SpectrumItem.init(sp, group_item)
+                    SpectrumItem.from_spectrum(sp, parent=group_item)
 
         if add_rows_count > 0:
             # update view and names

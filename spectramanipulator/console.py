@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QDockWidget, QWidget
 
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
-from SSM.settings import Settings
+import spectramanipulator
 
 
 # great help from here https://stackoverflow.com/questions/11513132/embedding-ipython-qt-console-in-a-pyqt-application/12375397#12375397
@@ -82,7 +82,7 @@ class Console(QDockWidget):
         self.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.setVisible(False)
 
-        banner = f"""Simple Spectra Manipulator console based on IPython, version {Settings.__version__}. Numpy package was imported as np and matplotlib.pyplot as plt. Three variables are setup:
+        banner = f"""Simple Spectra Manipulator console based on IPython, version {spectramanipulator.__version__}. Numpy package was imported as np and matplotlib.pyplot as plt. Three variables are setup:
     item - this is used to interact with spectra in TreeWidget and perform various calculations
     tree_widget - instance of TreeWidget
     main - instance of Main (Main Window)

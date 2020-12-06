@@ -62,11 +62,11 @@ target/
 
 
 
-SSM/fit_script.py
-SSM/test.py
+spectramanipulator/fit_script.py
+spectramanipulator/test.py
 # ui_convert.py
-SSM/config.json
-SSM/test_docstring.py
+spectramanipulator/config.json
+spectramanipulator/test_docstring.py
 
 # user defined script
-SSM/script.py
+spectramanipulator/script.py
