@@ -145,7 +145,7 @@ class Spectrum(object):
             self.data = np.asarray(data[data[:, 0].argsort()], dtype=np.float64) if data is not None else None
 
         self.filepath = filepath
-        self._name = name
+        self.name = name
 
     @classmethod
     def from_xy_values(cls, x_values, y_values, name=''):
@@ -190,21 +190,6 @@ class Spectrum(object):
         data = np.vstack((x_data, y_data)).T
 
         return cls(data, name=name)
-
-    @property
-    def name(self):
-        """Returns the name of this spectrum.
-
-        :return: str
-        """
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        """Sets the name of this spectrum.
-
-        """
-        self._name = value
 
     @property
     def x(self):

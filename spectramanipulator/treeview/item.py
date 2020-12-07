@@ -142,34 +142,34 @@ class SpectrumItem(GenericItem, Spectrum):
         # del spectrum
 
         return si
-
-    @property
-    def name(self):
-        return super(SpectrumItem, self).name()
-
-    @name.setter
-    def name(self, value):
-        super(SpectrumItem, self).name(value)
-        self._redraw_all_spectra()
-        self._update_view()
+    #
+    # @property
+    # def name(self):
+    #     return self._name
+    #
+    # @name.setter
+    # def name(self, value):
+    #     self._name = value
+    #     self._redraw_all_spectra()
+    #     self._update_view()
 
     @property
     def x(self):
-        return super(SpectrumItem, self).x()
+        return self.data[:, 0]
 
     @x.setter
     def x(self, array):
-        super(SpectrumItem, self).x(array)
+        self.data[:, 0] = array
         self._redraw_all_spectra()
         self._update_view()
 
     @property
     def y(self):
-        return super(SpectrumItem, self).y()
+        return self.data[:, 1]
 
     @y.setter
     def y(self, array):
-        super(SpectrumItem, self).y(array)
+        self.data[:, 1] = array
         self._redraw_all_spectra()
         self._update_view()
 
