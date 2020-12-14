@@ -128,11 +128,13 @@ class Main(QMainWindow):
     def update_current_file(self, filepath):
         self.current_file = filepath
         head, tail = os.path.split(filepath)
-        self.setWindowTitle(os.path.splitext(tail)[0] + ' - Simple Spectra Manipulator')
+        self.setWindowTitle(os.path.splitext(tail)[0] + ' - Spectra Manipulator')
 
     def update_recent_files(self):
-        num = min(len(Settings.recent_project_filepaths), len(self.menuBar().recent_file_actions))
+        # num = min(len(Settings.recent_project_filepaths), len(self.menuBar().recent_file_actions))
+        num = len(Settings.recent_project_filepaths)
 
+        # update all of them
         for i in range(num):
             filepath = Settings.recent_project_filepaths[i]
             head, tail = os.path.split(filepath)
@@ -141,6 +143,9 @@ class Main(QMainWindow):
             self.menuBar().recent_file_actions[i].setData(filepath)  # save filepath as data to QAction
             self.menuBar().recent_file_actions[i].setVisible(True)
             self.menuBar().recent_file_actions[i].setStatusTip(filepath)  # show filepath in statusbar when hovered
+
+        for i in range(num, self.menuBar().MAX_RECENT_FILES):  # set invisible the rest
+            self.menuBar().recent_file_actions[i].setVisible(False)
 
     def add_recent_file(self, filepath):
         # if there is the same filepath in the list, remove this entry
@@ -192,7 +197,7 @@ class Main(QMainWindow):
 
         if open_dialog:
             # filter = "Data Files (*.txt, *.csv, *.dx)|*.txt;*.csv;*.dx|All Files (*.*)|*.*"
-            _filter = f"Project files (*.{Settings.PROJECT_EXTENSION});;All Files (*.*)"
+            _filter = f"Project files (*{Settings.PROJECT_EXTENSION});;All Files (*.*)"
             initial_filter = f"Project files (*.{Settings.PROJECT_EXTENSION})"
 
             filepaths = QFileDialog.getOpenFileName(caption="Open project",
@@ -210,6 +215,7 @@ class Main(QMainWindow):
             if filepath in Settings.recent_project_filepaths:
                 Settings.recent_project_filepaths.remove(filepath)
 
+            self.update_recent_files()
             return
 
         project = Project.deserialize(filepath)
@@ -244,7 +250,7 @@ class Main(QMainWindow):
         if self.tree_widget.top_level_items_count() == 0:
             return
 
-        filter = f"Project files (*.{Settings.PROJECT_EXTENSION})"
+        filter = f"Project files (*{Settings.PROJECT_EXTENSION})"
 
         filepath = QFileDialog.getSaveFileName(caption="Save project",
                                                directory=Settings.save_project_dialog_path if self.current_file is None else self.current_file,
@@ -257,10 +263,6 @@ class Main(QMainWindow):
 
         Settings.save_project_dialog_path = os.path.split(filepath[0])[0]
         Settings.save()
-
-        # sp_list = get_hierarchic_list(
-        #     self.tree_widget.myModel.iterate_items(ItemIterator.NoChildren))
-        # project = Project(spectra_list=sp_list)
 
         project = Project(generic_item=self.tree_widget.myModel.root)
         project.serialize(filepath[0])
@@ -275,10 +277,7 @@ class Main(QMainWindow):
             return
 
         if self.current_file is not None:
-            sp_list = get_hierarchic_list(
-                self.tree_widget.myModel.iterate_items(ItemIterator.NoChildren))
-
-            project = Project(sp_list)
+            project = Project(generic_item=self.tree_widget.myModel.root)
             project.serialize(self.current_file)
 
             Logger.status_message(f"Project was saved to {self.current_file}.")
@@ -465,7 +464,7 @@ def main():
 
     # form.interact()
 
-    app.lastWindowClosed.connect(app.quit)
+    # app.lastWindowClosed.connect(app.quit)
     sys.exit(app.exec_())
 
     #### cProfile.run('app.exec_()', 'profdata')

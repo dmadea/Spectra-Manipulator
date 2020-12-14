@@ -4,6 +4,7 @@ from pyqtgraph.graphicsItems.LabelItem import LabelItem
 
 # changed vertical spacing in legend entries
 
+
 class LabelItemModif(LabelItem):
     """
     GraphicsWidget displaying text.

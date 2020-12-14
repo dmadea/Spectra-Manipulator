@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QApplication, QMessageBox, QMenu, QAction
 from PyQt5.QtGui import QCursor, QColor
 
 
-from spectramanipulator.spectrum import Spectrum  # , SpectrumList
+from spectramanipulator.spectrum import Spectrum, SpectrumList
 
 from spectramanipulator.dialogs.int_int_inputdialog import IntIntInputDialog
 from spectramanipulator.dialogs.interpolate_dialog import InterpolateDialog
@@ -203,7 +203,7 @@ class TreeWidget(TreeView):
             try:
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
-                    item.normalize(x0, x1, False)
+                    item.normalize(x0, x1)
                 self.redraw_spectra.emit()
                 self.state_changed.emit()
 
@@ -233,7 +233,7 @@ class TreeWidget(TreeView):
             try:
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
-                    item.cut(x0, x1, False)
+                    item.cut(x0, x1)
 
                 self.redraw_spectra.emit()
                 self.setup_info()
@@ -262,7 +262,7 @@ class TreeWidget(TreeView):
             try:
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
-                    item.extend_by_zeros(x0, x1, False)
+                    item.extend_by_zeros(x0, x1)
 
                 self.redraw_spectra.emit()
                 self.setup_info()
@@ -293,7 +293,7 @@ class TreeWidget(TreeView):
             try:
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
-                    item.baseline_correct(x0, x1, False)
+                    item.baseline_correct(x0, x1)
 
                 self.redraw_spectra.emit()
                 self.state_changed.emit()
@@ -329,7 +329,7 @@ class TreeWidget(TreeView):
         try:
             for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                             skip_childs_in_selected_groups=False):
-                item.interpolate(spacing, kind, False)
+                item.interpolate(spacing, kind)
 
             self.redraw_spectra.emit()
             self.setup_info()
@@ -743,6 +743,11 @@ class TreeWidget(TreeView):
 
         self.myModel.root.children += generic_item.children
 
+        for child in self.myModel.root.children:  # set the parent to be the current root
+            child.parent = self.myModel.root
+
+        del generic_item  # destroy the original object
+
         if num_items > 0:
             # update names and view
             self.myModel.insertRows(self.myModel.root.__len__(), num_items, QModelIndex())
@@ -762,16 +767,27 @@ class TreeWidget(TreeView):
         add_rows_count = 0
 
         for node in spectra:
-            if isinstance(node, Spectrum):
+            if isinstance(node, SpectrumItem):
                 # child = SpectrumItem(node, node.name, '', parent=self.myModel.root)
+                node.setParent(self.myModel.root)
+                add_rows_count += 1
+            elif isinstance(node, Spectrum):
                 SpectrumItem.from_spectrum(node, parent=self.myModel.root)
+                add_rows_count += 1
 
-                add_rows_count += 1
-            if isinstance(node, list):  # list of spectra
+            if isinstance(node, list):  # for backward compatibility
                 group_item = SpectrumItemGroup(node[0].group_name, '', parent=self.myModel.root)
-                add_rows_count += 1
-                for sp in node:
-                    # child = SpectrumItem(sp, sp.name, '', parent=group_item)
+            elif isinstance(node, SpectrumList):  # list of spectra
+                group_item = SpectrumItemGroup(node.name, '', parent=self.myModel.root)
+            else:
+                continue
+
+            add_rows_count += 1
+
+            for sp in node:
+                if isinstance(sp, SpectrumItem):
+                    sp.setParent(group_item)
+                else:
                     SpectrumItem.from_spectrum(sp, parent=group_item)
 
         if add_rows_count > 0:

@@ -21,7 +21,7 @@ class Settings(object):
     # --------SETTINGS----------
 
     # not in Settings dialog
-    general_models_dir = 'general models\\'
+    general_models_dir = 'spectramanipulator\\general models\\'
     REG_PROGRAM_NAME = 'SpectraManipulator.projectfile'
     PROJECT_EXTENSION = '.smpj'
 

@@ -20,7 +20,7 @@ class DXFileParser(GenericParser):
             data.clear()
             return
 
-        sp = Spectrum(np.asarray(data, dtype=np.float64), self.filepath, name)
+        sp = Spectrum(np.asarray(data, dtype=np.float64), filepath=self.filepath, name=name)
         self.buffer.append(sp)
         data.clear()
 

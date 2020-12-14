@@ -1,5 +1,5 @@
 import numpy as np
-from spectramanipulator.spectrum import Spectrum
+from spectramanipulator.spectrum import Spectrum, SpectrumList
 from spectramanipulator.parsers.genericparser import GenericParser
 
 
@@ -89,14 +89,15 @@ class GeneralParser(GenericParser):
         # sort according to first column (x values)
         np_data = np_data[np_data[:, 0].argsort()]
 
-        spectra = []
+        spectra = SpectrumList()
         for i in range(1, np_data.shape[1]):
             # separate the matrix to individual spectra, x values are from first column, the data are from i-th column
             sp_data = np_data[:, [0, i]]
 
-            sp = Spectrum(sp_data, self.filepath, names[i].strip(), self.name_of_file)  # TODO add assume sorted arg.
-            # sp = Spectrum(sp_data, self.filepath, names[i].strip(), self.name_of_file, assume_sorted=True)
-            spectra.append(sp)
+            sp = Spectrum(sp_data, filepath=self.filepath, name=names[i].strip(), assume_sorted=True)
+            spectra.children.append(sp)
+            spectra.name = self.name_of_file
+            # spectra.append(sp)
 
         # for single spectrum, non-concatenated data
         if len(spectra) == 1:

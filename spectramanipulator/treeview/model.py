@@ -293,6 +293,10 @@ class Model(QAbstractItemModel):
 
         destination_parent = self.index_from_node(destination_group)
         source_parent = self.index_from_node(item.parent)
+
+        if item.parent == destination_group:
+            destination_parent = source_parent
+
         row = item.parent.rowOfChild(item)
 
         self.beginMoveRows(source_parent, row, row, destination_parent,
@@ -634,9 +638,10 @@ class TreeView(QTreeView):
         group_item = SpectrumItemGroup('', '', parent=self.myModel.root) if group is None else group
         self.myModel.insertRows(self.myModel.root.__len__(), 1, QModelIndex())
 
-        group_item_index = self.myModel.createIndex(self.myModel.root.__len__(), 0, group_item)
+        # group_item_index = self.myModel.createIndex(self.myModel.root.__len__(), 0, group_item)
 
-        def _move_items(parent, first_row, last_row, group_item_index, row_to_put):
+        def _move_items(parent, first_row, last_row, row_to_put):
+            group_item_index = self.myModel.createIndex(self.myModel.root.__len__(), 0, group_item)
             source_parent = self.myModel.index_from_node(parent)
 
             self.myModel.beginMoveRows(source_parent, first_row, last_row, group_item_index, row_to_put)
@@ -674,7 +679,7 @@ class TreeView(QTreeView):
             if current_parent != last_parent or current_row - last_row > 1:  # move chunk of items
 
                 n_items = (last_row - first_row + 1)
-                _move_items(last_parent, first_row, last_row, group_item_index, i - n_items)
+                _move_items(last_parent, first_row, last_row, i - n_items)
 
                 # current row will be changed because we removed n_items
                 first_row = current_row if current_parent != last_parent else current_row - n_items
@@ -686,10 +691,13 @@ class TreeView(QTreeView):
             i += 1
 
         # process last chunk
-        _move_items(last_parent, first_row, last_row, group_item_index, i - (last_row - first_row + 1))
+        _move_items(last_parent, first_row, last_row, i - (last_row - first_row + 1))
 
         # move the group to correct place
-        self.myModel.move_item(group_item, self.myModel.root, row_to_place)
+        try:
+            self.myModel.move_item(group_item, self.myModel.root, row_to_place)
+        except:
+            print("asdasd")
 
         index = self.myModel.index_from_node(group_item)
 

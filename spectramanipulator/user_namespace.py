@@ -6,6 +6,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt  # we plot graphs with this library
 from matplotlib import cm
 from matplotlib.ticker import *
+
 from matplotlib import colors as c
 
 # from copy import deepcopy
@@ -13,7 +14,7 @@ from PyQt5.QtWidgets import QApplication
 from scipy.linalg import lstsq
 
 from spectramanipulator.settings import Settings
-from spectramanipulator.spectrum import Spectrum
+from spectramanipulator.spectrum import fi, Spectrum
 
 # for backward compatibility of smpj files
 ItemList = list
@@ -308,17 +309,17 @@ def _get_D(group):
         D = np.vstack((D, group[i].data[:, 1]))
     return D
 
-
-def calc_Eps(group):
-    C = _get_C(group)
-    D = _get_D(group)
-    wls = group[0].data[:, 0]
-
-    # C needs to be changed to column vector
-    ST = lstsq(C.reshape(-1, 1), D)[0]
-
-    # add a spectrum to list
-    Spectrum.from_xy_values(wls, ST.flatten(), name=group.name + '-epsilon').add_to_list()
+#
+# def calc_Eps(group):
+#     C = _get_C(group)
+#     D = _get_D(group)
+#     wls = group[0].data[:, 0]
+#
+#     # C needs to be changed to column vector
+#     ST = lstsq(C.reshape(-1, 1), D)[0]
+#
+#     # add a spectrum to list
+#     Spectrum.from_xy_values(wls, ST.flatten(), name=group.name + '-epsilon').add_to_list()
 
 
 def rename_times(group, decimal_places=1):
@@ -524,12 +525,12 @@ def plot_kinetics(group_item, n_spectra=50, linscale=1, linthresh=100, cmap='jet
     cmap = cm.get_cmap(cmap)
     norm = mpl.colors.SymLogNorm(vmin=t[0], vmax=t[-1], linscale=linscale, linthresh=linthresh, base=10, clip=True)
 
-    tsb_idxs = Spectrum.find_nearest_idx(t, emph_t)
+    tsb_idxs = fi(t, emph_t)
     ts_real = np.round(t[tsb_idxs])
 
     x_space = np.linspace(0, 1, n_spectra, endpoint=True, dtype=np.float64)
 
-    t_idx_space = Spectrum.find_nearest_idx(t, norm.inverse(x_space))
+    t_idx_space = fi(t, norm.inverse(x_space))
     t_idx_space = np.sort(np.asarray(list(set(t_idx_space).union(set(tsb_idxs)))))
 
     for i in t_idx_space:

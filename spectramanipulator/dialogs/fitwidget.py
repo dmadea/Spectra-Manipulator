@@ -9,8 +9,9 @@ import numpy as np
 
 from spectramanipulator.settings import Settings
 from spectramanipulator.logger import Logger
-from spectramanipulator.spectrum import Spectrum
+from spectramanipulator.treeview.item import SpectrumItem, SpectrumItemGroup
 from spectramanipulator.console import Console
+from spectramanipulator.spectrum import fi
 
 import pyqtgraph as pg
 
@@ -20,8 +21,8 @@ from lmfit import fit_report, report_fit, Minimizer, report_ci, conf_interval, c
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 
-import spectramanipulator.fitmodels
-import spectramanipulator.userfitmodels
+import spectramanipulator.fitmodels as fitmodels
+import spectramanipulator.userfitmodels as userfitmodels
 import inspect
 import sys
 from ..general_model import GeneralModel
@@ -43,7 +44,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     _instance = None
 
     # maximum number of parameters
-    max_count = 30
+    max_count = 80
 
     def __init__(self, dock_widget, accepted_func, spectrum=None, parent=None):
         super(FitWidget, self).__init__(parent)
@@ -77,7 +78,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         xy_dif = x1 - x0
         self.lr = pg.LinearRegionItem([x0 + (1 - f) * xy_dif, x0 + f * xy_dif],
                                       brush=QtGui.QBrush(QtGui.QColor(0, 255, 0, 20)),
-                                      bounds=(self.spectrum.x_min(), self.spectrum.x_max())
+                                      bounds=(self.spectrum.x.min(), self.spectrum.x.max())
                                       if self.spectrum is not None else None)
         self.lr.setZValue(-10)
         self.plot_widget.addItem(self.lr)
@@ -125,6 +126,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             self.upper_bound_list.append([QLineEdit(), QLineEdit()])
             self.fixed_list.append([QCheckBox(), QCheckBox()])
             self.error_list.append([QLineEdit(), QLineEdit()])
+
             self.params_list[i][1].setReadOnly(True)
             self.error_list[i][0].setReadOnly(True)
             self.error_list[i][1].setReadOnly(True)
@@ -204,6 +206,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.dock_widget.setWidget(self)
         self.dock_widget.setVisible(True)
 
+        self.set_lower_upper_enabled()
+
     # @staticmethod
     # def get_instance():
     #     return FitWidget._instance
@@ -212,7 +216,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # curr_idx = self.cbGenModels.currentIndex() if len(self.cbGenModels) > 0 else None
         self.cbGenModels.clear()
         self.gen_models_paths = []
-        for fpath in glob.glob(os.path.join(Settings.general_models_dir, '*.json'), recursive=True):
+        fpath = os.path.join(Settings.general_models_dir, '*.json')
+        for fpath in glob.glob(fpath, recursive=True):
             fname = os.path.splitext(os.path.split(fpath)[1])[0]
             self.gen_models_paths.append(fpath)
             self.cbGenModels.addItem(fname)
@@ -390,6 +395,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             self.upper_bound_list[i][1].setText(str(p.max))
             self.fixed_list[i][1].setChecked(not p.vary)
 
+        self.set_lower_upper_enabled()
+
     def cbCustom_checked_changed(self):
         if self.cbCustom.isChecked():
             self.sbParamsCount.setEnabled(True)
@@ -418,8 +425,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         x0, x1 = self.lr.getRegion()
 
-        start_idx = Spectrum.find_nearest_idx(self.spectrum.data[:, 0], x0)
-        end_idx = Spectrum.find_nearest_idx(self.spectrum.data[:, 0], x1) + 1
+        start_idx = fi(self.spectrum.data[:, 0], x0)
+        end_idx = fi(self.spectrum.data[:, 0], x1) + 1
 
         x_data = self.spectrum.data[start_idx:end_idx, 0]
         y_data = self.spectrum.data[start_idx:end_idx, 1]
@@ -451,8 +458,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             self.plot_widget.plotItem.removeItem(self.plot_fit)
             self.plot_widget.plotItem.removeItem(self.plot_residuals)
             try:
-                self.plot_widget.legend.removeLastItem()
-                self.plot_widget.legend.removeLastItem()
+                self.plot_widget.legend.remove_last_item()
+                self.plot_widget.legend.remove_last_item()
             except IndexError:
                 pass
 
@@ -464,7 +471,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 self.plot_widget.plotItem.removeItem(item)
             try:
                 for i in range(len(self.plotted_functions)):
-                    self.plot_widget.legend.removeLastItem()
+                    self.plot_widget.legend.remove_last_item()
             except IndexError:
                 pass
 
@@ -523,8 +530,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         x0, x1 = self.lr.getRegion()
 
-        start_idx = Spectrum.find_nearest_idx(self.spectrum.data[:, 0], x0)
-        end_idx = Spectrum.find_nearest_idx(self.spectrum.data[:, 0], x1) + 1
+        start_idx = fi(self.spectrum.data[:, 0], x0)
+        end_idx = fi(self.spectrum.data[:, 0], x1) + 1
 
         x_data = self.spectrum.data[start_idx:end_idx, 0]
         y_data = self.spectrum.data[start_idx:end_idx, 1]
@@ -591,11 +598,11 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                                                              pen=pg.mkPen(color=QColor(255, 0, 0, 150), width=1),
                                                              name="Residuals of {}".format(self.spectrum.name))
 
-        self.fitted_spectrum = Spectrum.from_xy_values(x_data, y_fit_data,
+        self.fitted_spectrum = SpectrumItem.from_xy_values(x_data, y_fit_data,
                                                        name="Fit of {}".format(self.spectrum.name),
                                                        color='black', line_width=2.5, line_type=Qt.SolidLine)
 
-        self.residual_spectrum = Spectrum.from_xy_values(x_data, y_residuals,
+        self.residual_spectrum = SpectrumItem.from_xy_values(x_data, y_residuals,
                                                          name="Residuals of {}".format(self.spectrum.name),
                                                          color='red', line_width=1, line_type=Qt.SolidLine)
 
@@ -636,8 +643,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # if this is a fit widget with real spectrum, use x range from that spectrum,
         # otherwise, use np.linspace with defined number of points in Settings
         if self.spectrum is not None:
-            start_idx = Spectrum.find_nearest_idx(self.spectrum.data[:, 0], x0)
-            end_idx = Spectrum.find_nearest_idx(self.spectrum.data[:, 0], x1) + 1
+            start_idx = fi(self.spectrum.data[:, 0], x0)
+            end_idx = fi(self.spectrum.data[:, 0], x1) + 1
             x_data = self.spectrum.data[start_idx:end_idx, 0]
         else:
             x_data = np.linspace(x0, x1, num=Settings.FP_num_of_points)
@@ -667,14 +674,14 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             sol = self._simul_custom_model(init, rates, x_data)
 
             if self.cbPlotAllComps.isChecked():
-                spectra = []
+                spectra = SpectrumItemGroup(name='all comparments plot')
                 for i in range(n_params):
                     name = self.params_list[i+n_params][tab_idx].text()
                     self.plotted_functions.append(self.plot_widget.plotItem.plot(x_data, sol[:, i],
                                                                              pen=pg.mkPen(color=int_default_color_scheme(i),
                                                                                           width=1),
                                                                              name=name))
-                    spectra.append(Spectrum.from_xy_values(x_data, sol[:, i], name=name))
+                    spectra.children.append(SpectrumItem.from_xy_values(x_data, sol[:, i], name=name))
                 self.plotted_function_spectra.append(spectra)
                 return
 
@@ -688,7 +695,20 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                                                                                   width=1),
                                                                      name=name))
 
-        self.plotted_function_spectra.append(Spectrum.from_xy_values(x_data, y_data, name=name))
+        self.plotted_function_spectra.append(SpectrumItem.from_xy_values(x_data, y_data, name=name))
+
+    def set_lower_upper_enabled(self):
+        if self.spectrum is None:
+            return
+        for i in range(len(self.fixed_list)):
+            enabled_0 = not self.fixed_list[i][0].isChecked()
+            enabled_1 = not self.fixed_list[i][1].isChecked()
+
+            self.lower_bound_list[i][0].setEnabled(enabled_0)
+            self.upper_bound_list[i][0].setEnabled(enabled_0)
+
+            self.lower_bound_list[i][1].setEnabled(enabled_1)
+            self.upper_bound_list[i][1].setEnabled(enabled_1)
 
     def fixed_checked_changed(self, value):
         if self.spectrum is None:
@@ -699,8 +719,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         idx = self.tabWidget.currentIndex()
 
         i = 0
-        for i, ch in enumerate(self.fixed_list[idx]):
-            if ch == checkbox:
+        for i, (ch1, ch2) in enumerate(self.fixed_list):
+            if ch1 == checkbox or ch2 == checkbox:
                 break
 
         enabled = True if value == Qt.Unchecked else False

@@ -176,8 +176,8 @@ class FitDialog(QtWidgets.QDialog, Ui_Dialog):
 
         x0, x1 = self.lr.getRegion()
 
-        start_idx = Spectrum.find_nearest_idx(self.spectrum.data[:, 0], x0)
-        end_idx = Spectrum.find_nearest_idx(self.spectrum.data[:, 0], x1) + 1
+        start_idx = Spectrum.fi(self.spectrum.data[:, 0], x0)
+        end_idx = Spectrum.fi(self.spectrum.data[:, 0], x1) + 1
 
         x_data = self.spectrum.data[start_idx:end_idx, 0]
         y_data = self.spectrum.data[start_idx:end_idx, 1]
@@ -228,8 +228,8 @@ class FitDialog(QtWidgets.QDialog, Ui_Dialog):
 
         x0, x1 = self.lr.getRegion()
 
-        start_idx = Spectrum.find_nearest_idx(self.spectrum.data[:, 0], x0)
-        end_idx = Spectrum.find_nearest_idx(self.spectrum.data[:, 0], x1) + 1
+        start_idx = Spectrum.fi(self.spectrum.data[:, 0], x0)
+        end_idx = Spectrum.fi(self.spectrum.data[:, 0], x1) + 1
 
         x_data = self.spectrum.data[start_idx:end_idx, 0]
         y_data = self.spectrum.data[start_idx:end_idx, 1]

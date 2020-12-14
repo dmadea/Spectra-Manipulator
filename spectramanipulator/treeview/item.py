@@ -1,6 +1,7 @@
 from PyQt5.QtCore import Qt
 from spectramanipulator.spectrum import Spectrum, SpectrumList
-from spectramanipulator.user_namespace import add_to_list, update_view, redraw_all_spectra
+import spectramanipulator.user_namespace as un
+
 import numpy as np
 
 
@@ -87,16 +88,16 @@ class GenericItem:
 
     def add_to_list(self, spectra=None):
         if self.__class__ == SpectrumItem or self.__class__ == SpectrumItemGroup:
-            add_to_list(self if spectra is None else spectra)
+            un.add_to_list(self if spectra is None else spectra)
             # print('add_to_list - generic')
 
     def _redraw_all_spectra(self):
-        redraw_all_spectra()
+        un.redraw_all_spectra()
 
         # print('_redraw_all_spectra - generic')
 
     def _update_view(self):
-        update_view()
+        un.update_view()
         # print('_update_view - generic')
 
 
@@ -142,16 +143,21 @@ class SpectrumItem(GenericItem, Spectrum):
         # del spectrum
 
         return si
-    #
-    # @property
-    # def name(self):
-    #     return self._name
-    #
-    # @name.setter
-    # def name(self, value):
-    #     self._name = value
-    #     self._redraw_all_spectra()
-    #     self._update_view()
+
+    @classmethod
+    def from_xy_values(cls, x_values, y_values, name='', info='', parent=None, color=None, line_width=None, line_alpha=255,
+                 line_type=None, symbol=None, symbol_brush=None, sym_brush_alpha=255, symbol_fill=None,
+                 sym_fill_alpha=255, symbol_size=8, plot_legend=True):
+
+        sp = cls(name, info, parent, color, line_width, line_alpha, line_type, symbol, symbol_brush, sym_brush_alpha,
+                 symbol_fill, sym_fill_alpha, symbol_size, plot_legend)
+
+        sp_spectrum = Spectrum.from_xy_values(x_values, y_values, name='')
+
+        sp.data = sp_spectrum.data
+        del sp_spectrum
+
+        return sp
 
     @property
     def x(self):
@@ -238,50 +244,6 @@ class SpectrumItem(GenericItem, Spectrum):
 
         self._redraw_all_spectra()
 
-    def power_spectrum(self):
-        super(SpectrumItem, self).power_spectrum()
-        self._redraw_all_spectra()
-        self._update_view()
-
-    def savgol(self, window_length, poly_order):
-        super(SpectrumItem, self).savgol(window_length, poly_order)
-        self._redraw_all_spectra()
-
-    def gradient(self, edge_order=1):
-        super(SpectrumItem, self).gradient(edge_order)
-        self._redraw_all_spectra()
-
-    def differentiate(self, n=1):
-        super(SpectrumItem, self).differentiate(n)
-        self._redraw_all_spectra()
-        self._update_view()
-
-    def integrate(self, int_constant=0):
-        super(SpectrumItem, self).integrate(int_constant)
-        self._redraw_all_spectra()
-
-    def baseline_correct(self, x0=None, x1=None):
-        super(SpectrumItem, self).baseline_correct(x0, x1)
-        self._redraw_all_spectra()
-
-    def normalize(self, x0=None, x1=None):
-        super(SpectrumItem, self).normalize(x0, x1)
-        self._redraw_all_spectra()
-
-    def interpolate(self, spacing=1, kind='linear'):
-        super(SpectrumItem, self).interpolate(spacing, kind)
-        self._redraw_all_spectra()
-
-    def cut(self, x0=None, x1=None):
-        super(SpectrumItem, self).cut(x0, x1)
-        self._redraw_all_spectra()
-        self._update_view()
-
-    def extend_by_zeros(self, x0=None, x1=None):
-        super(SpectrumItem, self).extend_by_zeros(x0, x1)
-        self._redraw_all_spectra()
-        self._update_view()
-
     def is_in_group(self):
         return not self.parent.is_root()
 
@@ -294,10 +256,12 @@ class SpectrumItemGroup(GenericItem, SpectrumList):
     def __init__(self, name='', info='', parent=None):
         super(SpectrumItemGroup, self).__init__(name, info, parent)
 
-        self.setup_fcn()
+        # self.setup_fcn()
 
     def set_names(self, names):
-        super(SpectrumItemGroup, self).set_names(names)
+        # super(SpectrumItemGroup, self).set_names(names)
+        for sp, new_name in zip(self, names):
+            sp.name = str(new_name)
         self._update_view()
         self._redraw_all_spectra()
 

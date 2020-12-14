@@ -23,6 +23,15 @@ class LegendItemModif(LegendItem):
 
         self.verSpacing = verSpacing  # verSpacing parameter used as a setup for setMinimumHeight in LabelItemModif
 
+    def remove_last_item(self):
+        sample, label = self.items[-1]
+        del self.items[-1]
+        self.layout.removeItem(sample)  # remove from layout
+        sample.close()  # remove from drawing
+        self.layout.removeItem(label)
+        label.close()
+        self.updateSize()  # redraq box
+
     def addItem(self, item, name):
         """
         Add a new entry to the legend.
