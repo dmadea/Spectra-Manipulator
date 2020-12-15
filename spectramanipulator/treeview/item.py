@@ -4,6 +4,8 @@ import spectramanipulator.user_namespace as un
 
 import numpy as np
 
+from copy import deepcopy
+
 
 class GenericItem:
 
@@ -251,10 +253,7 @@ class SpectrumItem(GenericItem, Spectrum):
         return self.parent.is_root()
 
     def __copy__(self):
-
-        # TODO--->
-        sp = super(SpectrumItem, self).__copy__()
-        return self.from_spectrum(sp)
+        return deepcopy(self)
 
 
 class SpectrumItemGroup(GenericItem, SpectrumList):

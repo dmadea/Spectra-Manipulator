@@ -10,33 +10,42 @@ from .logger import Logger
 # import time
 
 
-def _process_filepath(args):
-    filepath, settings = args
-    try:
-        parsed_spectra = _parse_file(filepath, settings)
-        return None, parsed_spectra
-    except Exception as ex:
-        return "Error occurred while parsing file {}, skipping the file.\nException: {}\n".format(filepath, ex.__str__()), None
-
-
-def _process_filepath_specific(args):
-    filepath, settings,  = args
-    try:
-        parsed_spectra = _parse_file_specific(filepath, settings)
-        return None, parsed_spectra
-    except Exception as ex:
-        return "Error occurred while parsing file {}, skipping the file.\nException: {}\n".format(filepath, ex.__str__()), None
-
-
 def parse_files_specific(filepaths, use_CSV_parser=False, **kwargs):
     """kwargs are passed to the parser"""
 
+    def _process_filepath(args):
+        filepath, kwargs = args
+        try:
+            parser = CSVFileParser(filepath, **kwargs) if use_CSV_parser else GeneralParser(filepath, **kwargs)
+            return None, parser.parse()
+        except Exception as ex:
+            return "Error occurred while parsing file {}, " \
+                   "skipping the file.\nException: {}\n".format(filepath, ex.__str__()), None
 
+    return _parse_files(filepaths, _process_filepath, kwargs)
 
 
 def parse_files(filepaths, settings: dict = None):
-    """
 
+    settings_dict = Settings.get_attributes()
+    if settings is not None:
+        settings_dict.update(settings)
+
+    def _process_filepath(args):
+        filepath, settings = args
+        try:
+            parsed_spectra = _parse_file(filepath, settings)
+            return None, parsed_spectra
+        except Exception as ex:
+            return "Error occurred while parsing file {}, " \
+                   "skipping the file.\nException: {}\n".format(filepath, ex.__str__()), None
+
+    return _parse_files(filepaths, _process_filepath, settings_dict)
+
+
+def _parse_files(filepaths, parse_func, settings):
+    """
+    parse_func takes filepath and settings as arguments and returns the tuple with error and result.
 
     :param filepaths:
     :param settings:
@@ -54,9 +63,9 @@ def parse_files(filepaths, settings: dict = None):
 
     spectra = []
 
-    settings_dict = Settings.get_attributes()
-    if settings is not None:
-        settings_dict.update(settings)
+    # settings_dict = Settings.get_attributes()
+    # if settings is not None:
+    #     settings_dict.update(settings)
     # start_time = time.time()
 
     # if at least two files are >= 0.5 MB, switch to multiprocess
@@ -67,7 +76,9 @@ def parse_files(filepaths, settings: dict = None):
 
         # ex = ProcessPoolExecutor() if Settings.load_method == 'multiprocess' else ThreadPoolExecutor()
         with ProcessPoolExecutor() as executor:
-            results = executor.map(_process_filepath, zip(filepaths, [settings_dict] * len(filepaths)))
+            # results = executor.map(_process_filepath, zip(filepaths, [settings_dict] * len(filepaths)))
+            results = executor.map(parse_func, zip(filepaths, [settings] * len(filepaths)))
+
             for res in results:
                 if res[0] is not None:
                     Logger.message(res[0])
@@ -79,14 +90,23 @@ def parse_files(filepaths, settings: dict = None):
         # Logger.console_message("Loading in the main thread.")
         for filepath in filepaths:
             # parsed_spectra is always a list of spectra, if parsing was unsuccessful, None is returned
-            try:
-                parsed_spectra = _parse_file(filepath, settings_dict)
-            except Exception as ex:
-                Logger.message(
-                    "Error occurred while parsing file {}, skipping the file.\nException: {}\n".format(filepath, ex.__str__()))
+            err, p_spectra = parse_func((filepath, settings))
+
+            if err is not None:
+                Logger.message(err)
                 continue
-            if parsed_spectra is not None:
-                spectra += parsed_spectra
+
+            if p_spectra is not None:
+                spectra += p_spectra
+            #
+            # try:
+            #     # parsed_spectra = _parse_file(filepath, settings_dict)
+            # except Exception as ex:
+            #     Logger.message(
+            #         "Error occurred while parsing file {}, skipping the file.\nException: {}\n".format(filepath, ex.__str__()))
+            #     continue
+            # if parsed_spectra is not None:
+            #     spectra += parsed_spectra
 
     # elapsed_time = time.time() - start_time
     # Logger.console_message(elapsed_time)

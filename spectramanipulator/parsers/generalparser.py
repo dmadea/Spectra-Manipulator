@@ -97,7 +97,6 @@ class GeneralParser(GenericParser):
             sp = Spectrum(sp_data, filepath=self.filepath, name=names[i].strip(), assume_sorted=True)
             spectra.children.append(sp)
             spectra.name = self.name_of_file
-            # spectra.append(sp)
 
         # for single spectrum, non-concatenated data
         if len(spectra) == 1:

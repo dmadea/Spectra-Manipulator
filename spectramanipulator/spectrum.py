@@ -101,7 +101,96 @@ def group2mat(spectra):
     return x, y, matrix.T
 
 
-class SpectrumList:
+def operation(operator=lambda a, b: a + b, operator_str='+', switch_names=False):
+    """TODO--->"""
+    def decorator(fn):
+        @functools.wraps(fn)
+        def func(self, other):
+            obj, other_str = self._arithmetic_operation(other, operator)
+            if obj is None:
+                return NotImplemented
+            if switch_names:
+                obj.name = f"{other_str} {operator_str} {self.name}"
+            else:
+                obj.name = f"{self.name} {operator_str} {other_str}"
+
+            return obj
+        return func
+    return decorator
+
+
+class OperationBase:
+    """
+    Abstract base class that defines the operations for Spectrum and SpectrumList objects.
+    It allows for ... TODO...
+    """
+
+    def __init__(self, name):
+        self.name = name
+
+    def _redraw_all_spectra(self):
+        pass
+
+    def _update_view(self):
+        pass
+
+    def _arithmetic_operation(self, other, operator):
+        """TODO--->>"""
+        pass
+
+    @operation(lambda a, b: a + b, '+', False)  # self + other
+    def __add__(self, other):
+        pass
+
+    @operation(lambda a, b: a - b, '-', False)  # self - other
+    def __sub__(self, other):
+        pass
+
+    @operation(lambda a, b: a * b, '*', False)  # self * other
+    def __mul__(self, other):
+        pass
+
+    @operation(lambda a, b: a / b, '/', False)  # self / other
+    def __truediv__(self, other):
+        pass
+
+    @operation(lambda a, b: b + a, '+', True)  # other + self, switch_names=True
+    def __radd__(self, other):
+        pass
+
+    @operation(lambda a, b: b - a, '-', True)  # other - self, switch_names=True
+    def __rsub__(self, other):
+        pass
+
+    @operation(lambda a, b: b * a, '*', True)  # other * self, switch_names=True
+    def __rmul__(self, other):
+        pass
+
+    @operation(lambda a, b: b / a, '/', True)  # other / self, switch_names=True
+    def __rtruediv__(self, other):
+        pass
+
+    @operation(lambda a, b: a ** b, '**', False)  # self ** power
+    def __pow__(self, power, modulo=None):
+        pass
+
+    @operation(lambda a, b: b ** a, '**', True)  # other ** self, switch_names=True
+    def __rpow__(self, other):
+        pass
+
+    def __neg__(self):  # - self
+        obj = self * -1
+        obj.name = f'-{self.name}'
+        return obj
+
+    def __pos__(self):  # + self
+        return self.__copy__()
+
+    def __copy__(self):
+        return NotImplementedError
+
+
+class SpectrumList(OperationBase):
 
     def __init__(self, children=None, name=''):
         """
@@ -127,8 +216,8 @@ class SpectrumList:
             The group name as appeared in Tree Widget.
         """
 
+        super(SpectrumList, self).__init__(name)
         self.children = [] if children is None else children
-        self.name = name
 
     def __len__(self):
         return self.children.__len__()
@@ -239,7 +328,7 @@ class SpectrumList:
             return ret_list, other.name if isinstance(other, SpectrumList) else 'ndarray'
 
         # operation with single spectrum, group + spectrum or with number, eg. group - 1
-        if isinstance(other, (Spectrum, float, int)):
+        elif isinstance(other, (Spectrum, float, int)):
             if len(self) == 0:
                 return SpectrumList()
 
@@ -250,67 +339,14 @@ class SpectrumList:
                 ret_list.children.append(func_operation(sp, other))
             return ret_list, str(other) if isinstance(other, (float, int)) else other.name
 
-        raise ValueError("Cannot perform calculation of SpectrumList with {}".format(type(other)))
-
-    def __add__(self, other):
-        list, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 + s2)
-        list.name = "{} + {}".format(self.name, other_str)
-        return list
-
-    def __sub__(self, other):
-        list, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 - s2)
-        list.name = "{} - {}".format(self.name, other_str)
-        return list
-
-    def __mul__(self, other):
-        list, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 * s2)
-        list.name = "{} * {}".format(self.name, other_str)
-        return list
-
-    def __truediv__(self, other):
-        list, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 / s2)
-        list.name = "{} / {}".format(self.name, other_str)
-        return list
-
-    def __radd__(self, other):
-        list, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 + s1)
-        list.name = "{} + {}".format(other_str, self.name)
-        return list
-
-    def __rsub__(self, other):
-        list, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 - s1)
-        list.name = "{} - {}".format(other_str, self.name)
-        return list
-
-    def __rmul__(self, other):
-        list, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 * s1)
-        list.name = "{} * {}".format(other_str, self.name)
-        return list
-
-    def __rtruediv__(self, other):
-        list, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 / s1)
-        list.name = "{} / {}".format(other_str, self.name)
-        return list
+        return None, None
 
     def __neg__(self):
-        list = SpectrumList()
-        list.name = f'-{self.name}'
+        sl = SpectrumList()
+        sl.name = f'-{self.name}'
         for sp in self:
-            list.children.append(-sp)
-        return list
-
-    def __pos__(self):
-        return self.__copy__()
-
-    def __pow__(self, power, modulo=None):  # self ** power
-        list, other_str = self._arithmetic_operation(power, lambda s1, s2: s1 ** s2)
-        list.name = "{} ** {}".format(self.name, other_str)
-        return list
-
-    def __rpow__(self, other):  # other ** self
-        list, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 ** s1)
-        list.name = "{} ** {}".format(other_str, self.name)
-        return list
+            sl.children.append(-sp)
+        return sl
 
     def __getitem__(self, item):
         return self.children[item]
@@ -330,17 +366,11 @@ class SpectrumList:
             ret.children.append(child.__copy__())
         return ret
 
-    def _redraw_all_spectra(self):
-        pass
-
-    def _update_view(self):
-        pass
-
 
 def add_modif_func(redraw_spectra=True, update_view=False):
     """Adds the function to cls"""
 
-    def function_decorator(fn):
+    def decorator(fn):
         @functools.wraps(fn)
         def fn_spectrum(self, *args, **kwargs):
             fn(self, *args, **kwargs)
@@ -369,25 +399,25 @@ def add_modif_func(redraw_spectra=True, update_view=False):
 
         return fn_spectrum  # use modified function
 
-    return function_decorator
+    return decorator
 
 
 def add_op_func():
 
-    def function_decorator(fn):
+    def decorator(fn):
         @functools.wraps(fn)
         def fn_spectrum_list(self, *args, **kwargs):
-            # perform the operation for each spectrum and collect the results as array
+            # perform the operation for each spectrum and collect the results as ndarray
             return np.asarray([fn(sp, *args, **kwargs) for sp in self])
 
         setattr(SpectrumList, fn.__name__, fn_spectrum_list)
 
         return fn
 
-    return function_decorator
+    return decorator
 
 
-class Spectrum(object):
+class Spectrum(OperationBase):
 
     def __init__(self, data, name='', filepath=None, assume_sorted=False):
         """
@@ -406,6 +436,8 @@ class Spectrum(object):
             If the spectrum was imported from file, this variable stored the path to the file it was imported from.
         """
 
+        super(Spectrum, self).__init__(name)
+
         if assume_sorted:
             self.data = np.asarray(data, dtype=np.float64) if data is not None else None
         else:
@@ -413,7 +445,6 @@ class Spectrum(object):
             self.data = np.asarray(data[data[:, 0].argsort()], dtype=np.float64) if data is not None else None
 
         self.filepath = filepath
-        self.name = name
 
     @classmethod
     def from_xy_values(cls, x_values, y_values, name=''):
@@ -604,26 +635,26 @@ class Spectrum(object):
         return self
 
     def _get_xy_from_range(self, x0=None, x1=None):
-        start_idx = 0
-        end_idx = self.data.shape[0]
+        start = 0
+        end = self.data.shape[0]
 
         if x0 is not None and x1 is not None and x0 > x1:
             x0, x1 = x1, x0
 
         if x0 is not None:
-            start_idx = fi(self.data[:, 0], x0)
+            start = fi(self.data[:, 0], x0)
 
         if x1 is not None:
-            end_idx = fi(self.data[:, 0], x1) + 1
+            end = fi(self.data[:, 0], x1) + 1
 
-        x = self.data[start_idx:end_idx, 0]
-        y = self.data[start_idx:end_idx, 1]
+        x = self.data[start:end, 0]
+        y = self.data[start:end, 1]
 
         return x, y
 
     @add_op_func()
     def integral(self, x0=None, x1=None, method: str = 'trapz'):
-        """Calculate cumulative integral of spectrum at specified x range [x0, x1] by trapezoidal integration method.
+        """Calculate integral of the spectrum at specified x range [x0, x1] by integration method.
         If x0, x1 are None, all spectrum will be integrated.
 
         Parameters
@@ -863,6 +894,9 @@ class Spectrum(object):
                 f"(or have different dimension). Unable to perform operation.")
 
     def _arithmetic_operation(self, other, func_operation):
+        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
+            return None, None
+
         # another spectrum
         if isinstance(other, Spectrum):
             self._operation_check(other)
@@ -889,99 +923,11 @@ class Spectrum(object):
 
         return Spectrum.from_xy_values(self.data[:, 0], np.nan_to_num(y_data)), other_str
 
-    def __add__(self, other):
-        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
-            return NotImplemented
-        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 + s2)
-        sp.name = f"{self.name} + {other_str}"
-
-        return sp
-
-    def __sub__(self, other):
-        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
-            return NotImplemented
-        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 - s2)
-        sp.name = f"{self.name} - {other_str}"
-
-        return sp
-
-    def __mul__(self, other):
-        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
-            return NotImplemented
-        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 * s2)
-        sp.name = f"{self.name} * {other_str}"
-
-        return sp
-
-    def __truediv__(self, other):   # self / other
-        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
-            return NotImplemented
-        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s1 / s2)
-        sp.name = f"{self.name} / {other_str}"
-
-        return sp
-
-    def __radd__(self, other):   # other + self
-        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
-            return NotImplemented
-        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 + s1)
-        sp.name = f"{other_str} + {self.name}"
-
-        return sp
-
-    def __rsub__(self, other):   # other - self
-        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
-            return NotImplemented
-        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 - s1)
-        sp.name = f"{other_str} - {self.name}"
-
-        return sp
-
-    def __rmul__(self, other):   # other * self
-        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
-            return NotImplemented
-        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 * s1)
-        sp.name = f"{other_str} * {self.name}"
-
-        return sp
-
-    def __rtruediv__(self, other):  # other / self
-        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
-            return NotImplemented
-        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 / s1)
-        sp.name = f"{other_str} / {self.name}"
-
-        return sp
-
-    def __pow__(self, power, modulo=None):  # self ** power
-        if not isinstance(power, (Spectrum, int, float, list, tuple, np.ndarray)):
-            return NotImplemented
-        sp, other_str = self._arithmetic_operation(power, lambda s1, s2: s1 ** s2)
-        sp.name = f"{self.name} ** {other_str}"
-
-        return sp
-
-    def __rpow__(self, other):  # other ** self
-        if not isinstance(other, (Spectrum, int, float, list, tuple, np.ndarray)):
-            return NotImplemented
-
-        sp, other_str = self._arithmetic_operation(other, lambda s1, s2: s2 ** s1)
-        sp.name = f"{other_str} ** {self.name}"
-
-        return sp
-
-    def __neg__(self):
-        sp = self * -1
-        sp.name = f'-{self.name}'
-        return sp
-
-    def __pos__(self):
-        return self.__copy__()
-
     def __repr__(self):
         if self.data is None:
             return f'{self.__class__.__name__} without data'
-        return f"{self.__class__.__name__}({self.name}, x_range=({self.data[0, 0]:.4g}, {self.data[-1, 0]:.4g}), n_points={self.data.shape[0]})"
+        return f"{self.__class__.__name__}({self.name}, x_range=({self.data[0, 0]:.4g}, {self.data[-1, 0]:.4g}), " \
+               f"n_points={self.data.shape[0]})"
 
     def __copy__(self):
         """Deep copy the current instance as Spectrum object."""

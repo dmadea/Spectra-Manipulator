@@ -24,7 +24,7 @@ from spectramanipulator.treeview.model import TreeView, ItemIterator
 # from console import Console
 
 from spectramanipulator.parsers import parse_XML_Spreadsheet
-from spectramanipulator.dataloader import parse_text, parse_files
+from spectramanipulator.dataloader import parse_text, parse_files, parse_files_specific
 from spectramanipulator.exporter import list_to_string, list_to_files
 
 
@@ -825,17 +825,17 @@ class TreeWidget(TreeView):
         self.import_spectra(spectra)
 
     def import_LPF_kinetics(self, filepaths):
-        settings = dict(delimiter=',',
-                        decimal_sep='.',
-                        remove_empty_entries=False,
-                        skip_col_num=3,
-                        general_import_spectra_name_from_filename=True,
-                        skip_nan_columns=False,
-                        nan_replacement=0,
-                        doublequote=True,
-                        skipinitialspace=True)
+        kwargs = dict(delimiter=',',
+                      decimal_sep='.',
+                      remove_empty_entries=False,
+                      skip_col_num=3,
+                      general_import_spectra_name_from_filename=True,
+                      skip_nan_columns=False,
+                      nan_replacement=0,
+                      doublequote=True,
+                      skipinitialspace=True)
 
-        spectra = parse_files_specific(filepaths, use_CSV_parser=True, **settings)
+        spectra = parse_files_specific(filepaths, use_CSV_parser=True, **kwargs)
         self.import_spectra(spectra)
 
 
