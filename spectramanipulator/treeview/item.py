@@ -250,6 +250,12 @@ class SpectrumItem(GenericItem, Spectrum):
     def is_top_level(self):
         return self.parent.is_root()
 
+    def __copy__(self):
+
+        # TODO--->
+        sp = super(SpectrumItem, self).__copy__()
+        return self.from_spectrum(sp)
+
 
 class SpectrumItemGroup(GenericItem, SpectrumList):
 

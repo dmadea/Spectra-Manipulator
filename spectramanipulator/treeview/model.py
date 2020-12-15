@@ -628,7 +628,7 @@ class TreeView(QTreeView):
         self.items_deleted_signal.emit(item_was_checked)
         self.save_state()
 
-    def add_items_to_group(self, items, group=None, row_to_place=None, edit=True):
+    def add_items_to_group(self, items, group=None, row_to_place=None, edit=True, copy_items=False):
         """edit - if place cursor in a new group item to edit the name"""
 
         if not np.iterable(items):
@@ -638,10 +638,9 @@ class TreeView(QTreeView):
         group_item = SpectrumItemGroup('', '', parent=self.myModel.root) if group is None else group
         self.myModel.insertRows(self.myModel.root.__len__(), 1, QModelIndex())
 
-        # group_item_index = self.myModel.createIndex(self.myModel.root.__len__(), 0, group_item)
+        group_item_index = self.myModel.createIndex(len(self.myModel.root), 0, group_item)
 
-        def _move_items(parent, first_row, last_row, row_to_put):
-            group_item_index = self.myModel.createIndex(self.myModel.root.__len__(), 0, group_item)
+        def _move_chunk(parent, first_row, last_row, group_item_index, row_to_put):
             source_parent = self.myModel.index_from_node(parent)
 
             self.myModel.beginMoveRows(source_parent, first_row, last_row, group_item_index, row_to_put)
@@ -653,6 +652,19 @@ class TreeView(QTreeView):
                 child.setParent(group_item)
 
             self.myModel.endMoveRows()
+
+        def _copy_chunk(parent, first_row, last_row, group_item_index, row_to_put):
+
+            self.myModel.beginInsertRows(group_item_index, row_to_put, last_row - first_row + 1)
+            chunk = parent.children[first_row:last_row + 1]  # take the reference
+
+            for child in chunk:
+                copied_child = child.__copy__()
+                copied_child.setParent(group_item)
+
+            self.myModel.endInsertRows()
+
+        chunk_op = _copy_chunk if copy_items else _move_chunk  # either move or copy mode
 
         last_parent = None
         first_row = -1
@@ -679,7 +691,8 @@ class TreeView(QTreeView):
             if current_parent != last_parent or current_row - last_row > 1:  # move chunk of items
 
                 n_items = (last_row - first_row + 1)
-                _move_items(last_parent, first_row, last_row, i - n_items)
+
+                chunk_op(last_parent, first_row, last_row, group_item_index, i - n_items)
 
                 # current row will be changed because we removed n_items
                 first_row = current_row if current_parent != last_parent else current_row - n_items
@@ -691,13 +704,13 @@ class TreeView(QTreeView):
             i += 1
 
         # process last chunk
-        _move_items(last_parent, first_row, last_row, i - (last_row - first_row + 1))
+        chunk_op(last_parent, first_row, last_row, group_item_index, i - (last_row - first_row + 1))
 
         # move the group to correct place
-        try:
-            self.myModel.move_item(group_item, self.myModel.root, row_to_place)
-        except:
-            print("asdasd")
+        gi = self.myModel.take_item(group_item)
+        self.myModel.add_item(gi, self.myModel.root, row_to_place)
+        # simple item move did not work for last item in the list, there is some Qt bug there...
+        # self.myModel.move_item(group_item, self.myModel.root, row_to_place)
 
         index = self.myModel.index_from_node(group_item)
 
@@ -711,14 +724,14 @@ class TreeView(QTreeView):
 
         self.save_state()
 
-    def add_selected_items_to_group(self):
+    def add_selected_items_to_group(self, copy=False):
 
         if len(self.selectedIndexes()) == 0:
             return
 
         iterator = self.myModel.iterate_selected_items(skip_groups=True,
-                                                        skip_childs_in_selected_groups=False)
-        self.add_items_to_group(iterator)
+                                                       skip_childs_in_selected_groups=False)
+        self.add_items_to_group(iterator, copy_items=copy)
 
     def keyPressEvent(self, e):
         pass

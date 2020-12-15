@@ -19,6 +19,21 @@ def _process_filepath(args):
         return "Error occurred while parsing file {}, skipping the file.\nException: {}\n".format(filepath, ex.__str__()), None
 
 
+def _process_filepath_specific(args):
+    filepath, settings,  = args
+    try:
+        parsed_spectra = _parse_file_specific(filepath, settings)
+        return None, parsed_spectra
+    except Exception as ex:
+        return "Error occurred while parsing file {}, skipping the file.\nException: {}\n".format(filepath, ex.__str__()), None
+
+
+def parse_files_specific(filepaths, use_CSV_parser=False, **kwargs):
+    """kwargs are passed to the parser"""
+
+
+
+
 def parse_files(filepaths, settings: dict = None):
     """
 
@@ -27,6 +42,7 @@ def parse_files(filepaths, settings: dict = None):
     :param settings:
     :return:
     """
+
     if filepaths is None:
         raise ValueError("Filepaths cannot be None.")
     if isinstance(filepaths, str):
@@ -96,6 +112,12 @@ def parse_text(text):
     if spectra is None or len(spectra) == 0:
         Logger.message("No lines were parsed, check delimiter, decimal separator and number of skipped columns in settings.")
     return spectra
+
+
+def _parse_file_specific(filepath, use_CSV_parser=False, **kwargs):
+    """kwargs are passed to the General or CSV parser"""
+    parser = CSVFileParser(filepath, **kwargs) if use_CSV_parser else GeneralParser(filepath, **kwargs)
+    return parser.parse()
 
 
 def _parse_file(filepath, settings):

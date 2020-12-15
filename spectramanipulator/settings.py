@@ -1,6 +1,6 @@
 import json
 from spectramanipulator.logger import Logger
-import sys
+# import sys
 import os
 
 
@@ -13,7 +13,6 @@ class Settings(object):
     _config_filename = "config.json"
     _inst_default_settings = None  # default settings instance
 
-
     # not in Settings dialog
     enable_multiprocessing = True  # enables importing files as separate processes
     force_multiprocess = False  # importing of files will only run in multiple processes
@@ -21,7 +20,7 @@ class Settings(object):
     # --------SETTINGS----------
 
     # not in Settings dialog
-    general_models_dir = 'spectramanipulator\\general models\\'
+    general_models_dir = 'general models'
     REG_PROGRAM_NAME = 'SpectraManipulator.projectfile'
     PROJECT_EXTENSION = '.smpj'
 
@@ -83,7 +82,7 @@ class Settings(object):
     same_color_in_group = True
     different_line_style_among_groups = False
 
-    legend_spacing = 13
+    legend_spacing = 8
 
     color_scheme = 0  # 0 - default, 1 - HSV, 2 - user defined
 
@@ -118,6 +117,7 @@ class Settings(object):
     # files dialog last paths
 
     import_files_dialog_path = ""
+    import_LPF_dialog_path = ""
     open_project_dialog_path = ""
     save_project_dialog_path = ""
     export_spectra_as_dialog_path = ""
@@ -150,15 +150,6 @@ class Settings(object):
 
         for s in Settings._project_independent_settings:
             del self.attr[s]
-
-        # del self.attr['export_spectra_as_dialog_path']
-        # del self.attr['export_spectra_as_dialog_ext']
-        # del self.attr['export_spectra_as_dialog_delimiter']
-        # del self.attr['export_spectra_as_dialog_decimal_sep']
-        # del self.attr['recent_project_filepaths']
-        # del self.attr['import_files_dialog_path']
-        # del self.attr['open_project_dialog_path']
-        # del self.attr['save_project_dialog_path']
 
     def set_settings(self):
         """Sets static settings from this instance object (project settings)."""

@@ -12,6 +12,7 @@ from spectramanipulator.logger import Logger
 from spectramanipulator.treeview.item import SpectrumItem, SpectrumItemGroup
 from spectramanipulator.console import Console
 from spectramanipulator.spectrum import fi
+import spectramanipulator
 
 import pyqtgraph as pg
 
@@ -216,7 +217,10 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # curr_idx = self.cbGenModels.currentIndex() if len(self.cbGenModels) > 0 else None
         self.cbGenModels.clear()
         self.gen_models_paths = []
-        fpath = os.path.join(Settings.general_models_dir, '*.json')
+
+        module_path = os.path.abspath(spectramanipulator.__file__)  # get the absolute path of a module
+        fpath = os.path.join(os.path.dirname(module_path), Settings.general_models_dir, '*.json')
+
         for fpath in glob.glob(fpath, recursive=True):
             fname = os.path.splitext(os.path.split(fpath)[1])[0]
             self.gen_models_paths.append(fpath)

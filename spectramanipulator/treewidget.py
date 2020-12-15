@@ -639,8 +639,11 @@ class TreeWidget(TreeView):
         else:
             # Clicked on item
             if isinstance(item, SpectrumItem):
-                add_to_group = menu.addAction("Add Items to Group")
-                add_to_group.triggered.connect(self.add_selected_items_to_group)
+                add_to_group = menu.addAction("Move Items to New Group")
+                add_to_group.triggered.connect(lambda: self.add_selected_items_to_group(copy=False))
+
+                copy_to_group = menu.addAction("Copy Items to New Group")
+                copy_to_group.triggered.connect(lambda: self.add_selected_items_to_group(copy=True))
 
                 uncheck_all = menu.addAction("Uncheck All Items")
                 uncheck_all.triggered.connect(self.uncheck_all)
@@ -820,3 +823,22 @@ class TreeWidget(TreeView):
 
         spectra = parse_files(filepaths)
         self.import_spectra(spectra)
+
+    def import_LPF_kinetics(self, filepaths):
+        settings = dict(delimiter=',',
+                        decimal_sep='.',
+                        remove_empty_entries=False,
+                        skip_col_num=3,
+                        general_import_spectra_name_from_filename=True,
+                        skip_nan_columns=False,
+                        nan_replacement=0,
+                        doublequote=True,
+                        skipinitialspace=True)
+
+        spectra = parse_files_specific(filepaths, use_CSV_parser=True, **settings)
+        self.import_spectra(spectra)
+
+
+
+
+

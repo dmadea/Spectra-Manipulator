@@ -177,6 +177,7 @@ class Main(QMainWindow):
             else:
                 event.ignore()
 
+
     def open_settings(self):
 
         if SettingsDialog.is_opened:
@@ -298,9 +299,26 @@ class Main(QMainWindow):
         if len(filenames[0]) == 0:
             return
 
-        Settings.import_files_dialog_path = os.path.split(filenames[0][0])[0]
+        Settings.import_files_dialog_path = os.path.dirname(filenames[0][0])
+        Settings.save()
 
         self.tree_widget.import_files(filenames[0])
+
+    def import_LPF_kinetics(self):
+        filter = "Data Files (*.csv, *.CSV);;All Files (*.*)"
+        initial_filter = "Data Files (*.csv, *.CSV)"
+
+        filenames = QFileDialog.getOpenFileNames(None, caption="Import LFP Kinetics",
+                                                 directory=Settings.import_LPF_dialog_path,
+                                                 filter=filter, initialFilter=initial_filter)
+
+        if len(filenames[0]) == 0:
+            return
+
+        Settings.import_LPF_dialog_path = os.path.dirname(filenames[0][0])
+        Settings.save()
+
+        self.tree_widget.import_LPF_kinetics(filenames[0])
 
     def intLineStyle(self, counter):
         styles = [Qt.SolidLine, Qt.DashLine, Qt.DotLine, Qt.DashDotLine, Qt.DashDotDotLine]
