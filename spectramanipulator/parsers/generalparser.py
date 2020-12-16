@@ -18,6 +18,8 @@ class GeneralParser(GenericParser):
         self.skip_nan_columns = skip_nan_columns
         self.nan_replacement = nan_replacement
 
+        self.names_history = []
+
     def line2list_iterator(self):
         """Iterator method that can be overridden. Get iterator that will iterate through a parsed line into a LIST"""
 
@@ -32,13 +34,13 @@ class GeneralParser(GenericParser):
     def parse(self, name=None):
 
         data = []
-        names = []
+        last_names = []
 
         for line in self.line2list_iterator():
             # line is a parsed list - ['entry1', 'entry2', .... ]
 
             if len(line) < 2:
-                self._parse_chunk(data, names)
+                self._parse_chunk(data, last_names)
                 continue
 
             if len(line) != 0:
@@ -52,14 +54,15 @@ class GeneralParser(GenericParser):
             l_values = [self.float_try_parse(num) for num in line]
 
             if l_values[0] is None:
-                self._parse_chunk(data, names)
-                names = line
+                self._parse_chunk(data, last_names)
+                last_names = line
+                self.names_history.append(last_names.copy())
 
                 continue
 
             data.append(l_values)
 
-        self._parse_chunk(data, names)
+        self._parse_chunk(data, last_names)
 
         return self._spectra_buffer
 

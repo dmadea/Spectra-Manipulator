@@ -25,6 +25,9 @@ from .misc import intColor, intColorGradient, int_default_color_scheme
 
 from .dialogs.settingsdialog import SettingsDialog
 from .treeview.item import SpectrumItemGroup
+from .dataloader import parse_files_specific
+from .spectrum import SpectrumList
+import re
 
 import numpy as np
 
@@ -194,22 +197,38 @@ class Main(QMainWindow):
 
         self.redraw_all_spectra()
 
+    @staticmethod
+    def _open_file_dialog(caption='Open ...', initial_dir='...', _filter='All Files (*.*)',
+                          initial_filter='All Files (*.*)', choose_multiple=False):
+
+        f = QFileDialog.getOpenFileNames if choose_multiple else QFileDialog.getOpenFileName
+
+        filepaths = f(caption=caption,
+                      directory=initial_dir,
+                      filter=_filter,
+                      initialFilter=initial_filter)
+
+        if not choose_multiple and filepaths[0] == '':
+            return None
+
+        if choose_multiple and len(filepaths[0]) < 1:
+            return None
+
+        return filepaths[0]
+
     def open_project(self, filepath=None, open_dialog=True):
 
         if open_dialog:
-            # filter = "Data Files (*.txt, *.csv, *.dx)|*.txt;*.csv;*.dx|All Files (*.*)|*.*"
-            _filter = f"Project files (*{Settings.PROJECT_EXTENSION});;All Files (*.*)"
-            initial_filter = f"Project files (*.{Settings.PROJECT_EXTENSION})"
+            filepath = self._open_file_dialog("Open project", Settings.open_project_dialog_path,
+                                              _filter=f"Project files (*{Settings.PROJECT_EXTENSION});;All Files (*.*)",
+                                              initial_filter=f"Project files (*{Settings.PROJECT_EXTENSION})",
+                                              choose_multiple=False)
 
-            filepaths = QFileDialog.getOpenFileName(caption="Open project",
-                                                    directory=Settings.open_project_dialog_path,
-                                                    filter=_filter,
-                                                    initialFilter=initial_filter)
-            if filepaths[0] == '':
+            if filepath is None:
                 return
 
-            Settings.open_project_dialog_path = os.path.split(filepaths[0])[0]
-            filepath = filepaths[0]
+            Settings.open_project_dialog_path = os.path.dirname(filepath)
+            Settings.save()
 
         if not os.path.exists(filepath):
             Logger.message(f"File {filepath} does not exist.")
@@ -251,18 +270,18 @@ class Main(QMainWindow):
         if self.tree_widget.top_level_items_count() == 0:
             return
 
-        filter = f"Project files (*{Settings.PROJECT_EXTENSION})"
+        _filter = f"Project files (*{Settings.PROJECT_EXTENSION})"
 
         filepath = QFileDialog.getSaveFileName(caption="Save project",
                                                directory=Settings.save_project_dialog_path if self.current_file is None else self.current_file,
-                                               filter=filter, initialFilter=filter)
+                                               filter=_filter, initialFilter=_filter)
 
         if filepath[0] == '':
             return
 
         Logger.message(f"Saving project to {filepath[0]}")
 
-        Settings.save_project_dialog_path = os.path.split(filepath[0])[0]
+        Settings.save_project_dialog_path = os.path.dirname(filepath[0])
         Settings.save()
 
         project = Project(generic_item=self.tree_widget.myModel.root)
@@ -288,37 +307,113 @@ class Main(QMainWindow):
             self.save_project_as()
 
     def file_menu_import_files(self):
+        filepaths = self._open_file_dialog("Import files", Settings.import_files_dialog_path,
+                                           _filter="Data Files (*.txt, *.TXT, *.csv, *.CSV, *.dx, *.DX);;All Files (*.*)",
+                                           initial_filter=f"All Files (*.*)",
+                                           choose_multiple=True)
 
-        filter = "Data Files (*.txt, *.TXT, *.csv, *.CSV, *.dx, *.DX);;All Files (*.*)"
-        initial_filter = "All Files (*.*)"
-
-        filenames = QFileDialog.getOpenFileNames(None, caption="Import files",
-                                                 directory=Settings.import_files_dialog_path,
-                                                 filter=filter, initialFilter=initial_filter)
-
-        if len(filenames[0]) == 0:
+        if filepaths is None:
             return
 
-        Settings.import_files_dialog_path = os.path.dirname(filenames[0][0])
+        Settings.import_files_dialog_path = os.path.dirname(filepaths[0])
         Settings.save()
 
-        self.tree_widget.import_files(filenames[0])
+        self.tree_widget.import_files(filepaths)
 
     def import_LPF_kinetics(self):
-        filter = "Data Files (*.csv, *.CSV);;All Files (*.*)"
-        initial_filter = "Data Files (*.csv, *.CSV)"
+        filepaths = self._open_file_dialog("Import LFP Kinetics", Settings.import_LPF_dialog_path,
+                                           _filter="Data Files (*.csv, *.CSV);;All Files (*.*)",
+                                           initial_filter="Data Files (*.csv, *.CSV)",
+                                           choose_multiple=True)
 
-        filenames = QFileDialog.getOpenFileNames(None, caption="Import LFP Kinetics",
-                                                 directory=Settings.import_LPF_dialog_path,
-                                                 filter=filter, initialFilter=initial_filter)
-
-        if len(filenames[0]) == 0:
+        if filepaths is None:
             return
 
-        Settings.import_LPF_dialog_path = os.path.dirname(filenames[0][0])
+        Settings.import_LPF_dialog_path = os.path.dirname(filepaths[0])
         Settings.save()
 
-        self.tree_widget.import_LPF_kinetics(filenames[0])
+        kwargs = dict(delimiter=',',
+                      decimal_sep='.',
+                      remove_empty_entries=False,
+                      skip_col_num=3,
+                      general_import_spectra_name_from_filename=True,
+                      skip_nan_columns=False,
+                      nan_replacement=0)
+
+        spectra, _ = parse_files_specific(filepaths, use_CSV_parser=False, **kwargs)
+        if len(spectra) == 0:
+            return
+
+        # CONVERT THE VOLTAGE (proportional to transmittance) TO ABSORBANCE
+        for sp in spectra:
+            sp.y = -np.log10(-sp.y)
+
+        self.tree_widget.import_spectra(spectra)
+
+    def import_EEM_Duetta(self):
+        filepaths = self._open_file_dialog("Import Excitation Emission Map from Duetta Fluorimeter",
+                                           Settings.import_EEM_dialog_path,
+                                           _filter="Data Files (*.txt, *.TXT);;All Files (*.*)",
+                                           initial_filter="Data Files (*.txt, *.TXT)",
+                                           choose_multiple=True)
+
+        if filepaths is None:
+            return
+
+        Settings.import_EEM_dialog_path = os.path.dirname(filepaths[0])
+        Settings.save()
+
+        kwargs = dict(delimiter='\t',
+                      decimal_sep='.',
+                      remove_empty_entries=False,
+                      skip_col_num=0,
+                      general_import_spectra_name_from_filename=True,
+                      skip_nan_columns=False,
+                      nan_replacement=0)
+
+        spectra, parsers = parse_files_specific(filepaths, use_CSV_parser=False, **kwargs)
+        if len(spectra) == 0:
+            return
+
+        if not isinstance(spectra[0], SpectrumList):
+            Logger.message(f"{type(spectra[0])} is not type SpectrumList. "
+                           f"Unable to import data. Check the dataparsers.")
+            return
+
+        # eg. MeCN blank 2nm step 448:250-1100, we need 448 which is the excitation wavelength
+        pattern = re.compile(r'(\d+):\d+-\d+')
+
+        # extract the wavelengths from parsers
+        for sl, parser in zip(spectra, parsers):
+            names_list = parser.names_history[0]  # first line in names history
+            assert len(names_list) == len(sl) + 1
+
+            # extract the excitation wavelengths from the name history
+            new_names = []
+            sl_name = None
+            for name in names_list:
+                if name == '':
+                    continue
+                m = pattern.search(name)
+                if m is None:
+                    continue
+                new_names.append(m.group(1))
+                sl_name = name.replace(m.group(0), '').strip()
+
+            # set the main name
+            if sl_name:
+                sl.name = sl_name
+
+            # remove each 2nd spectrum as it contains useless X values (starting from second spectrum)
+            del sl.children[1::2]
+
+            # setup extracted names = excitation wavelengths
+            sl.set_names(new_names)
+
+            # 'sort' the list, the data are imported in opposite way so we can just reverse the list
+            sl.children = sl.children[::-1]
+
+        self.tree_widget.import_spectra(spectra)
 
     def intLineStyle(self, counter):
         styles = [Qt.SolidLine, Qt.DashLine, Qt.DotLine, Qt.DashDotLine, Qt.DashDotDotLine]

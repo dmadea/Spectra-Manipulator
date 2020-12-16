@@ -49,9 +49,13 @@ class MenuBar(QMenuBar):
         self.import_special_menu = QMenu("Import Special", self.file_menu)
         self.file_menu.addAction(self.import_special_menu.menuAction())
 
-        self.nano_kinetics = QAction("Kinetics from LFP", self)
+        self.nano_kinetics = QAction("Kinetics from LFP (with T\u2192A conversion)", self)
         self.nano_kinetics.triggered.connect(self.parent().import_LPF_kinetics)
         self.import_special_menu.addAction(self.nano_kinetics)
+
+        self.EEM_duetta = QAction('Excitation-Emission Map from Duetta Fluorimeter', self)
+        self.EEM_duetta.triggered.connect(self.parent().import_EEM_Duetta)
+        self.import_special_menu.addAction(self.EEM_duetta)
 
         self.export_selected_spectra_as_act = QAction("&Export Selected Items As", self)
         # self.export_selected_spectra_as.setShortcut("Ctrl+E")

@@ -118,6 +118,7 @@ class Settings(object):
 
     import_files_dialog_path = ""
     import_LPF_dialog_path = ""
+    import_EEM_dialog_path = ""
     open_project_dialog_path = ""
     save_project_dialog_path = ""
     export_spectra_as_dialog_path = ""

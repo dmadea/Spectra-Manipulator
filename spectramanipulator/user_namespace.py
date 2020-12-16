@@ -14,7 +14,9 @@ from PyQt5.QtWidgets import QApplication
 from scipy.linalg import lstsq
 
 from spectramanipulator.settings import Settings
-from spectramanipulator.spectrum import fi, Spectrum
+from spectramanipulator.spectrum import fi, Spectrum, SpectrumList
+
+import functools
 
 # for backward compatibility of smpj files
 ItemList = list
@@ -129,6 +131,59 @@ def set_main_axis(ax, x_label=WL_LABEL, y_label="Absorbance", xlim=(None, None),
 
     ax.tick_params(axis='both', which='major', direction='in')
     ax.tick_params(axis='both', which='minor', direction='in')
+
+
+def _transform_func(transform=lambda y: y):
+    def decorator(fn):
+        @functools.wraps(fn)
+        def func(item):
+            fn_name = fn.__name__
+            if isinstance(item, Spectrum):
+                y_data = transform(item.data[:, 1])
+                return Spectrum.from_xy_values(item.data[:, 0], np.nan_to_num(y_data), name=f'{fn_name}({item.name})')
+            elif isinstance(item, SpectrumList):
+                sl = SpectrumList(name=f'{fn_name}({item.name})')
+                for sp in item:
+                    y_data = transform(sp.data[:, 1])
+                    new_sp = Spectrum.from_xy_values(sp.data[:, 0], np.nan_to_num(y_data), name=f'{fn_name}({sp.name})')
+                    sl.children.append(new_sp)
+                return sl
+            else:
+                return transform(item)  # this may not be implemented, but for numbers and ndarrays it will work
+        return func
+    return decorator
+
+
+@_transform_func(lambda y: np.exp(y))
+def exp(item):
+    """
+    Calculates the exponential of y values and returns a new Spectrum/SpectrumList.
+    """
+    pass
+
+
+@_transform_func(lambda y: np.log10(y))
+def log10(item):
+    """
+    Calculates the decadic logarithm of y values and returns a new Spectrum/SpectrumList.
+    """
+    pass
+
+
+@_transform_func(lambda y: np.log(y))
+def log(item):
+    """
+    Calculates the natural logarithm of y values and returns a new Spectrum/SpectrumList
+    """
+    pass
+
+
+@_transform_func(lambda y: -np.log10(-y))
+def T2A_LFP(item):
+    """
+    Performs the transmittance to absorbance conversion for nano kinetics,
+    y_transformed = -log10(-y)."""
+    pass
 
 
 def add_to_list(spectra):
