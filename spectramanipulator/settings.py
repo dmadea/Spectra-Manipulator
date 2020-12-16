@@ -139,6 +139,8 @@ class Settings(object):
         'export_spectra_as_dialog_decimal_sep',
         'recent_project_filepaths',
         'import_files_dialog_path',
+        'import_LPF_dialog_path',
+        'import_EEM_dialog_path',
         'open_project_dialog_path',
         'save_project_dialog_path',
     ]
@@ -148,7 +150,6 @@ class Settings(object):
         self.attr = Settings.get_attributes()
 
         # delete settings that are project independent
-
         for s in Settings._project_independent_settings:
             del self.attr[s]
 

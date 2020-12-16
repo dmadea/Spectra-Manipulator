@@ -15,6 +15,8 @@ from scipy.linalg import lstsq
 
 from spectramanipulator.settings import Settings
 from spectramanipulator.spectrum import fi, Spectrum, SpectrumList
+from scipy.integrate import simps, cumtrapz
+
 
 import functools
 
@@ -733,8 +735,8 @@ def plot_fit(data_item, fit_item, residuals_item, symlog=False, linscale=1, lint
     ax2.xaxis.set_ticks_position('both')
 
     if symlog:
-        ax1.set_xscale('symlog', subsx=[2, 3, 4, 5, 6, 7, 8, 9], linscalex=linscale, linthreshx=linthresh)
-        ax2.set_xscale('symlog', subsx=[2, 3, 4, 5, 6, 7, 8, 9], linscalex=linscale, linthreshx=linthresh)
+        ax1.set_xscale('symlog', subs=[2, 3, 4, 5, 6, 7, 8, 9], linscale=linscale, linthresh=linthresh)
+        ax2.set_xscale('symlog', subs=[2, 3, 4, 5, 6, 7, 8, 9], linscale=linscale, linthresh=linthresh)
         ax1.xaxis.set_minor_locator(MinorSymLogLocator(linthresh))
         ax2.xaxis.set_minor_locator(MinorSymLogLocator(linthresh))
 
@@ -749,6 +751,118 @@ def plot_fit(data_item, fit_item, residuals_item, symlog=False, linscale=1, lint
         plt.savefig(fname=filepath, format=ext, transparent=transparent, dpi=dpi)
 
     plt.show()
+
+
+def reaction_QY_relative(sample_items, actinometer_items, QY_act=1, irradiation_spectrum=None,
+                         irradiation_wavelength=None, integration_range=(None, None),
+                         samples_times=None, actinometers_times=None, integration_method='trapz'):
+    """
+    TODO.....
+    :param sample_items:
+    :param actinometer_items:
+    :param irradiation_spectrum:
+    :param irradiation_wavelength:
+    :param integration_range:
+    :param sample_times:
+    :param actinometer_times:
+    :param integration_method: trapz or simps - simpsons rule
+    :return:
+    """
+
+    # type checking
+    if sample_items is None or actinometer_items is None:
+        raise ValueError("Arguments sample_items and actinometer_items must not be None.")
+
+    if not isinstance(sample_items, (list, tuple, SpectrumList)) and \
+            not isinstance(actinometer_items, (list, tuple, SpectrumList)):
+        raise ValueError("Arguments sample_items and actinometer_items must be type list, tuple or SpectrumList.")
+
+    if isinstance(sample_items, (list, tuple)) and not isinstance(sample_items[0], SpectrumList):
+        raise ValueError("Entries of sample_items must be type of SpectrumList.")
+
+    if isinstance(actinometer_items, (list, tuple)) and not isinstance(actinometer_items[0], SpectrumList):
+        raise ValueError("Entries of actinometer_items must be type of SpectrumList.")
+
+    if irradiation_wavelength is None and irradiation_spectrum is None:
+        raise ValueError("Argument irradiation_spectrum or irradiation_wavelength must be provided.")
+
+    if irradiation_spectrum is not None and irradiation_wavelength is not None:
+        raise ValueError("Only one argument of irradiation_spectrum or irradiation_wavelength must be provided.")
+
+    if irradiation_spectrum is None and not isinstance(irradiation_wavelength, (int, float)):
+        raise ValueError("Argument irradiation_wavelength must be type of int or float.")
+
+    if irradiation_wavelength is None and not isinstance(irradiation_spectrum, (Spectrum, np.ndarray, list)):
+        raise ValueError("Argument irradiation_spectrum must be type of Spectrum, ndarray or list.")
+
+    if not isinstance(integration_range, tuple) or len(integration_range) != 2:
+        raise ValueError("Argument integration_range must be type of tuple and have length of 2.")
+
+    samples = [sample_items] if isinstance(sample_items, SpectrumList) else sample_items
+    acts = [actinometer_items] if isinstance(actinometer_items, SpectrumList) else actinometer_items
+
+    if irradiation_spectrum:
+        irr_sp = np.asarray(irradiation_spectrum) if not isinstance(irradiation_spectrum, Spectrum) \
+                                else irradiation_spectrum.data[:, 1]
+
+        x0, x1 = integration_range
+        if x0 is not None and x1 is not None and x0 > x1:
+            x0, x1 = x1, x0
+
+        def abs_photons(data):
+            start = 0
+            end = data.shape[0]
+            start_sp = 0
+            end_sp = irr_sp.shape[0]
+            if x0 is not None:
+                start = fi(data[:, 0], x0)
+                start_sp = fi(irr_sp, x0)
+            if x1 is not None:
+                end = fi(data[:, 0], x1) + 1
+                end_sp = fi(irr_sp, x1) + 1
+
+            if start - end != start_sp - end_sp:
+                # TODO --- > interpolate irradiaiton specturm based on data
+                raise ValueError("Irradiation spectrum and data does not have equal dimension.")
+
+            # (1 - 10 ** -A) * I_irr
+            abs_light = (1 - 10 ** -data[start:end, 1]) * irr_sp[start_sp:end_sp]
+
+            if integration_method == 'trapz':
+                return np.trapz(abs_light, data[start:end, 0])  # integrate using trapezoidal rule
+            else:
+                return simps(abs_light, data[start:end, 0])  # integrate using simpsons rule
+
+    else:  # only irradiation wavelength
+        def abs_photons(data):
+            idx = fi(data[:, 0], irradiation_wavelength)
+            return 1 - 10 ** -data[idx, 1]  # 1 - 10 ** -A
+
+    _sample_times = [] if samples_times is None else samples_times
+    _acs_times = [] if actinometers_times is None else actinometers_times
+
+    if samples_times is None:
+        for sample in samples:
+            _sample_times = np.asarray([float(sp.name) for sp in sample])
+
+    if actinometers_times is None:
+        for act in acts:
+            _acs_times = np.asarray([float(sp.name) for sp in act])
+
+    # calculate for each combination of sample and actinometer kinetics
+    for sample, s_times in zip(samples, _sample_times):
+        for act, act_times in zip(acts, _acs_times):
+
+            abs_photons_sample = np.asarray([abs_photons(sp.data) for sp in sample])
+            abs_photons_act = np.asarray([abs_photons(sp.data) for sp in act])
+
+            np_abs_sample = cumtrapz(abs_photons_sample, s_times)
+            np_abs_act = cumtrapz(abs_photons_act, act_times)
+
+            # TODO>>>>
+
+
+
 
 
 def bcorr_1D(item, first_der_tresh=1e-4, second_der_tresh=0.1):

@@ -139,11 +139,12 @@ class TreeWidget(TreeView):
                                                 skip_childs_in_selected_groups=False))
 
         try:
-            list_to_files(sp_list, path, ext, include_group_name=Settings.files_exp_include_group_name,
-                                   include_header=Settings.files_exp_include_header,
-                                   delimiter=delimiter,
-                                   decimal_sep=decimal_sep,
-                                   x_data_name=Settings.bottom_axis_label)
+            list_to_files(sp_list, path, ext,
+                          include_group_name=Settings.files_exp_include_group_name,
+                          include_header=Settings.files_exp_include_header,
+                          delimiter=delimiter,
+                          decimal_sep=decimal_sep,
+                          x_data_name=Settings.bottom_axis_label)
 
         except Exception as ex:
             QMessageBox.warning(self, 'Error', ex.__str__(), QMessageBox.Ok)
