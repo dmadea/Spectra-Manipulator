@@ -16,6 +16,8 @@ from scipy.linalg import lstsq
 from spectramanipulator.settings import Settings
 from spectramanipulator.spectrum import fi, Spectrum, SpectrumList
 from scipy.integrate import simps, cumtrapz
+from scipy.stats import linregress
+from uncertainties import ufloat, unumpy
 
 
 import functools
@@ -754,10 +756,20 @@ def plot_fit(data_item, fit_item, residuals_item, symlog=False, linscale=1, lint
 
 
 def reaction_QY_relative(sample_items, actinometer_items, QY_act=1, irradiation_spectrum=None,
-                         irradiation_wavelength=None, integration_range=(None, None),
-                         samples_times=None, actinometers_times=None, integration_method='trapz'):
+                         irradiation_wavelength=None, integration_range=(None, None), V_solution=1,
+                         conc_calc_range=(None, None), samples_times=None, actinometers_times=None,
+                         c_0_samples=1, c_0_acts=1, integration_method='trapz'):
     """
     TODO.....
+
+    Initial spectrua of both sample and actinometers must be at time = 0 (before irradiaiton).
+
+    if conc_calc_range is (None, None), all spectrum will be taken for calclation of conccentration
+    V solution
+
+    integration method works for spectra integration as well as for cumulative time integration
+
+
     :param sample_items:
     :param actinometer_items:
     :param irradiation_spectrum:
@@ -802,8 +814,12 @@ def reaction_QY_relative(sample_items, actinometer_items, QY_act=1, irradiation_
     acts = [actinometer_items] if isinstance(actinometer_items, SpectrumList) else actinometer_items
 
     if irradiation_spectrum:
-        irr_sp = np.asarray(irradiation_spectrum) if not isinstance(irradiation_spectrum, Spectrum) \
-                                else irradiation_spectrum.data[:, 1]
+        irr_sp_x = None
+        if isinstance(irradiation_spectrum, Spectrum):
+            irr_sp_x = irradiation_spectrum.data[:, 0]
+            irr_sp_y = irradiation_spectrum.data[:, 1]
+        else:
+            irr_sp_y = np.asarray(irradiation_spectrum)
 
         x0, x1 = integration_range
         if x0 is not None and x1 is not None and x0 > x1:
@@ -813,25 +829,30 @@ def reaction_QY_relative(sample_items, actinometer_items, QY_act=1, irradiation_
             start = 0
             end = data.shape[0]
             start_sp = 0
-            end_sp = irr_sp.shape[0]
+            end_sp = irr_sp_y.shape[0]
             if x0 is not None:
                 start = fi(data[:, 0], x0)
-                start_sp = fi(irr_sp, x0)
+                start_sp = fi(irr_sp_y, x0)
             if x1 is not None:
                 end = fi(data[:, 0], x1) + 1
-                end_sp = fi(irr_sp, x1) + 1
+                end_sp = fi(irr_sp_y, x1) + 1
 
             if start - end != start_sp - end_sp:
-                # TODO --- > interpolate irradiaiton specturm based on data
-                raise ValueError("Irradiation spectrum and data does not have equal dimension.")
+                if irr_sp_x is None:
+                    raise ValueError("Irradiation spectrum and data does not have equal dimension.")
+                irr = np.interp(data[:, 0], irr_sp_x, irr_sp_y)  # interpolate to match data if x vals are provided
+            else:
+                irr = irr_sp_y[start_sp:end_sp]  # slice the irradiation spectrum to match the data
 
-            # (1 - 10 ** -A) * I_irr
-            abs_light = (1 - 10 ** -data[start:end, 1]) * irr_sp[start_sp:end_sp]
+            x = data[start:end, 0]
+            y = data[start:end, 1]
+
+            abs_light = (1 - 10 ** -y) * irr  # (1 - 10 ** -A) * I_irr
 
             if integration_method == 'trapz':
-                return np.trapz(abs_light, data[start:end, 0])  # integrate using trapezoidal rule
+                return np.trapz(abs_light, x)  # integrate using trapezoidal rule
             else:
-                return simps(abs_light, data[start:end, 0])  # integrate using simpsons rule
+                return simps(abs_light, x)  # integrate using simpsons rule
 
     else:  # only irradiation wavelength
         def abs_photons(data):
@@ -849,17 +870,84 @@ def reaction_QY_relative(sample_items, actinometer_items, QY_act=1, irradiation_
         for act in acts:
             _acs_times = np.asarray([float(sp.name) for sp in act])
 
+    _c_0_samples = [c_0_samples] * len(samples) if isinstance(c_0_samples, (int, float)) else c_0_samples
+    _c_0_acts = [c_0_acts] * len(acts) if isinstance(c_0_acts, (int, float)) else c_0_acts
+
+    def cumintegrate(y, x, initial=0):
+        if integration_method == 'trapz':
+            return cumtrapz(y, x, initial=initial)
+        else:
+            # simsons rule
+            raise NotImplementedError()  # TODO----->
+
+    def calc_c(unknown_sp_data, sp_data_c0, c0=1):
+        """
+        Calculation of concentariton by least squares.
+
+        :param unknown_sp_data:
+        :param sp_data_c0:
+        :param c0:
+        :return:
+        """
+        assert unknown_sp_data.shape == sp_data_c0.shape
+        x0, x1 = conc_calc_range
+        start = 0
+        end = sp_data_c0.shape[0]
+        if x0 is not None:
+            start = fi(sp_data_c0[:, 0], x0)
+        if x1 is not None:
+            end = fi(sp_data_c0[:, 0], x1) + 1
+
+        # for min || xA - B ||_2^2 for scalar x, x = sum(A*B) / sum(A*A)
+        a = sp_data_c0[start:end, 1]
+        b = unknown_sp_data[start:end, 1]
+
+        return c0 * (a * b).sum() / (a * a).sum()
+
+    results_sample = SpectrumList(name='Results of samples')
+    results_act = SpectrumList(name='Results of actinometers')
+
+    def calculate_line(sl, times, c0):
+        # calculate the amount of absorbed photons
+        qs = np.asarray([abs_photons(sp.data) for sp in sl])
+        # calculate the time-dependent concentration
+        c0s = np.asarray([calc_c(sp.data, sl[0].data, c0) for sp in sl])
+        # Delta n = (c(t=0) - c(t)) * V
+        d_n_dec = (c0s[0] - c0s) * V_solution
+        # cumulative integration of light absorbed: int_0^t q(t') dt'
+        np_abs = cumintegrate(qs, times, initial=0)
+
+        return Spectrum.from_xy_values(np_abs, d_n_dec, name=f'Result for {sl.name}')
+
+    for sample, s_times, c0_sample in zip(samples, _sample_times, _c_0_samples):
+        results_sample.children.append(calculate_line(sample, s_times, c0_sample))
+
+    for act, act_times, c0_act in zip(acts, _acs_times, _c_0_acts):
+        results_act.children.append(calculate_line(act, act_times, c0_act))
+
+    QYs = []
+
     # calculate for each combination of sample and actinometer kinetics
-    for sample, s_times in zip(samples, _sample_times):
-        for act, act_times in zip(acts, _acs_times):
+    for res_sample in results_sample:
+        slope_sam, intercept_sam, r_sam, _, err_sam = linregress(res_sample.x, res_sample.y)
 
-            abs_photons_sample = np.asarray([abs_photons(sp.data) for sp in sample])
-            abs_photons_act = np.asarray([abs_photons(sp.data) for sp in act])
+        for res_act in results_act:
+            slope_act, intercept_act, r_act, _, err_act = linregress(res_act.x, res_act.y)
 
-            np_abs_sample = cumtrapz(abs_photons_sample, s_times)
-            np_abs_act = cumtrapz(abs_photons_act, act_times)
+            # use uncertainty package to automatically propagate errors
+            # QY is type of ufloat - uncertainties.core.Variable
+            QY = QY_act * ufloat(slope_sam, err_sam) / ufloat(slope_act, err_act)
 
-            # TODO>>>>
+            QYs.append(QY)
+
+    average_QY = sum(QYs) / len(QYs)
+
+    add_to_list(results_sample)
+    add_to_list(results_act)
+
+
+
+
 
 
 

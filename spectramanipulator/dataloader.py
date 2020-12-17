@@ -120,6 +120,7 @@ def _parse_files(filepaths, parse_func):
     else:
         Logger.message("No lines were parsed, check delimiter, decimal separator, number of skipped columns and"
                        " skip in settings.")
+    return None, None
 
 
 def _parse_file(filepath, settings):
