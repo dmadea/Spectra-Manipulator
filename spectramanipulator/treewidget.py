@@ -87,6 +87,7 @@ class TreeWidget(TreeView):
         self.myModel.item_edited_signal.connect(self.item_edited)
         self.myModel.checked_changed_signal.connect(self.check_changed)
         self.myModel.data_dropped_signal.connect(self.data_dropped)
+        self.myModel.all_unchecked_signal.connect(lambda: self.redraw_spectra.emit())
 
     def items_deleted(self, item_was_checked):
         if item_was_checked:
@@ -97,8 +98,9 @@ class TreeWidget(TreeView):
         if item_is_checked:
             self.redraw_spectra.emit()
 
-    def check_changed(self):
-        self.redraw_spectra.emit()
+    def check_changed(self, items, checked):
+        # self.redraw_spectra.emit()
+        self.main_widget.redraw_items(items, not checked)
 
     def data_dropped(self):
         self.redraw_spectra.emit()
@@ -204,7 +206,8 @@ class TreeWidget(TreeView):
             try:
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
-                    item.normalize(x0, x1)
+                    item.normalize_no_update(x0, x1)
+
                 self.redraw_spectra.emit()
                 self.state_changed.emit()
 
@@ -234,7 +237,7 @@ class TreeWidget(TreeView):
             try:
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
-                    item.cut(x0, x1)
+                    item.cut_no_update(x0, x1)
 
                 self.redraw_spectra.emit()
                 self.setup_info()
@@ -263,7 +266,7 @@ class TreeWidget(TreeView):
             try:
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
-                    item.extend_by_zeros(x0, x1)
+                    item.extend_by_zeros_no_update(x0, x1)
 
                 self.redraw_spectra.emit()
                 self.setup_info()
@@ -294,7 +297,7 @@ class TreeWidget(TreeView):
             try:
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
-                    item.baseline_correct(x0, x1)
+                    item.baseline_correct_no_update(x0, x1)
 
                 self.redraw_spectra.emit()
                 self.state_changed.emit()
@@ -330,7 +333,7 @@ class TreeWidget(TreeView):
         try:
             for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                             skip_childs_in_selected_groups=False):
-                item.interpolate(spacing, kind)
+                item.interpolate_no_update(spacing, kind)
 
             self.redraw_spectra.emit()
             self.setup_info()

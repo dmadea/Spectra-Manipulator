@@ -1,9 +1,9 @@
 import numpy as np
 from spectramanipulator.spectrum import Spectrum
-from spectramanipulator.parsers.genericparser import GenericParser
+from spectramanipulator.parsers.parser import Parser
 
 
-class DXFileParser(GenericParser):
+class DXFileParser(Parser):
 
     def __init__(self, filepath=None, str_data=None, delimiter=' ', decimal_sep='.',
                  dx_import_spectra_name_from_filename=False, dx_if_title_is_empty_use_filename=True):

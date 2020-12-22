@@ -50,8 +50,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     def __init__(self, dock_widget, accepted_func, spectrum=None, parent=None):
         super(FitWidget, self).__init__(parent)
 
-        if FitWidget._instance is not None:
-            PlotWidget.instance.removeItem(FitWidget._instance.lr)
+        # if FitWidget._instance is not None:
+        #     PlotWidget._instance.removeItem(FitWidget._instance.lr)
 
         self.setupUi(self)
 
@@ -70,20 +70,19 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # if spectrum is None - we have just open the widget for function plotting
         self.spectrum = spectrum
 
-        self.plot_widget = PlotWidget.instance
+        # self.plot_widget = PlotWidget._instance
 
         self.cbUpdateInitValues.setCheckState(Qt.Checked)
 
-        f = 0.87
-        x0, x1 = self.plot_widget.getViewBox().viewRange()[0]
-        xy_dif = x1 - x0
-        self.lr = pg.LinearRegionItem([x0 + (1 - f) * xy_dif, x0 + f * xy_dif],
-                                      brush=QtGui.QBrush(QtGui.QColor(0, 255, 0, 20)),
-                                      bounds=(self.spectrum.x.min(), self.spectrum.x.max())
-                                      if self.spectrum is not None else None)
-        self.lr.setZValue(-10)
-        self.plot_widget.addItem(self.lr)
+        # x0, x1 = PlotWidget.get_view_range()
 
+        self.lr = PlotWidget.add_linear_region(bounds=(self.spectrum.x.min(), self.spectrum.x.max())) if \
+                self.spectrum is not None else None
+
+        # self.lr = pg.LinearRegionItem([x0 + (1 - f) * xy_dif, x0 + f * xy_dif],
+        #                               brush=QtGui.QBrush(QtGui.QColor(0, 255, 0, 20)),
+        #                               bounds=(self.spectrum.x.min(), self.spectrum.x.max())
+        #                               if self.spectrum is not None else None)
         # update region when the focus is lost and when the user presses enter
         self.leX0.returnPressed.connect(self.updateRegion)
         self.leX1.returnPressed.connect(self.updateRegion)
@@ -776,8 +775,9 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.accepted = True
         FitWidget.is_opened = False
         FitWidget._instance = None
-        self.plot_widget.removeItem(self.lr)
-        del self.lr
+        # self.plot_widget.removeItem(self.lr)
+        # del self.lr
+        PlotWidget.remove_linear_region()
         self.dock_widget.setVisible(False)
         self.accepted_func()
         # super(FitWidget, self).accept()
@@ -787,8 +787,9 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.clear_plot()
         FitWidget.is_opened = False
         FitWidget._instance = None
-        self.plot_widget.removeItem(self.lr)
-        del self.lr
+        # self.plot_widget.removeItem(self.lr)
+        # del self.lr
+        PlotWidget.remove_linear_region()
         self.dock_widget.setVisible(False)
 
         # super(FitWidget, self).reject()
@@ -796,7 +797,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
 if __name__ == "__main__":
     import sys
-
 
     def my_exception_hook(exctype, value, traceback):
         # Print the error and traceback

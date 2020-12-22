@@ -180,7 +180,6 @@ class Main(QMainWindow):
             else:
                 event.ignore()
 
-
     def open_settings(self):
 
         if SettingsDialog.is_opened:
@@ -194,7 +193,6 @@ class Main(QMainWindow):
             return
 
         self.grpView.update_settings()
-
         self.redraw_all_spectra()
 
     @staticmethod
@@ -383,35 +381,39 @@ class Main(QMainWindow):
         # eg. MeCN blank 2nm step 448:250-1100, we need 448 which is the excitation wavelength
         pattern = re.compile(r'(\d+):\d+-\d+')
 
-        # extract the wavelengths from parsers
-        for sl, parser in zip(spectra, parsers):
-            names_list = parser.names_history[0]  # first line in names history
-            assert len(names_list) == len(sl) + 1
+        try:
+            # extract the wavelengths from parsers
+            for sl, parser in zip(spectra, parsers):
+                names_list = parser.names_history[0]  # first line in names history
+                assert len(names_list) == len(sl) + 1
 
-            # extract the excitation wavelengths from the name history
-            new_names = []
-            sl_name = None
-            for name in names_list:
-                if name == '':
-                    continue
-                m = pattern.search(name)
-                if m is None:
-                    continue
-                new_names.append(m.group(1))
-                sl_name = name.replace(m.group(0), '').strip()
+                # extract the excitation wavelengths from the name history
+                new_names = []
+                sl_name = None
+                for name in names_list:
+                    if name == '':
+                        continue
+                    m = pattern.search(name)
+                    if m is None:
+                        continue
+                    new_names.append(m.group(1))
+                    sl_name = name.replace(m.group(0), '').strip()
 
-            # set the main name
-            if sl_name:
-                sl.name = sl_name
+                # set the main name
+                if sl_name:
+                    sl.name = sl_name
 
-            # remove each 2nd spectrum as it contains useless X values (starting from second spectrum)
-            del sl.children[1::2]
+                # remove each 2nd spectrum as it contains useless X values (starting from second spectrum)
+                del sl.children[1::2]
 
-            # setup extracted names = excitation wavelengths
-            sl.set_names(new_names)
+                # setup extracted names = excitation wavelengths
+                sl.set_names(new_names)
 
-            # 'sort' the list, the data are imported in opposite way so we can just reverse the list
-            sl.children = sl.children[::-1]
+                # 'sort' the list, the data are imported in opposite way so we can just reverse the list
+                sl.children = sl.children[::-1]
+        except Exception as e:
+            Logger.message(f"Unable to import data: {e.__str__()}")
+            return
 
         self.tree_widget.import_spectra(spectra)
 
@@ -445,13 +447,26 @@ class Main(QMainWindow):
             # Console.showMessage("User defined color scheme is not correct.")
 
     def redraw_all_spectra(self):
-        self.grpView.plotItem.clearPlots()
+        # self.grpView.plotItem.clearPlots()
+        self.grpView.clear_plots()
 
-        try:
-            # self.grpView.plotItem.legend.scene().removeItem(self.grpView.plotItem.legend)
-            self.grpView.legend.scene().removeItem(self.grpView.plotItem.legend)
-        except Exception as e:
-            print(e)
+        # try:
+        #     # self.grpView.plotItem.legend.scene().removeItem(self.grpView.plotItem.legend)
+        #     self.grpView.legend.scene().removeItem(self.grpView.plotItem.legend)
+        # except Exception as e:
+        #     print(e)
+
+        # self.grpView.plotItem.addLegend(offset=(-30, 30))
+        # self.grpView.add_legend(spacing=Settings.legend_spacing, offset=(-30, 30))
+
+        self.redraw_items()
+
+    def redraw_items(self, items=None, remove=None):
+
+        if remove is True:
+            for item in items:
+                self.grpView.remove(item)
+            return
 
         gradient_mat = None
         if Settings.color_scheme == 2:  # user defined
@@ -460,32 +475,35 @@ class Main(QMainWindow):
                 Console.showMessage("Cannot plot the spectra, user defined gradient matrix is not correct.")
                 return
 
-        # self.grpView.plotItem.addLegend(offset=(-30, 30))
-        self.grpView.add_legend(spacing=Settings.legend_spacing, offset=(-30, 30))
-
-        item_counter = 0
-        group_counter = -1
+        # item_counter = 0
         # iterate over all checked spectra items and draw them
         # it = QTreeWidgetItemIterator(self.treeWidget, QTreeWidgetItemIterator.Checked)
 
+        # for item in self.tree_widget.myModel.iterate_items(ItemIterator.Checked):
+        # iterator = items if items is not None else self.tree_widget.myModel.iterate_items(ItemIterator.Checked)
+
+        group_counter = -1
         last_group = None
 
-        for item in self.tree_widget.myModel.iterate_items(ItemIterator.Checked):
+        # iterate over all checked items, if iterated item is already plotted, continue
+        for item_counter, item in enumerate(self.tree_widget.myModel.iterate_items(ItemIterator.Checked)):
 
             if isinstance(item, SpectrumItemGroup):
                 # last_group = item
                 continue
-
-            sp = item
-            # if the spectra item is part of a group, write the group name in square brackets before the spectra name in legend
-            spectrum_name = '<strong>{}</strong>: {}'.format(item.parent.name, item.name) if item.is_in_group() \
-                else item.name
 
             # check if we are plotting a new group, if so, increment counter
             if item.is_in_group():
                 if last_group != item.parent:
                     last_group = item.parent
                     group_counter += 1
+
+            if item in self.grpView.plotted_spectra:
+                continue
+
+            # if the spectra item is part of a group, write the group name in square brackets before the spectra name in legend
+            spectrum_name = '<strong>{}</strong>: {}'.format(item.parent.name, item.name) if item.is_in_group() \
+                else item.name
 
             style = self.intLineStyle(
                 group_counter) if Settings.different_line_style_among_groups and item.is_in_group() else Qt.SolidLine
@@ -496,58 +514,57 @@ class Main(QMainWindow):
                 color = int_default_color_scheme(counter)
             elif Settings.color_scheme == 1:
                 color = intColor(counter,
-                                      hues=Settings.hues,
-                                      values=Settings.values,
-                                      maxValue=Settings.maxValue,
-                                      minValue=Settings.minValue,
-                                      maxHue=Settings.maxHue,
-                                      minHue=Settings.minHue,
-                                      sat=Settings.sat,
-                                      alpha=Settings.alpha,
-                                      reversed=Settings.HSV_reversed)
+                                 hues=Settings.hues,
+                                 values=Settings.values,
+                                 maxValue=Settings.maxValue,
+                                 minValue=Settings.minValue,
+                                 maxHue=Settings.maxHue,
+                                 minHue=Settings.minHue,
+                                 sat=Settings.sat,
+                                 alpha=Settings.alpha,
+                                 reversed=Settings.HSV_reversed)
             else:
                 color = intColorGradient(counter, Settings.hues, gradient_mat, reversed=Settings.HSV_reversed)
 
             try:
-                line_alpha = sp.line_alpha if hasattr(sp, 'line_alpha') else 255
-                line_color = color if sp.color is None else QColor(*sp.color) if isinstance(sp.color, (
-                    tuple, list)) else QColor(sp.color)  # if string - html format or name of color
+                line_alpha = item.line_alpha if hasattr(item, 'line_alpha') else 255
+                line_color = color if item.color is None else QColor(*item.color) if isinstance(item.color, (
+                    tuple, list)) else QColor(item.color)  # if string - html format or name of color
                 if Settings.color_scheme < 2:  # only for default and HSV
                     line_color.setAlpha(line_alpha)
                 pen = pg.mkPen(color=line_color,
-                               width=Settings.line_width if sp.line_width is None else sp.line_width,
-                               style=style if sp.line_type is None else sp.line_type)
+                               width=Settings.line_width if item.line_width is None else item.line_width,
+                               style=style if item.line_type is None else item.line_type)
             except AttributeError:
                 pen = pg.mkPen(color=color, width=Settings.line_width, style=style)
 
             try:
-                symbol = sp.symbol
+                symbol = item.symbol
 
-                _brush = sp.symbol_brush if sp.symbol_brush is not None else pen.color().name()
+                _brush = item.symbol_brush if item.symbol_brush is not None else pen.color().name()
                 symbolPen = QColor(*_brush) if isinstance(_brush, (tuple, list)) else QColor(_brush)
-                symbolPen.setAlpha(sp.sym_brush_alpha)
-                _fill = sp.symbol_fill if sp.symbol_fill is not None else pen.color().name()
+                symbolPen.setAlpha(item.sym_brush_alpha)
+                _fill = item.symbol_fill if item.symbol_fill is not None else pen.color().name()
                 symbolBrush = QColor(*_fill) if isinstance(_fill, (tuple, list)) else QColor(_fill)
-                symbolBrush.setAlpha(sp.sym_fill_alpha)
-                symbol_size = sp.symbol_size
+                symbolBrush.setAlpha(item.sym_fill_alpha)
+                symbol_size = item.symbol_size
             except AttributeError:
                 symbol = None
                 symbolBrush = None
                 symbolPen = None
                 symbol_size = None
 
-            self.grpView.plotItem.plot(sp.data,
-                                       pen=pen,
-                                       name=spectrum_name,
-                                       plot_legend=sp.plot_legend if hasattr(sp, 'plot_legend') else True,
-                                       symbolBrush=symbolBrush,
-                                       symbolPen=symbolPen,
-                                       symbol=symbol,
-                                       symbolSize=symbol_size,
-                                       zValue=item_counter if Settings.reverse_z_order else (1e5 - item_counter))
-
+            self.grpView.plot(item,
+                              pen=pen,
+                              name=spectrum_name,
+                              plot_legend=item.plot_legend if hasattr(item, 'plot_legend') else True,
+                              symbolBrush=symbolBrush,
+                              symbolPen=symbolPen,
+                              symbol=symbol,
+                              symbolSize=symbol_size,
+                              zValue=item_counter if Settings.reverse_z_order else (1e5 - item_counter))
+             # Zvalue TODO-->
             # Console.showMessage(spectrum_name + "  " + str(plot.zValue()))
-            item_counter += 1
 
 
 def my_exception_hook(exctype, value, traceback):

@@ -368,38 +368,58 @@ class SpectrumList(OperationBase):
 
 
 def add_modif_func(redraw_spectra=True, update_view=False):
-    """Adds the function to cls"""
+    """Adds the function to cls
+    adds a new functions with """
+    # https://stackoverflow.com/questions/2366713/can-a-decorator-of-an-instance-method-access-the-class
 
-    def decorator(fn):
-        @functools.wraps(fn)
-        def fn_spectrum(self, *args, **kwargs):
-            fn(self, *args, **kwargs)
+    class Decorator:
+        def __init__(self, fn):
+            self.fn = fn
 
-            if redraw_spectra:
-                self._redraw_all_spectra()
-            if update_view:
-                self._update_view()
+        def __set_name__(self, owner, fn_name):
+            # gets called when the owner class is created !!
 
-            return self
+            # do something with owner, i.e.
+            # print(f"decorating {self.fn} and using {owner}")
+            # self.fn.class_name = owner.__name__
 
-        @functools.wraps(fn)
-        def fn_spectrum_list(self, *args, **kwargs):
-            for sp in self:
-                fn(sp, *args, **kwargs)  # perform the operation for each spectrum
+            @functools.wraps(self.fn)
+            def fn_spectrum(this, *args, **kwargs):
+                self.fn(this, *args, **kwargs)
 
-            if redraw_spectra:
-                self._redraw_all_spectra()
-            if update_view:
-                self._update_view()
+                if redraw_spectra:
+                    this._redraw_all_spectra()
+                if update_view:
+                    this._update_view()
 
-            return self
+                return this
 
-        # set the modified function for SpectrumList class
-        setattr(SpectrumList, fn.__name__, fn_spectrum_list)
+            @functools.wraps(self.fn)
+            def fn_spectrum_list_no_update(this, *args, **kwargs):
+                for sp in this:
+                    self.fn(sp, *args, **kwargs)  # perform the operation for each spectrum
 
-        return fn_spectrum  # use modified function
+                return this
 
-    return decorator
+            @functools.wraps(self.fn)
+            def fn_spectrum_list(this, *args, **kwargs):
+                for sp in this:
+                    self.fn(sp, *args, **kwargs)  # perform the operation for each spectrum
+
+                if redraw_spectra:
+                    this._redraw_all_spectra()
+                if update_view:
+                    this._update_view()
+
+                return this
+
+            # then replace ourself with the original method
+            setattr(owner, f'{fn_name}_no_update', self.fn)  # no update as with original function
+            setattr(owner, fn_name, fn_spectrum)  # use same name for modified fcn
+            setattr(SpectrumList, f'{fn_name}_no_update', fn_spectrum_list_no_update)
+            setattr(SpectrumList, fn_name, fn_spectrum_list)
+
+    return Decorator
 
 
 def add_op_func():
@@ -489,12 +509,6 @@ class Spectrum(OperationBase):
         data = np.vstack((x_data, y_data)).T
 
         return cls(data, name=name)
-
-    def _redraw_all_spectra(self):
-        pass
-
-    def _update_view(self):
-        pass
 
     @property
     def x(self):
@@ -634,7 +648,7 @@ class Spectrum(OperationBase):
 
         return self
 
-    def _get_xy_from_range(self, x0=None, x1=None):
+    def _get_start_end_indexes(self, x0=None, x1=None):
         start = 0
         end = self.data.shape[0]
 
@@ -646,6 +660,11 @@ class Spectrum(OperationBase):
 
         if x1 is not None:
             end = fi(self.data[:, 0], x1) + 1
+
+        return start, end
+
+    def _get_xy_from_range(self, x0=None, x1=None):
+        start, end = self._get_start_end_indexes(x0, x1)
 
         x = self.data[start:end, 0]
         y = self.data[start:end, 1]
@@ -765,8 +784,7 @@ class Spectrum(OperationBase):
         data_max = self.data[-1, 0]
 
         if spacing > data_max - data_min:
-            raise ValueError(f"Spacing ({spacing}) cannot be larger that data itself. "
-                             f"Resample method, spectrum {self.name}.")
+            raise ValueError(f"Spacing ({spacing}) cannot be larger that data itself.")
 
         # new x data must lie inside a range of original x values
         x_min = spacing * int(np.ceil(data_min / spacing))
@@ -806,6 +824,52 @@ class Spectrum(OperationBase):
         x, y = self._get_xy_from_range(x0, x1)
 
         self.data = np.vstack((x, y)).T
+
+        return self
+
+    @add_modif_func(True, False)
+    def ceil_larger_to(self, value: float, x0=None, x1=None):
+        """Values larger than value in the range [x0, x1] will be assigned to value .
+
+        Parameters
+        ----------
+        value : {int, float}
+            Value to ceil to.
+        x0 : {int, float}
+            First x value.
+        x1 : {int, float}
+            Last x value.
+        """
+
+        start, end = self._get_start_end_indexes(x0, x1)
+
+        y = self.data[start:end, 1]
+        y[y > value] = value
+
+        self.data[start:end, 1] = y
+
+        return self
+
+    @add_modif_func(True, False)
+    def floor_lower_to(self, value: float, x0=None, x1=None):
+        """Values lower than value in the range [x0, x1] will be assigned to a value .
+
+        Parameters
+        ----------
+        value : {int, float}
+            Value to floor to.
+        x0 : {int, float}
+            First x value.
+        x1 : {int, float}
+            Last x value.
+        """
+
+        start, end = self._get_start_end_indexes(x0, x1)
+
+        y = self.data[start:end, 1]
+        y[y < value] = value
+
+        self.data[start:end, 1] = y
 
         return self
 
@@ -919,7 +983,7 @@ class Spectrum(OperationBase):
 
         max_len = 20
         if len(other_str) > max_len:
-            other_str = other_str[0:max_len]
+            other_str = other_str[:max_len]
 
         return Spectrum.from_xy_values(self.data[:, 0], np.nan_to_num(y_data)), other_str
 

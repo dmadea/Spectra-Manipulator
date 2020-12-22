@@ -83,8 +83,8 @@ def _parse_files(filepaths, parse_func):
     # start_time = time.time()
 
     # if at least two files are >= 0.5 MB, switch to multiprocess
-    if (Settings.enable_multiprocessing and filesizes.shape[0] > 1 and (filesizes >= 0.5e6).sum() > 1) or \
-            Settings.force_multiprocess:
+    if (os.cpu_count() > 1 and Settings.enable_multiprocessing and filesizes.shape[0] > 1 and
+       (filesizes >= 0.5e6).sum() > 1) or Settings.force_multiprocess:
 
         # Logger.console_message("Loading in multiprocess.")
 

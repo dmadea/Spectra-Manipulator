@@ -1,9 +1,9 @@
 import numpy as np
 from spectramanipulator.spectrum import Spectrum, SpectrumList
-from spectramanipulator.parsers.genericparser import GenericParser
+from spectramanipulator.parsers.parser import Parser
 
 
-class GeneralParser(GenericParser):
+class GeneralParser(Parser):
 
     def __init__(self, filepath=None, str_data=None, delimiter='\t', decimal_sep='.', remove_empty_entries=True,
                  skip_col_num=0, general_import_spectra_name_from_filename=False,

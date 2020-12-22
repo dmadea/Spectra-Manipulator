@@ -45,9 +45,10 @@ class ItemIterator:
 
 
 class Model(QAbstractItemModel):
-    checked_changed_signal = pyqtSignal()
+    checked_changed_signal = pyqtSignal(list, bool)
     data_dropped_signal = pyqtSignal()
     item_edited_signal = pyqtSignal(bool)
+    all_unchecked_signal = pyqtSignal()
 
     def __init__(self, parent=None):
         super(Model, self).__init__(parent)
@@ -432,8 +433,12 @@ class Model(QAbstractItemModel):
         return self.createIndex(row, 0, parent)
 
     def update_tristate(self):
+        # nodes = []
         for group in self.iterate_items(ItemIterator.Groups):
             self._update_tristate(group)
+            # nodes += group.children
+
+        # self.checked_changed_signal.emit(nodes)
 
     def _update_tristate(self, parent):
 
@@ -454,7 +459,6 @@ class Model(QAbstractItemModel):
         idx = self.createIndex(parent.row(), 0, parent)
 
         self.dataChanged.emit(idx, idx, [Qt.CheckStateRole])
-        self.checked_changed_signal.emit()
 
     def setData(self, index, value, role=None):
         if index.column() == 0:
@@ -484,7 +488,7 @@ class Model(QAbstractItemModel):
                     else:
                         self.dataChanged.emit(index, index, [Qt.CheckStateRole])
 
-                    # self.checked_changed_signal.emit()
+                    self.checked_changed_signal.emit(node.children, value)
 
                 elif isinstance(node, SpectrumItem):  # SpectrumItem instance
                     # print("isinstance(node, SpectrumItem):")
@@ -492,7 +496,7 @@ class Model(QAbstractItemModel):
                     if node.is_in_group():
                         self._update_tristate(node.parent)
 
-                self.checked_changed_signal.emit()
+                    self.checked_changed_signal.emit([node], value)
                 return True
 
                 # return super(Model, self).setData(index, value, role)
@@ -763,31 +767,39 @@ class TreeView(QTreeView):
         if len(self.selectedIndexes()) == 0:
             return
 
+        items = []
+
         for item in self.myModel.iterate_selected_items(False, False):
             item.check_state = Qt.Checked
+            items.append(item)
 
         self.myModel.update_tristate()
         self.myModel.dataChanged.emit(QModelIndex(), QModelIndex())
-        self.myModel.checked_changed_signal.emit()
+        self.myModel.checked_changed_signal.emit(items, True)
 
     def uncheck_selected_items(self):
         if len(self.selectedIndexes()) == 0:
             return
 
+        items = []
+
         for item in self.myModel.iterate_selected_items(False, False):
             item.check_state = Qt.Unchecked
+            items.append(item)
 
         self.myModel.update_tristate()
         self.myModel.dataChanged.emit(QModelIndex(), QModelIndex())
-        self.myModel.checked_changed_signal.emit()
+        self.myModel.checked_changed_signal.emit(items, False)
 
     def uncheck_all(self):
 
+        items = []
         for item in self.myModel.iterate_items(ItemIterator.All):
             item.check_state = Qt.Unchecked
+            items.append(item)
 
         self.myModel.dataChanged.emit(QModelIndex(), QModelIndex())
-        self.myModel.checked_changed_signal.emit()
+        self.myModel.all_unchecked_signal.emit()
 
     def create_group(self):
         group_item = SpectrumItemGroup('', parent=self.myModel.root)

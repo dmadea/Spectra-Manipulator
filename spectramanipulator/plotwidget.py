@@ -5,6 +5,7 @@ import pyqtgraph as pg
 
 from spectramanipulator.pyqtgraphmodif.legend_item_modif import LegendItemModif
 from spectramanipulator.pyqtgraphmodif.plot_item_modif import PlotItemModif
+from spectramanipulator.pyqtgraphmodif.view_box import ViewBox
 
 from pyqtgraph.exporters import ImageExporter
 from pyqtgraph.exporters import SVGExporter
@@ -17,28 +18,41 @@ from PyQt5.QtCore import Qt
 
 # subclassing of PlotWidget
 class PlotWidget(pg.PlotWidget):
-    instance = None
+    _instance = None
 
     def __init__(self, parent=None, coordinates_func=None):
 
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
 
-        super(PlotWidget, self).__init__(parent, plotItem=PlotItemModif())
+        self.plotted_spectra = []
+        self.plotted_items = []
 
-        PlotWidget.instance = self
+        self.plotItem = PlotItemModif(viewBox=ViewBox(self.plotted_spectra))
+
+        # use our modified plotItem
+        super(PlotWidget, self).__init__(parent, plotItem=self.plotItem)
+
+        PlotWidget._instance = self
 
         self.coordinates_func = coordinates_func
 
-        self.update_settings()
-
         self.legend = None
-        self.add_legend()
+        # self.add_legend(spacing=Settings.legend_spacing)
 
         self.img_exporter = ImageExporter(self.plotItem)
         self.svg_exporter = SVGExporter(self.plotItem)
 
+        self.lr_item = None
+
+        self.update_settings()
+        self.plotItem.setDownsampling(ds=True, auto=True, mode='subsample')
+        self.plotItem.setClipToView(True)
+
     def update_settings(self):
+
+        self.clear_plots()
+        self.add_legend(spacing=Settings.legend_spacing)
 
         pg.setConfigOptions(antialias=Settings.antialiasing)
         self.plotItem.showAxis('top', show=True)
@@ -59,6 +73,84 @@ class PlotWidget(pg.PlotWidget):
         bottom_label_font.setPixelSize(Settings.bottom_axis_font_size)
 
         self.plotItem.getAxis('bottom').label.setFont(bottom_label_font)
+
+    def plot(self, spectrum, **kwargs):
+        """kwargs are passed to plotItem.plot function"""
+        self.plotted_items.append(self.plotItem.plot(spectrum.data, **kwargs))
+        self.plotted_spectra.append(spectrum)
+
+    def remove(self, spectrum):
+        try:
+            i = self.plotted_spectra.index(spectrum)
+        except ValueError:
+            return
+
+        self.removeItem(self.plotted_items[i])
+        del self.plotted_spectra[i]
+        del self.plotted_items[i]
+
+    def clear_plots(self):
+        """Removes all plots except of linear region item and ...."""
+        self.plotted_spectra.clear()
+        self.plotted_items.clear()
+        self.plotItem.clearPlots()
+
+    @classmethod
+    def add_linear_region(cls, region=None, bounds=None, brush=None, orientation='vertical', z_value=-10):
+        """boudns is tuple or None"""
+
+        self = cls._instance
+        if self is None:
+            return
+
+        if region is None:
+            region = self.getViewBox().viewRange()[0]
+            f = 0.87
+            diff = region[1] - region[0]
+            region[0] += (1 - f) * diff
+            region[1] += f * diff
+
+        brush = QtGui.QBrush(QtGui.QColor(0, 255, 0, 20)) if brush is None else brush
+
+        if self.lr_item is None:
+            self.lr_item = pg.LinearRegionItem(region, orientation=orientation, brush=brush, bounds=bounds)
+            self.addItem(self.lr_item)
+
+        self.lr_item.setRegion(region)
+        self.lr_item.setBounds(bounds)
+        self.lr_item.setBrush(brush)
+        self.lr_item.setZValue(z_value)
+
+        return self.lr_item
+
+    @classmethod
+    def remove_linear_region(cls):
+        self = cls._instance
+        if self is None:
+            return
+
+        if self.lr_item is not None:
+            self.removeItem(self.lr_item)
+            self.lr_item = None
+
+    @classmethod
+    def set_lr_x_range(cls, x0, x1):
+        self = cls._instance
+        if self is None:
+            return
+
+        if self.lr_item is not None:
+            self.lr_item.setRegion((x0, x1))
+
+    @classmethod
+    def get_view_range(cls):
+        if cls._instance is None:
+            return
+
+        x0, x1 = cls._instance.getViewBox().viewRange()[0]
+        y0, y1 = cls._instance.viewRange()[1]
+
+        return x0, x1, y0, y1
 
     def save_plot_to_clipboard_as_png(self):
         self.img_exporter.export(copy=True)

@@ -877,7 +877,7 @@ def reaction_QY_relative(sample_items, actinometer_items, QY_act=1, irradiation_
         if integration_method == 'trapz':
             return cumtrapz(y, x, initial=initial)
         else:
-            # simsons rule
+            # simpsons rule
             raise NotImplementedError()  # TODO----->
 
     def calc_c(unknown_sp_data, sp_data_c0, c0=1):

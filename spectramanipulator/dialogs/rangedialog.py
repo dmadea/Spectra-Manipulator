@@ -30,13 +30,13 @@ class RangeDialog(GenericInputDialog):
 
         f = 0.87
         # x0, x1 = x0_value, x1_value
-        x0, x1 = PlotWidget.instance.getViewBox().viewRange()[0]
+        x0, x1 = PlotWidget._instance.getViewBox().viewRange()[0]
         xy_dif = x1 - x0
         self.lr = pg.LinearRegionItem([x0 + (1 - f) * xy_dif, x0 + f * xy_dif],
                                       brush=QBrush(QColor(0, 255, 0, 20)))
 
         self.lr.setZValue(-10)
-        PlotWidget.instance.addItem(self.lr)
+        PlotWidget._instance.addItem(self.lr)
 
         self.le_x0.focus_lost.connect(self.update_region)
         self.le_x1.focus_lost.connect(self.update_region)
@@ -79,12 +79,12 @@ class RangeDialog(GenericInputDialog):
             QMessageBox.warning(self, "Warning", "Invalid format of the range.", QMessageBox.Ok)
             return
 
-        PlotWidget.instance.removeItem(self.lr)
+        PlotWidget._instance.removeItem(self.lr)
         # del self.lr
         super(RangeDialog, self).accept()
 
     def reject(self):
-        PlotWidget.instance.removeItem(self.lr)
+        PlotWidget._instance.removeItem(self.lr)
         # del self.lr
         super(RangeDialog, self).reject()
 

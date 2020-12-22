@@ -2,8 +2,9 @@ import os
 import sys
 from abc import abstractmethod
 
+
 # abstract class that every parser should inherit
-class GenericParser:
+class Parser:
 
     def __init__(self, filepath=None, str_data=None, delimiter='\t', decimal_sep='.'):
         if filepath is None and str_data is None:
@@ -27,7 +28,7 @@ class GenericParser:
 
         # for line in it:
         #     # Do stuff...
-        raise NotImplemented("This method has to be implemented.")
+        raise NotImplementedError("This method has to be implemented.")
 
     def __iter__(self):
         """Return an line iterator that iterates through loaded data, either opened file, or string data"""
