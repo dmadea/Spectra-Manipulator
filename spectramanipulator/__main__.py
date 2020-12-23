@@ -442,7 +442,7 @@ class Main(QMainWindow):
             data[:, 1:] *= 255  # multiply the rgba values by 255
 
             return data
-        except Exception :
+        except:
             pass
             # Console.showMessage("User defined color scheme is not correct.")
 
@@ -460,6 +460,9 @@ class Main(QMainWindow):
         # self.grpView.add_legend(spacing=Settings.legend_spacing, offset=(-30, 30))
 
         self.redraw_items()
+
+    def update_items_data(self, items):
+        self.grpView.update_items_data(items)
 
     def redraw_items(self, items=None, remove=None):
 
@@ -498,8 +501,8 @@ class Main(QMainWindow):
                     last_group = item.parent
                     group_counter += 1
 
-            if item in self.grpView.plotted_spectra:
-                continue
+            # if item in self.grpView.plotted_items:  # look for keys in dictionary
+            #     continue
 
             # if the spectra item is part of a group, write the group name in square brackets before the spectra name in legend
             spectrum_name = '<strong>{}</strong>: {}'.format(item.parent.name, item.name) if item.is_in_group() \
@@ -563,8 +566,6 @@ class Main(QMainWindow):
                               symbol=symbol,
                               symbolSize=symbol_size,
                               zValue=item_counter if Settings.reverse_z_order else (1e5 - item_counter))
-             # Zvalue TODO-->
-            # Console.showMessage(spectrum_name + "  " + str(plot.zValue()))
 
 
 def my_exception_hook(exctype, value, traceback):

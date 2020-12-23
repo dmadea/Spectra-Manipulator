@@ -11,23 +11,26 @@ def is_nan_or_inf(value):
 class ViewBox(_ViewBox):
     # view All fix for downsampling ON
 
-    def __init__(self, plotted_spectra, **kwargs):
+    def __init__(self, plotted_items: dict, **kwargs):
         super(ViewBox, self).__init__(**kwargs)
 
-        self.plotted_spectra = plotted_spectra
+        self.plotted_items = plotted_items
 
     def autoRange(self, padding=None, items=None, item=None):
         """Modify the autorange function to properly autorange to all data."""
-        if len(self.plotted_spectra) == 0:
+
+        spectra = list(self.plotted_items.keys())
+
+        if len(spectra) == 0:
             return
 
-        x0 = self.plotted_spectra[0].data[0, 0]
-        x1 = self.plotted_spectra[0].data[-1, 0]
+        x0 = spectra[0].data[0, 0]
+        x1 = spectra[0].data[-1, 0]
 
-        y0 = self.plotted_spectra[0].y.min()
-        y1 = self.plotted_spectra[0].y.max()
+        y0 = spectra[0].y.min()
+        y1 = spectra[0].y.max()
 
-        for item in self.plotted_spectra[1:]:
+        for item in spectra[1:]:
             new_x0 = item.data[0, 0]
             new_x1 = item.data[-1, 0]
             new_y0 = item.y.min()

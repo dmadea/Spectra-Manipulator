@@ -49,6 +49,8 @@ class Model(QAbstractItemModel):
     data_dropped_signal = pyqtSignal()
     item_edited_signal = pyqtSignal(bool)
     all_unchecked_signal = pyqtSignal()
+    data_modified_signal = pyqtSignal(list)  # list of spectra that were modified
+    info_modified_signal = pyqtSignal(list)  # list of spectra that were modified
 
     def __init__(self, parent=None):
         super(Model, self).__init__(parent)
@@ -59,6 +61,9 @@ class Model(QAbstractItemModel):
         self.columns = 2
 
         self.coarsed_mimeData = None
+
+        GenericItem.data_modified_signal = self.data_modified_signal
+        GenericItem.info_modified_signal = self.info_modified_signal
 
         # Create items
         self.root = GenericItem('root', 'this is root', None)

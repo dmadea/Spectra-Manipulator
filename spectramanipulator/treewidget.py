@@ -26,6 +26,7 @@ from spectramanipulator.treeview.model import TreeView, ItemIterator
 from spectramanipulator.parsers import parse_XML_Spreadsheet
 from spectramanipulator.dataloader import parse_text, parse_files
 from spectramanipulator.exporter import list_to_string, list_to_files
+# from spectramanipulator.plotwidget import PlotWidget
 
 
 def get_hierarchic_list(items_iterator):
@@ -88,6 +89,8 @@ class TreeWidget(TreeView):
         self.myModel.checked_changed_signal.connect(self.check_changed)
         self.myModel.data_dropped_signal.connect(self.data_dropped)
         self.myModel.all_unchecked_signal.connect(lambda: self.redraw_spectra.emit())
+        self.myModel.data_modified_signal.connect(self.data_modified)
+        self.myModel.info_modified_signal.connect(self.info_modified)
 
     def items_deleted(self, item_was_checked):
         if item_was_checked:
@@ -97,6 +100,13 @@ class TreeWidget(TreeView):
         self.state_changed.emit()
         if item_is_checked:
             self.redraw_spectra.emit()
+
+    def data_modified(self, items):
+        self.main_widget.update_items_data(items)
+
+    def info_modified(self, items):
+        self.setup_info()
+        self.update_view()
 
     def check_changed(self, items, checked):
         # self.redraw_spectra.emit()
@@ -204,11 +214,13 @@ class TreeWidget(TreeView):
             x0, x1 = rng_dialog.returned_range
 
             try:
+                items = []
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
                     item.normalize_no_update(x0, x1)
+                    items.append(item)
 
-                self.redraw_spectra.emit()
+                self.data_modified(items)
                 self.state_changed.emit()
 
             except ValueError as ex:
@@ -235,12 +247,14 @@ class TreeWidget(TreeView):
             # Logger.status_message("Cutting the spectra...")
 
             try:
+                items = []
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
                     item.cut_no_update(x0, x1)
+                    items.append(item)
 
-                self.redraw_spectra.emit()
-                self.setup_info()
+                self.data_modified(items)
+                self.info_modified(items)
                 self.state_changed.emit()
 
             except ValueError as ex:
@@ -264,12 +278,14 @@ class TreeWidget(TreeView):
             x0, x1 = rng_dialog.returned_range
 
             try:
+                items = []
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
                     item.extend_by_zeros_no_update(x0, x1)
+                    items.append(item)
 
-                self.redraw_spectra.emit()
-                self.setup_info()
+                self.data_modified(items)
+                self.info_modified(items)
                 self.state_changed.emit()
 
             except ValueError as ex:
@@ -295,11 +311,13 @@ class TreeWidget(TreeView):
             # Logger.status_message("Baseline correcting...")
             x0, x1 = rng_dialog.returned_range
             try:
+                items = []
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
                     item.baseline_correct_no_update(x0, x1)
+                    items.append(item)
 
-                self.redraw_spectra.emit()
+                self.data_modified(items)
                 self.state_changed.emit()
             except ValueError as ex:
                 Logger.message(ex.__str__())
@@ -331,12 +349,14 @@ class TreeWidget(TreeView):
         spacing, kind = interp_dialog.spacing, interp_dialog.selected_kind
 
         try:
+            items = []
             for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                             skip_childs_in_selected_groups=False):
                 item.interpolate_no_update(spacing, kind)
+                items.append(item)
 
-            self.redraw_spectra.emit()
-            self.setup_info()
+            self.data_modified(items)
+            self.info_modified(items)
             self.state_changed.emit()
         except ValueError as ex:
             Logger.message(ex.__str__())
@@ -423,6 +443,7 @@ class TreeWidget(TreeView):
             selected_node = selected_node[0]  # select spectrum
 
         def accepted():
+            items = []
             for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                             skip_childs_in_selected_groups=False):
                 color = None
@@ -471,7 +492,9 @@ class TreeWidget(TreeView):
                 setattr(item, 'sym_brush_alpha', sym_brush_alpha)
                 setattr(item, 'sym_fill_alpha', sym_fill_alpha)
 
-            self.redraw_spectra.emit()
+                items.append(item)
+
+            self.check_changed(items, True)
             self.state_changed.emit()
 
         style_widget = StyleWidget(self.main_widget.var_widget, accepted, selected_node, parent=self)

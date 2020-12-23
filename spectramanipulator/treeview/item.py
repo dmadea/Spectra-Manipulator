@@ -1,6 +1,5 @@
 from PyQt5.QtCore import Qt
 from spectramanipulator.spectrum import Spectrum, SpectrumList
-import spectramanipulator.user_namespace as un
 
 import numpy as np
 
@@ -8,6 +7,10 @@ from copy import deepcopy
 
 
 class GenericItem:
+
+    # static signals that are instantiated after formation of TreeView and root
+    data_modified_signal = None
+    info_modified_signal = None
 
     def __init__(self, name, info, parent=None):
 
@@ -88,19 +91,20 @@ class GenericItem:
     def __iter__(self):
         return iter(self.children)
 
-    def add_to_list(self, spectra=None):
-        if self.__class__ == SpectrumItem or self.__class__ == SpectrumItemGroup:
-            un.add_to_list(self if spectra is None else spectra)
-            # print('add_to_list - generic')
+    # def add_to_list(self, spectra=None):
+    #     if self.__class__ == SpectrumItem or self.__class__ == SpectrumItemGroup:
+    #         un.add_to_list(self if spectra is None else spectra)
+    #         # print('add_to_list - generic')
 
     def _redraw_all_spectra(self):
-        un.redraw_all_spectra()
-
-        # print('_redraw_all_spectra - generic')
+        items = [self] if len(self.children) == 0 else self.children
+        if GenericItem.data_modified_signal is not None:
+            GenericItem.data_modified_signal.emit(items)  # call static function
 
     def _update_view(self):
-        un.update_view()
-        # print('_update_view - generic')
+        items = [self] if len(self.children) == 0 else self.children
+        if GenericItem.info_modified_signal is not None:
+            GenericItem.info_modified_signal.emit(items)  # call static function
 
 
 class SpectrumItem(GenericItem, Spectrum):

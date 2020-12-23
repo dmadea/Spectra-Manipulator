@@ -25,10 +25,9 @@ class PlotWidget(pg.PlotWidget):
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
 
-        self.plotted_spectra = []
-        self.plotted_items = []
+        self.plotted_items = {}  # dictionary with keys as spectrum objects and values as plot data items
 
-        self.plotItem = PlotItemModif(viewBox=ViewBox(self.plotted_spectra))
+        self.plotItem = PlotItemModif(viewBox=ViewBox(self.plotted_items))
 
         # use our modified plotItem
         super(PlotWidget, self).__init__(parent, plotItem=self.plotItem)
@@ -74,24 +73,33 @@ class PlotWidget(pg.PlotWidget):
 
         self.plotItem.getAxis('bottom').label.setFont(bottom_label_font)
 
-    def plot(self, spectrum, **kwargs):
+    def plot(self, item, **kwargs):
         """kwargs are passed to plotItem.plot function"""
-        self.plotted_items.append(self.plotItem.plot(spectrum.data, **kwargs))
-        self.plotted_spectra.append(spectrum)
 
-    def remove(self, spectrum):
-        try:
-            i = self.plotted_spectra.index(spectrum)
-        except ValueError:
+        # if spectrum is already plotted, update the data and style
+        if item in self.plotted_items:
+            self.plotted_items[item].setData(item.data, **kwargs)
             return
 
-        self.removeItem(self.plotted_items[i])
-        del self.plotted_spectra[i]
-        del self.plotted_items[i]
+        pi = self.plotItem.plot(item.data, **kwargs)
+        self.plotted_items[item] = pi
+
+    def update_items_data(self, items: list):
+        """Updates the plots of items."""
+        for item in items:
+            try:
+                self.plotted_items[item].setData(item.data)
+            except KeyError:
+                continue
+
+    def remove(self, spectrum):
+        if spectrum in self.plotted_items:
+            self.removeItem(self.plotted_items[spectrum])
+            del self.plotted_items[spectrum]
 
     def clear_plots(self):
         """Removes all plots except of linear region item and ...."""
-        self.plotted_spectra.clear()
+        # self.plotted_spectra.clear()
         self.plotted_items.clear()
         self.plotItem.clearPlots()
 

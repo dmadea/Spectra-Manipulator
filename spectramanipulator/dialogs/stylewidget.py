@@ -211,6 +211,8 @@ class StyleWidget(QtWidgets.QWidget, Ui_Form):
         self.cbLineWidth.setChecked(True)
         self.cbSymBrushDefault.setChecked(True)
         self.cbSymFillDefault.setChecked(True)
+        self.combLineType.setCurrentIndex(0)
+        self.combSymbol.setCurrentIndex(0)
 
     def applied(self):
         self.accepted_func()
