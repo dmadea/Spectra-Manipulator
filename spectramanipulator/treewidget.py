@@ -91,6 +91,7 @@ class TreeWidget(TreeView):
         self.myModel.all_unchecked_signal.connect(lambda: self.redraw_spectra.emit())
         self.myModel.data_modified_signal.connect(self.data_modified)
         self.myModel.info_modified_signal.connect(self.info_modified)
+        self.myModel.items_ungrouped_signal.connect(lambda: self.redraw_spectra.emit())
 
     def items_deleted(self, item_was_checked):
         if item_was_checked:
@@ -422,8 +423,8 @@ class TreeWidget(TreeView):
             return
 
         selected_node = self.myModel.node_from_index(self.selectedIndexes()[0])
-        if isinstance(selected_node, SpectrumItemGroup):  # TODO>>>>
-            return
+        # if isinstance(selected_node, SpectrumItemGroup):  # TODO>>>>
+        #     return
 
         def accepted():
             self.import_spectra([fit_dialog.fitted_spectrum, fit_dialog.residual_spectrum])
@@ -806,9 +807,9 @@ class TreeWidget(TreeView):
                 add_rows_count += 1
 
             if isinstance(node, list):  # for backward compatibility
-                group_item = SpectrumItemGroup(node[0].group_name, '', parent=self.myModel.root)
+                group_item = SpectrumItemGroup(name=node[0].group_name, info='', parent=self.myModel.root)
             elif isinstance(node, SpectrumList):  # list of spectra
-                group_item = SpectrumItemGroup(node.name, '', parent=self.myModel.root)
+                group_item = SpectrumItemGroup(name=node.name, info='', parent=self.myModel.root)
             else:
                 continue
 

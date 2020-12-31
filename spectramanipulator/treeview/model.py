@@ -51,6 +51,9 @@ class Model(QAbstractItemModel):
     all_unchecked_signal = pyqtSignal()
     data_modified_signal = pyqtSignal(list)  # list of spectra that were modified
     info_modified_signal = pyqtSignal(list)  # list of spectra that were modified
+    items_sorted_signal = pyqtSignal(list)
+    items_ungrouped_signal = pyqtSignal(list)
+    items_moved_signal = pyqtSignal(list)
 
     def __init__(self, parent=None):
         super(Model, self).__init__(parent)
@@ -815,11 +818,14 @@ class TreeView(QTreeView):
 
         if self.myModel.root.__len__() == 0:
             return
+        items = []
 
         self.myModel.layoutAboutToBeChanged.emit([])
         step = 1 if ascending else -1
         self.myModel.root.children = sorted(self.myModel.root.children, key=lambda child: child.name)[::step]
         self.myModel.layoutChanged.emit([])
+
+        items.append(self.myModel.root.children)
 
         if sort_groups:
             self.myModel.layoutAboutToBeChanged.emit([])
@@ -827,9 +833,12 @@ class TreeView(QTreeView):
                 if group.__len__() == 0:
                     continue
                 group.children = sorted(group.children, key=lambda child: child.name)[::step]
+                items.append(group.children)
+
             self.myModel.layoutChanged.emit([])
 
         self.clearSelection()
+        self.myModel.items_sorted_signal.emit(items)
         self.save_state()
 
     def sort_selected_group(self, ascending=True):
@@ -841,11 +850,16 @@ class TreeView(QTreeView):
         if group_item.__len__() == 0:
             return
 
+        items = []
+
         self.myModel.layoutAboutToBeChanged.emit([])
         step = 1 if ascending else -1
         group_item.children = sorted(group_item.children, key=lambda child: child.name)[::step]
+        items.append(group_item.children)
         self.myModel.layoutChanged.emit([])
+
         self.clearSelection()
+        self.myModel.items_sorted_signal.emit(items)
 
     def ungroup_selected_group(self):
         self.ungroup(self.myModel.node_from_index(self.currentIndex()))
@@ -864,8 +878,8 @@ class TreeView(QTreeView):
 
         self.myModel.removeRow(row, QModelIndex())
 
+        self.myModel.items_ungrouped_signal.emit(children)
         self.save_state()
-
 
     # def change(self, topLeftIndex, bottomRightIndex):
     #     self.update(topLeftIndex)

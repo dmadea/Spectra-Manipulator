@@ -79,7 +79,7 @@ class Settings(object):
     bottom_axis_font_size = 20
     left_axis_font_size = 20
 
-    same_color_in_group = True
+    same_color_in_group = False
     different_line_style_among_groups = False
 
     legend_spacing = 8
@@ -143,6 +143,8 @@ class Settings(object):
         'import_EEM_dialog_path',
         'open_project_dialog_path',
         'save_project_dialog_path',
+        'legend_spacing',
+        'line_width'
     ]
 
     def __init__(self):
@@ -155,9 +157,11 @@ class Settings(object):
 
     def set_settings(self):
         """Sets static settings from this instance object (project settings)."""
+        # dont set any settings
+        pass
 
-        for key, value in self.attr.items():
-            setattr(Settings, key, value)
+        # for key, value in self.attr.items():
+        #     setattr(Settings, key, value)
 
         del self
 

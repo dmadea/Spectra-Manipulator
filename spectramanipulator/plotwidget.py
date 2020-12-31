@@ -26,6 +26,7 @@ class PlotWidget(pg.PlotWidget):
         pg.setConfigOption('foreground', 'k')
 
         self.plotted_items = {}  # dictionary with keys as spectrum objects and values as plot data items
+        self.plotted_fits = {}  #
 
         self.plotItem = PlotItemModif(viewBox=ViewBox(self.plotted_items))
 
@@ -42,7 +43,7 @@ class PlotWidget(pg.PlotWidget):
         self.img_exporter = ImageExporter(self.plotItem)
         self.svg_exporter = SVGExporter(self.plotItem)
 
-        self.lr_item = None
+        self.lr_item = None  # linear region item
 
         self.update_settings()
         self.plotItem.setDownsampling(ds=True, auto=True, mode='subsample')
@@ -94,14 +95,38 @@ class PlotWidget(pg.PlotWidget):
 
     def remove(self, spectrum):
         if spectrum in self.plotted_items:
-            self.removeItem(self.plotted_items[spectrum])
-            del self.plotted_items[spectrum]
+            self.removeItem(self.plotted_items[spectrum])  # remove from pyqtgraph
+            del self.plotted_items[spectrum]  # remove entry in dictionary
 
     def clear_plots(self):
         """Removes all plots except of linear region item and ...."""
         # self.plotted_spectra.clear()
         self.plotted_items.clear()
         self.plotItem.clearPlots()
+
+    @classmethod
+    def plot_fit(cls, item, **kwargs):
+        self = cls._instance
+        if self is None:
+            return
+
+        if item in self.plotted_fits:
+            self.plotted_fits[item].setData(item.data, **kwargs)
+            return
+
+        pi = self.plotItem.plot(item.data, **kwargs)
+        self.plotted_fits[item] = pi
+
+    @classmethod
+    def remove_fits(cls):
+        self = cls._instance
+        if self is None:
+            return
+
+        for val in self.plotted_fits.values():
+            self.removeItem(val)
+
+        self.plotted_fits.clear()
 
     @classmethod
     def add_linear_region(cls, region=None, bounds=None, brush=None, orientation='vertical', z_value=-10):
@@ -125,7 +150,8 @@ class PlotWidget(pg.PlotWidget):
             self.addItem(self.lr_item)
 
         self.lr_item.setRegion(region)
-        self.lr_item.setBounds(bounds)
+        if bounds is not None:
+            self.lr_item.setBounds(bounds)
         self.lr_item.setBrush(brush)
         self.lr_item.setZValue(z_value)
 

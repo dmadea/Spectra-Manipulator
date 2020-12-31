@@ -109,9 +109,12 @@ class GenericItem:
 
 class SpectrumItem(GenericItem, Spectrum):
 
-    def __init__(self, name, info='', parent=None, color=None, line_width=None, line_alpha=255,
+    def __init__(self, name='', info='', parent=None, color=None, line_width=None, line_alpha=255,
                  line_type=None, symbol=None, symbol_brush=None, sym_brush_alpha=255, symbol_fill=None,
-                 sym_fill_alpha=255, symbol_size=8, plot_legend=True):
+                 sym_fill_alpha=255, symbol_size=8, plot_legend=True, data=None, filepath=None,
+                 assume_sorted=False):
+
+        Spectrum.__init__(self, data, name=name, filepath=filepath, assume_sorted=assume_sorted)
 
         super(SpectrumItem, self).__init__(name, info, parent)
 
@@ -130,7 +133,7 @@ class SpectrumItem(GenericItem, Spectrum):
         self.sym_fill_alpha = sym_fill_alpha
 
     @classmethod
-    def from_spectrum(cls, spectrum, info='', parent=None):
+    def from_spectrum(cls, spectrum, info='', parent=None, copy_spectrum=False):
         si = cls(spectrum.name, info, parent,  # for backward compatibility
                  color=getattr(spectrum, 'color', None),
                  line_width=getattr(spectrum, 'line_width', None),
@@ -142,26 +145,17 @@ class SpectrumItem(GenericItem, Spectrum):
                  symbol_fill=getattr(spectrum, 'symbol_fill', None),
                  sym_fill_alpha=getattr(spectrum, 'sym_fill_alpha', 255),
                  symbol_size=getattr(spectrum, 'symbol_size', 8),
-                 plot_legend=getattr(spectrum, 'plot_legend', True))
-
-        si.filepath = spectrum.filepath
-        si.data = spectrum.data
-        # del spectrum
+                 plot_legend=getattr(spectrum, 'plot_legend', True),
+                 data=spectrum.data.copy() if copy_spectrum else spectrum.data,
+                 filepath=spectrum.filepath,
+                 assume_sorted=True)
 
         return si
 
     @classmethod
-    def from_xy_values(cls, x_values, y_values, name='', info='', parent=None, color=None, line_width=None, line_alpha=255,
-                 line_type=None, symbol=None, symbol_brush=None, sym_brush_alpha=255, symbol_fill=None,
-                 sym_fill_alpha=255, symbol_size=8, plot_legend=True):
+    def from_xy_values(cls, x_values, y_values, **kwargs):
 
-        sp = cls(name, info, parent, color, line_width, line_alpha, line_type, symbol, symbol_brush, sym_brush_alpha,
-                 symbol_fill, sym_fill_alpha, symbol_size, plot_legend)
-
-        sp_spectrum = Spectrum.from_xy_values(x_values, y_values, name='')
-
-        sp.data = sp_spectrum.data
-        del sp_spectrum
+        sp = super(SpectrumItem, cls).from_xy_values(x_values, y_values, **kwargs)
 
         return sp
 

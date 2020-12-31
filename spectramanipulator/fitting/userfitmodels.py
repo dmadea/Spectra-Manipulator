@@ -1,4 +1,4 @@
-from .fitmodels import _Model
+from spectramanipulator.fitting.fitmodels import _Model
 from scipy.integrate import odeint
 import numpy as np
 

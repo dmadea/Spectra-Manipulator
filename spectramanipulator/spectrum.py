@@ -439,7 +439,7 @@ def add_op_func():
 
 class Spectrum(OperationBase):
 
-    def __init__(self, data, name='', filepath=None, assume_sorted=False):
+    def __init__(self, data=None, name='', filepath=None, assume_sorted=False, **kwargs):
         """
         Class that holds the spectrum object as a 2D array (dimensions n x 2) where n is a number
         of points in spectrum and includes various functions used for data manipulation with them.
@@ -467,7 +467,7 @@ class Spectrum(OperationBase):
         self.filepath = filepath
 
     @classmethod
-    def from_xy_values(cls, x_values, y_values, name=''):
+    def from_xy_values(cls, x_values, y_values, name='', filepath=None, **kwargs):
         """
         Creates the Spectrum object from separate x and y data variables. The dimensions of x_values
         and y_values must be the same and contain numbers. The other parameters are the same
@@ -508,7 +508,7 @@ class Spectrum(OperationBase):
 
         data = np.vstack((x_data, y_data)).T
 
-        return cls(data, name=name)
+        return cls(data=data, name=name, filepath=filepath, assume_sorted=False, **kwargs)
 
     @property
     def x(self):

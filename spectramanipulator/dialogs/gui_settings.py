@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'gui_settings.ui'
+# Form implementation generated from reading ui file 'spectramanipulator/dialogs\gui_settings.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.2
 #
