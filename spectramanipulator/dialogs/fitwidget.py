@@ -33,6 +33,7 @@ from ..utils.syntax_highlighter import PythonHighlighter, KineticModelHighlighte
 
 import glob
 import os
+import time
 
 import sys
 
@@ -53,7 +54,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     _instance = None
 
     # maximum number of parameters
-    max_param_count = 20
+    max_param_count = 25
 
     def __init__(self, dock_widget, accepted_func, node: [SpectrumItem, SpectrumItemGroup] = None, parent=None):
         super(FitWidget, self).__init__(parent)
@@ -129,7 +130,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         self.ppteScheme_highlighter = KineticModelHighlighter(self.pteScheme.document())
 
-        self.verticalLayout.addWidget(QtWidgets.QLabel('Model-independent parameters:'))
+        self.verticalLayout.addWidget(QtWidgets.QLabel('Experiment-independent parameters:'))
         self.pred_model_indep_params_layout = self.create_params_layout()
         self.verticalLayout.addLayout(self.pred_model_indep_params_layout)
 
@@ -137,20 +138,20 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.cbPredefModelDepParams_changing = False
         self.cbPredefModelDepParams.check_changed.connect(self.cbPredefModelDepParams_check_changed)
         hbox = QtWidgets.QHBoxLayout(self)
-        hbox.addWidget(QtWidgets.QLabel('Selected model-dependent parameters:'))
+        hbox.addWidget(QtWidgets.QLabel('Selected experiment-dependent parameters:'))
         hbox.addWidget(self.cbPredefModelDepParams)
         self.verticalLayout.addLayout(hbox)
 
         self.tab_widget_pred_model = QtWidgets.QTabWidget(self)
         self.verticalLayout.addWidget(self.tab_widget_pred_model)
 
-        self.species_grids_pred = []
+        self.pred_species_hlayouts = []
         self.pred_model_dep_param_layouts = []
 
         if self.node is not None:
             for spectrum in self.node:
-                widget, species_grid, params_layout = self.create_tab_widget(self.tab_widget_pred_model)
-                self.species_grids_pred.append(species_grid)
+                widget, species_hlayout, params_layout = self.create_tab_widget(self.tab_widget_pred_model)
+                self.pred_species_hlayouts.append(species_hlayout)
                 self.pred_model_dep_param_layouts.append(params_layout)
 
                 self.tab_widget_pred_model.addTab(widget, spectrum.name)
@@ -158,6 +159,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         vals_temp = dict(params=[], lower_bounds=[], values=[], upper_bounds=[], fixed=[], errors=[])
         self.pred_param_fields = dict(exp_independent=deepcopy(vals_temp),
                                       exp_dependent=[deepcopy(vals_temp) for _ in range(len(self.node))])
+
+        self.pred_spec_visible_fields = [[] for _ in range(len(self.node))]
 
         def add_widgets(dict_fields: dict, param_layout: QtWidgets.QGridLayout):
             for i in range(self.max_param_count):
@@ -177,7 +180,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 ub.par = par
                 fix.par = par
 
-                # set lower and upper bound fields as tag for fix field to be able to handle
+                # set lower and upper bound fields as tag for fix field to be able to handle fix field changes
                 fix.lb = lb
                 fix.ub = ub
 
@@ -188,7 +191,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 fix.setVisible(False)
                 err.setVisible(False)
 
-                # link event upon change
+                # update model param upon field change
                 lb.textChanged.connect(lambda value: self.transfer_param_to_model('min', value))
                 val.textChanged.connect(lambda value: self.transfer_param_to_model('value', value))
                 ub.textChanged.connect(lambda value: self.transfer_param_to_model('max', value))
@@ -215,51 +218,16 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         for i in range(len(self.node)):
             add_widgets(self.pred_param_fields['exp_dependent'][i], self.pred_model_dep_param_layouts[i])
 
-        self.setting_params = False
+            # setup species visible checkboxes
+            for _ in range(self.max_param_count):
+                cb = QCheckBox('')
+                cb.exp_index = i
+                cb.setVisible(False)
+                cb.toggled.connect(self.species_visible_checkbox_toggled)
+                self.pred_spec_visible_fields[i].append(cb)
+                self.pred_species_hlayouts[i].addWidget(cb)
 
-        # self.params_list = []
-        # self.lower_bound_list = []
-        # self.value_list = []
-        # self.upper_bound_list = []
-        # self.fixed_list = []
-        # self.error_list = []
-        #
-        # for i in range(self.max_count):
-        #     self.params_list.append([QLineEdit(), QLineEdit()])
-        #     self.lower_bound_list.append([QLineEdit(), QLineEdit()])
-        #     self.value_list.append([QLineEdit(), QLineEdit()])
-        #     self.upper_bound_list.append([QLineEdit(), QLineEdit()])
-        #     self.fixed_list.append([QCheckBox(), QCheckBox()])
-        #     self.error_list.append([QLineEdit(), QLineEdit()])
-        #
-        #     self.params_list[i][1].setReadOnly(True)
-        #     self.error_list[i][0].setReadOnly(True)
-        #     self.error_list[i][1].setReadOnly(True)
-        #
-        #     for j, layout in enumerate([self.predefGridLayout, self.cusModelGridLayout]):
-        #         layout.addWidget(self.params_list[i][j], i + 1, 0, 1, 1)
-        #         layout.addWidget(self.lower_bound_list[i][j], i + 1, 1, 1, 1)
-        #         layout.addWidget(self.value_list[i][j], i + 1, 2, 1, 1)
-        #         layout.addWidget(self.upper_bound_list[i][j], i + 1, 3, 1, 1)
-        #         layout.addWidget(self.fixed_list[i][j], i + 1, 4, 1, 1)
-        #         layout.addWidget(self.error_list[i][j], i + 1, 5, 1, 1)
-        #
-        #     self.fixed_list[i][0].stateChanged.connect(self.fixed_checked_changed)
-        #     self.fixed_list[i][1].stateChanged.connect(self.fixed_checked_changed)
-        #
-        #     # if we are only plotting functions, disable some controls
-        #     if self.spectrum is None:
-        #         for j in (0, 1):
-        #             self.lower_bound_list[i][j].setEnabled(False)
-        #             self.upper_bound_list[i][j].setEnabled(False)
-        #             self.fixed_list[i][j].setEnabled(False)
-        #             self.error_list[i][j].setEnabled(False)
-        #
-        # if self.spectrum is None:
-        #     self.btnFit.setEnabled(False)
-        #     self.btnPrintReport.setEnabled(False)
-        #     self.cbMethod.setEnabled(False)
-        #     self.cbUpdateInitValues.setEnabled(False)
+        self.setting_params = False
 
         # get all models from fitmodels, get classes that inherits from Model base class and sort them by name
         # and number of species
@@ -295,8 +263,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.current_general_model = None
         self.general_model_params = None
         self.fit_result = None
-        self.plotted_functions = []
-        self.plotted_function_spectra = []
+        self.plotted_spectra = []
 
         self.accepted = False
         FitWidget.is_opened = True
@@ -316,15 +283,15 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         widget = QtWidgets.QWidget(tab_widget)
         vl = QtWidgets.QVBoxLayout(widget)
         vl.addWidget(QtWidgets.QLabel('Species visible:'))
-        species_grid = QtWidgets.QGridLayout(widget)
-        vl.addLayout(species_grid)
-        vl.addWidget(QtWidgets.QLabel('Model-dependent parameters:'))
+        species_hlayout = QtWidgets.QHBoxLayout(widget)
+        vl.addLayout(species_hlayout)
+        vl.addWidget(QtWidgets.QLabel('Experiment-dependent parameters:'))
         params_layout = self.create_params_layout(widget)
         vl.addLayout(params_layout)
 
         widget.setLayout(vl)
 
-        return widget, species_grid, params_layout
+        return widget, species_hlayout, params_layout
 
     def create_params_layout(self, parent=None):
         params_layout_template = QtWidgets.QGridLayout(self if parent is None else parent)
@@ -583,6 +550,20 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.current_model.update_model_options(exp_dep_params=set(checked_abbrs))
         self.pred_setup_field()
 
+    def species_visible_checkbox_toggled(self, checked):
+        cb = self.sender()
+        print('species_visible_checkbox_toggled', cb.exp_index, cb.text())
+
+        self.current_model.spec_visible[cb.exp_index][cb.text()] = checked
+        # dynamically find the corresponding amplitude parameter
+
+        for i, par in enumerate(self.pred_param_fields['exp_dependent'][cb.exp_index]['params']):
+            if par.text().startswith(cb.text()):
+                self.pred_param_fields['exp_dependent'][cb.exp_index]['values'][i].setEnabled(checked)
+                if not checked:
+                    self.pred_param_fields['exp_dependent'][cb.exp_index]['values'][i].setText('0')
+                return
+
     def transfer_param_to_model(self, param_type: str, value):
         """also handles enabling of lower and upper text fields"""
         if self.setting_params:
@@ -634,14 +615,24 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if self.current_model is None:
             return
 
-        print('pred_model_params_changed')
+        print('pred_setup_field')
         self.setting_params = True
 
         self._setup_fields(self.pred_param_fields['exp_independent'], self.current_model.get_model_indep_params())
 
-        model_indep_params = self.current_model.get_model_dep_params_list()
+        model_dep_params = self.current_model.get_model_dep_params_list()
+        spec_names = self.current_model.get_current_species_names()
         for i in range(len(self.node)):
-            self._setup_fields(self.pred_param_fields['exp_dependent'][i], model_indep_params[i])
+            self._setup_fields(self.pred_param_fields['exp_dependent'][i], model_dep_params[i])
+
+            for j in range(self.max_param_count):
+                visible = len(spec_names) > j
+
+                if visible:
+                    self.pred_spec_visible_fields[i][j].setText(spec_names[j])
+                    self.pred_spec_visible_fields[i][j].setChecked(self.current_model.spec_visible[i][spec_names[j]])
+
+                self.pred_spec_visible_fields[i][j].setVisible(visible)
 
         self.setting_params = False
 
@@ -669,36 +660,41 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
     def model_changed(self):
         # initialize new model
+        # self.plotted_fits.clear()
         data = [sp.data for sp in self.node] if self.node is not None else None
         self.current_model = self.models[self.cbModel.currentIndex()](data, n_spec=int(self.sbSpeciesCount.value()),
                                                                       varpro=self.cbVarPro.isChecked())
         self.n_spec_changed()
 
     def clear_plot(self, keep_spectra=False):
-        if self.plot_fit is not None and self.plot_residuals is not None:
-            self.plot_widget.plotItem.removeItem(self.plot_fit)
-            self.plot_widget.plotItem.removeItem(self.plot_residuals)
-            try:
-                self.plot_widget.legend.remove_last_item()
-                self.plot_widget.legend.remove_last_item()
-            except IndexError:
-                pass
 
-            self.plot_fit = None
-            self.plot_residuals = None
+        self.plotted_spectra.clear()
+        PlotWidget.remove_fits()
 
-        if len(self.plotted_functions) > 0:
-            for item in self.plotted_functions:
-                self.plot_widget.plotItem.removeItem(item)
-            try:
-                for i in range(len(self.plotted_functions)):
-                    self.plot_widget.legend.remove_last_item()
-            except IndexError:
-                pass
-
-            self.plotted_functions = []
-            if not keep_spectra:
-                self.plotted_function_spectra = []
+        # if self.plot_fit is not None and self.plot_residuals is not None:
+        #     self.plot_widget.plotItem.removeItem(self.plot_fit)
+        #     self.plot_widget.plotItem.removeItem(self.plot_residuals)
+        #     try:
+        #         self.plot_widget.legend.remove_last_item()
+        #         self.plot_widget.legend.remove_last_item()
+        #     except IndexError:
+        #         pass
+        #
+        #     self.plot_fit = None
+        #     self.plot_residuals = None
+        #
+        # if len(self.plotted_functions) > 0:
+        #     for item in self.plotted_functions:
+        #         self.plot_widget.plotItem.removeItem(item)
+        #     try:
+        #         for i in range(len(self.plotted_functions)):
+        #             self.plot_widget.legend.remove_last_item()
+        #     except IndexError:
+        #         pass
+        #
+        #     self.plotted_functions = []
+        #     if not keep_spectra:
+        #         self.plotted_function_spectra = []
 
     def fit(self):
 
@@ -863,16 +859,42 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if self.tabWidget.currentIndex() == 1:  # custom model
             return
 
+        self.current_model.set_ranges(self.lr.getRegion())
+
+        start_time = time.perf_counter()
         x_vals, fits, residuals = self.current_model.simulate()
+        end_time = time.perf_counter()
+        print((end_time - start_time) * 1e3, 'ms for simulation')
 
         if self.cbVarPro.isChecked():
             self.pred_setup_field()
 
-        PlotWidget.remove_fits()
+        pw_plot_items = PlotWidget.plotted_items()
+        df = Settings.fit_dark_factor
 
-        for x, y_fit, name in zip(x_vals, fits, map(lambda node: node.name, self.node)):
-            sp_fit = SpectrumItem.from_xy_values(x, y_fit)
-            PlotWidget.plot_fit(sp_fit, name=f'Fif of {name}', pen=pg.mkPen(color=QColor(0, 0, 0, 255), width=2))
+        for i in range(len(fits)):
+            # only update data if spectra are already instantiated
+            if len(self.plotted_spectra) == len(fits):
+                sp_fit = self.plotted_spectra[i]
+                sp_fit.data = np.vstack((x_vals[i], fits[i])).T
+            else:
+                sp_fit = SpectrumItem.from_xy_values(x_vals[i], fits[i])
+                self.plotted_spectra.append(sp_fit)
+
+            color = QColor(0, 0, 0, 255)
+            if self.node[i] in pw_plot_items:  # set color of checked spectra as darkened
+                plot_item = pw_plot_items[self.node[i]]
+                node_color = plot_item.opts['pen'].color()
+                color.setRgbF(node_color.redF() * df,
+                              node_color.greenF() * df,
+                              node_color.blueF() * df,
+                              node_color.alphaF())
+            # else:
+            #     color.setAlpha(0)
+
+            PlotWidget.plot_fit(sp_fit, name=f'Fif of {self.node[i].name}',
+                                pen=pg.mkPen(color=color, width=2),
+                                zValue=1e5 - i)
 
     def _plot_function(self):
         x0, x1 = self.lr.getRegion()

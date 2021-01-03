@@ -21,7 +21,7 @@ from spectramanipulator.utils.smart_rename import smart_rename
 from spectramanipulator.treeview.item import SpectrumItemGroup, SpectrumItem, GenericItem
 from spectramanipulator.treeview.model import TreeView, ItemIterator
 
-# from console import Console
+from spectramanipulator.console import Console
 
 from spectramanipulator.parsers import parse_XML_Spreadsheet
 from spectramanipulator.dataloader import parse_text, parse_files
@@ -431,6 +431,7 @@ class TreeWidget(TreeView):
             self.state_changed.emit()
 
         fit_dialog = FitWidget(self.main_widget.var_widget, accepted, selected_node, parent=self)
+        Console.push_variables({'fw': fit_dialog})
 
     def set_style(self):
 
@@ -784,6 +785,8 @@ class TreeWidget(TreeView):
             self.myModel.insertRows(self.myModel.root.__len__(), num_items, QModelIndex())
             self.setup_info()
             self.save_state()
+
+        self.redraw_spectra.emit()
 
     def import_spectra(self, spectra):
         if spectra is None:

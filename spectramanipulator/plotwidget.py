@@ -3,8 +3,8 @@
 from PyQt5 import QtGui
 import pyqtgraph as pg
 
-from spectramanipulator.pyqtgraphmodif.legend_item_modif import LegendItemModif
-from spectramanipulator.pyqtgraphmodif.plot_item_modif import PlotItemModif
+from spectramanipulator.pyqtgraphmodif.legend_item import LegendItem
+from spectramanipulator.pyqtgraphmodif.plot_item import PlotItem
 from spectramanipulator.pyqtgraphmodif.view_box import ViewBox
 
 from pyqtgraph.exporters import ImageExporter
@@ -28,7 +28,7 @@ class PlotWidget(pg.PlotWidget):
         self.plotted_items = {}  # dictionary with keys as spectrum objects and values as plot data items
         self.plotted_fits = {}  #
 
-        self.plotItem = PlotItemModif(viewBox=ViewBox(self.plotted_items))
+        self.plotItem = PlotItem(viewBox=ViewBox(self.plotted_items))
 
         # use our modified plotItem
         super(PlotWidget, self).__init__(parent, plotItem=self.plotItem)
@@ -80,6 +80,8 @@ class PlotWidget(pg.PlotWidget):
         # if spectrum is already plotted, update the data and style
         if item in self.plotted_items:
             self.plotted_items[item].setData(item.data, **kwargs)
+            if 'zValue' in kwargs:
+                self.plotted_items[item].setZValue(kwargs['zValue'])
             return
 
         pi = self.plotItem.plot(item.data, **kwargs)
@@ -105,6 +107,11 @@ class PlotWidget(pg.PlotWidget):
         self.plotItem.clearPlots()
 
     @classmethod
+    def plotted_items(cls):
+        if cls._instance is not None:
+            return cls._instance.plotted_items
+
+    @classmethod
     def plot_fit(cls, item, **kwargs):
         self = cls._instance
         if self is None:
@@ -112,6 +119,8 @@ class PlotWidget(pg.PlotWidget):
 
         if item in self.plotted_fits:
             self.plotted_fits[item].setData(item.data, **kwargs)
+            if 'zValue' in kwargs:
+                self.plotted_fits[item].setZValue(kwargs['zValue'])
             return
 
         pi = self.plotItem.plot(item.data, **kwargs)
@@ -227,7 +236,7 @@ class PlotWidget(pg.PlotWidget):
                 self.viewport().setCursor(Qt.SizeAllCursor)
 
     def add_legend(self, size=None, spacing=5, offset=(-30, 30)):
-        self.legend = LegendItemModif(size, verSpacing=spacing, offset=offset)
+        self.legend = LegendItem(size, verSpacing=spacing, offset=offset)
         self.legend.setParentItem(self.plotItem.vb)
         self.plotItem.legend = self.legend
         # return self.legend

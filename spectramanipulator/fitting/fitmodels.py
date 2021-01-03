@@ -114,15 +114,9 @@ class Model(object):
         self.exp_indep_params = None  # experimental independent parameters, will be set in init_params method
 
         if self.spec_visible is None:
-            self.spec_visible = dict(exp_independent={},
-                                     exp_dependent=[{name: True for name in self.spec_names[:self.n_spec]} for _ in range(len(self.exps_data))])
+            self.spec_visible = [{name: True for name in self.spec_names[:self.n_spec]} for _ in range(len(self.exps_data))]
 
         self.param_names_dict = {}
-
-        # self.spec_visible = {'exp_independent': {'A': True, 'B': True},
-        #                      'exp_dependent': [{'B': True, 'C':False, 'D':True},
-        #                                  {'B': True, 'C':False, 'D':True}]
-        #                      }
 
     def set_ranges(self, ranges=None):
         if self.exps_data is None:
@@ -130,12 +124,33 @@ class Model(object):
 
         if ranges is None:
             self.ranges = [(None, None)] * len(self.exps_data)
+            return
+
+        # only one range, make it valid for all experiements
+        if isinstance(ranges, (list, tuple)) and isinstance(ranges[0], (float, int)):
+            self.ranges = [ranges] * len(self.exps_data)
+        else:
+            self.ranges = ranges
+
+    def get_current_species_names(self):
+        return self.spec_names[:self.n_spec]
 
     def update_model_options(self, **kwargs):
         for key, value in kwargs.items():
             if not hasattr(self, key):
                 raise TypeError(f'Argument {key} is not valid.')
             self.__setattr__(key, value)
+
+        if 'n_spec' in kwargs and 'spec_visible' not in kwargs:
+            new_spec_visible = [{name: True for name in self.spec_names[:self.n_spec]} for _ in range(len(self.exps_data))]
+
+            # update spec_visible and keep the old parameters
+            for new_dict, old_dict in zip(new_spec_visible, self.spec_visible):
+                for key, value in old_dict.items():
+                    if key in new_dict:
+                        new_dict[key] = value
+
+            self.spec_visible = new_spec_visible
 
         self._update_params()
 
@@ -216,7 +231,7 @@ class SeqParModel(Model):
                                           n_spec=n_spec, spec_names=spec_names, spec_visible=spec_visible)
 
         self.sequential = sequential
-        self.use_intercept = True
+        self.fit_intercept_varpro = True
 
     def get_available_param_names(self):
         pars = {}
@@ -261,13 +276,13 @@ class SeqParModel(Model):
                     dict_params['amps'].append(f_par_name)
                     vary = not self.varpro
 
-                    if par in species_visible:
+                    if species_visible is not None and par in species_visible:
                         value = 1 if species_visible[par] else 0
                     else:
                         value = 1
                 elif self.is_intercept(par):
                     dict_params['intercept'] = f_par_name
-                    vary = self.use_intercept and not self.varpro
+                    vary = self.fit_intercept_varpro and not self.varpro
                     value = 0
                 else:
                     value = 0
@@ -278,19 +293,15 @@ class SeqParModel(Model):
         params_indep = dict(all=[], rates=[], j=[], amps=[], intercept='')
 
         n = len(self.exps_data)
-        # if self.spec_visible:
-        #     assert len(self.spec_visible['exp_independent']) == self.n_spec
 
         # add experiment independent parameters
-
-        add_params(self.exp_indep_params, params_indep,
-                   species_visible=self.spec_visible['exp_independent'])
+        add_params(self.exp_indep_params, params_indep)
 
         self.param_names_dict = [deepcopy(params_indep) for _ in range(n)]
         # add experiment dependent parameters
         for i in range(n):
             add_params(self.exp_dep_params, self.param_names_dict[i],
-                       species_visible=self.spec_visible['exp_dependent'][i],
+                       species_visible=self.spec_visible[i],
                        par_format=lambda name: self.format_exp_par(name, i))
 
             self.param_names_dict[i]['all'].sort()
@@ -341,7 +352,7 @@ class SeqParModel(Model):
         fits = []
         residuals = []
 
-        for data, x_range, par_names, visible in zip(self.exps_data, self.ranges, self.param_names_dict, self.spec_visible['exp_dependent']):
+        for data, x_range, par_names, visible in zip(self.exps_data, self.ranges, self.param_names_dict, self.spec_visible):
             x, y = get_xy(data, x0=x_range[0], x1=x_range[1])
             x_vals.append(x)
 
@@ -351,19 +362,21 @@ class SeqParModel(Model):
             traces = self._get_traces(x, ks, j)
 
             if self.varpro:
-                A = traces[:, list(visible.values())]
+                A = traces[:, list(visible.values())]  # select only visible species
                 # add intercept as constant function
-                if self.use_intercept:
+                if self.fit_intercept_varpro:
                     A = np.hstack((A, np.ones_like(x)[:, None]))
                 # solve the least squares problem, find the amplitudes of visibile compartments based on data
                 coefs = OLS_ridge(A, y, 0)
 
                 fit = A.dot(coefs)  # calculate the fit
 
-                # udpate amplitudes and intercept
-                if self.use_intercept:
+                # update amplitudes and intercept
+                if self.fit_intercept_varpro:
                     *coefs, intercept = list(coefs)
                     self.params[par_names['intercept']].value = intercept
+                else:
+                    fit += self.params[par_names['intercept']].value
 
                 amp_names = [amp_name for amp_name, visible in zip(par_names['amps'], visible.values()) if visible]
                 for name, value in zip(amp_names, coefs):

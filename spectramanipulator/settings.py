@@ -86,6 +86,10 @@ class Settings(object):
 
     color_scheme = 0  # 0 - default, 1 - HSV, 2 - user defined
 
+    # plotting of fits
+
+    fit_dark_factor = 0.8
+
     # plotwidget settings
     # not in Settings dialog
     coordinates_sig_figures = 4  # number of significant figures displayed in status bar for cooridnates

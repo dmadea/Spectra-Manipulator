@@ -469,7 +469,7 @@ class Main(QMainWindow):
         if remove is True:
             for item in items:
                 self.grpView.remove(item)
-            return
+
 
         gradient_mat = None
         if Settings.color_scheme == 2:  # user defined
@@ -565,7 +565,7 @@ class Main(QMainWindow):
                               symbolPen=symbolPen,
                               symbol=symbol,
                               symbolSize=symbol_size,
-                              zValue=item_counter if Settings.reverse_z_order else (1e5 - item_counter))
+                              zValue=item_counter if Settings.reverse_z_order else -item_counter)
 
 
 def my_exception_hook(exctype, value, traceback):

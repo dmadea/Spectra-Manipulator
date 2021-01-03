@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 # fcns addItem and plot were modified by adding an optional parameter plot_legend
+# plot handled zValue kwarg
 
 from pyqtgraph.graphicsItems.PlotDataItem import PlotDataItem
-from pyqtgraph.graphicsItems.PlotItem import PlotItem
+from pyqtgraph.graphicsItems.PlotItem import PlotItem as _PlotItem
 
 
-class PlotItemModif(PlotItem):
+class PlotItem(_PlotItem):
 
     def addItem(self, item, *args, **kargs):
         """
@@ -78,6 +79,9 @@ class PlotItemModif(PlotItem):
 
         if params is None:
             params = {}
+
+        if 'zValue' in kargs:
+            item.setZValue(kargs['zValue'])
 
         # plot legend option added
         self.addItem(item, params=params, plot_legend=kargs.get('plot_legend', True))

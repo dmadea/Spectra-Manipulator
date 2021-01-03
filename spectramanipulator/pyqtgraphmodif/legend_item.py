@@ -1,6 +1,7 @@
 
-from pyqtgraph.graphicsItems.LegendItem import LegendItem, ItemSample
-from .label_item_modif import LabelItemModif
+from pyqtgraph.graphicsItems.LegendItem import LegendItem as _LegendItem
+from pyqtgraph.graphicsItems.LegendItem import ItemSample as _ItemSamle
+from .label_item import LabelItem
 
 from PyQt5 import QtGui, QtCore
 from pyqtgraph import functions as fn
@@ -11,15 +12,15 @@ from pyqtgraph.graphicsItems.BarGraphItem import BarGraphItem
 # changed legend line position in ItemSample
 
 
-class LegendItemModif(LegendItem):
+class LegendItem(_LegendItem):
 
     def __init__(self, size=None, offset=None, horSpacing=25, verSpacing=0,
                  pen=None, brush=None, labelTextColor=None, frame=True,
                  labelTextSize='9pt', rowCount=1, colCount=1,  **kwargs):
 
-        super(LegendItemModif, self).__init__(size, offset, horSpacing, verSpacing,
-                 pen, brush, labelTextColor, frame,
-                 labelTextSize, rowCount, colCount, **kwargs)
+        super(LegendItem, self).__init__(size, offset, horSpacing, verSpacing,
+                                         pen, brush, labelTextColor, frame,
+                                         labelTextSize, rowCount, colCount, **kwargs)
 
         self.verSpacing = verSpacing  # verSpacing parameter used as a setup for setMinimumHeight in LabelItemModif
 
@@ -46,18 +47,18 @@ class LegendItemModif(LegendItem):
         ==============  ========================================================
         """
         # USED LabelItemModif insted of LabelItem
-        label = LabelItemModif(name, color=self.opts['labelTextColor'],
+        label = LabelItem(name, color=self.opts['labelTextColor'],
                           justify='left', size=self.opts['labelTextSize'], verspacing=self.verSpacing)
-        if isinstance(item, ItemSampleModif):  # Changed from ItemSample to ItemSampleModif
+        if isinstance(item, ItemSample):  # Changed from ItemSample to ItemSampleModif
             sample = item
         else:
-            sample = ItemSampleModif(item)  # Changed from ItemSample to ItemSampleModif
+            sample = ItemSample(item)  # Changed from ItemSample to ItemSampleModif
         self.items.append((sample, label))
         self._addItemToLayout(sample, label)
         self.updateSize()
 
 
-class ItemSampleModif(ItemSample):
+class ItemSample(_ItemSamle):
 
     def paint(self, p, *args):
         opts = self.item.opts

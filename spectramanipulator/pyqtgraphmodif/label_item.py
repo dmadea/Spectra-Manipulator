@@ -1,11 +1,11 @@
 from PyQt5 import QtCore
 
-from pyqtgraph.graphicsItems.LabelItem import LabelItem
+from pyqtgraph.graphicsItems.LabelItem import LabelItem as _LabelItem
 
 # changed vertical spacing in legend entries
 
 
-class LabelItemModif(LabelItem):
+class LabelItem(_LabelItem):
     """
     GraphicsWidget displaying text.
     Used mainly as axis labels, titles, etc.
@@ -15,7 +15,7 @@ class LabelItemModif(LabelItem):
 
     def __init__(self, text=' ', parent=None, angle=0, verspacing=5, **args):
         self.verspacing = verspacing  # added vertical spacing parameter
-        super(LabelItemModif, self).__init__(text, parent, angle, **args)
+        super(LabelItem, self).__init__(text, parent, angle, **args)
 
     def updateMin(self):
         bounds = self.itemRect()
