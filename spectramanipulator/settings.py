@@ -88,7 +88,7 @@ class Settings(object):
 
     # plotting of fits
 
-    fit_dark_factor = 0.8
+    fit_dark_factor = 0.7
 
     # plotwidget settings
     # not in Settings dialog

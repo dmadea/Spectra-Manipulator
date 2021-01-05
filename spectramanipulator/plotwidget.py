@@ -101,10 +101,12 @@ class PlotWidget(pg.PlotWidget):
             del self.plotted_items[spectrum]  # remove entry in dictionary
 
     def clear_plots(self):
-        """Removes all plots except of linear region item and ...."""
+        """Removes all plots except of linear region item and fits"""
         # self.plotted_spectra.clear()
+        for item in self.plotted_items.values():
+            self.removeItem(item)
+
         self.plotted_items.clear()
-        self.plotItem.clearPlots()
 
     @classmethod
     def plotted_items(cls):
@@ -127,7 +129,18 @@ class PlotWidget(pg.PlotWidget):
         self.plotted_fits[item] = pi
 
     @classmethod
-    def remove_fits(cls):
+    def remove_fits(cls, items: list):
+        self = cls._instance
+        if self is None:
+            return
+
+        for item in items:
+            if item in self.plotted_fits:
+                self.removeItem(self.plotted_fits[item])
+                del self.plotted_fits[item]
+
+    @classmethod
+    def remove_all_fits(cls):
         self = cls._instance
         if self is None:
             return
@@ -139,7 +152,7 @@ class PlotWidget(pg.PlotWidget):
 
     @classmethod
     def add_linear_region(cls, region=None, bounds=None, brush=None, orientation='vertical', z_value=-10):
-        """boudns is tuple or None"""
+        """bounds is tuple or None"""
 
         self = cls._instance
         if self is None:
@@ -214,29 +227,41 @@ class PlotWidget(pg.PlotWidget):
         in_scene = self.plotItem.sceneBoundingRect().contains(pos)
         in_legend = self.legend.sceneBoundingRect().contains(pos)
 
+        in_lin_reg = False
+        in_lin_reg_line = False
+        lin_reg_moving = False
+        if self.lr_item is not None:
+            in_lin_reg = self.lr_item.sceneBoundingRect().contains(pos)
+            line1, line2 = self.lr_item.lines
+            in_lin_reg_line = line1.sceneBoundingRect().contains(pos) or line2.sceneBoundingRect().contains(pos)
+            lin_reg_moving = self.lr_item.moving or line1.moving or line2.moving
+
         if in_scene:
             try:
                 mousePoint = self.plotItem.vb.mapSceneToView(pos)
                 n = Settings.coordinates_sig_figures
+                # double format with n being the number of significant figures of a number
                 self.coordinates_func(f"x={{:.{n}g}}, y={{:.{n}g}}".format(mousePoint.x(), mousePoint.y()))
             except:
                 pass
 
-        # self.label.setPos(mousePoint.x(), mousePoint.y())
-        # self.label.setHtml("<span style='font-size: 26pt'>x={:01f}, <span style='font-size: 26pt'>y={:01f}".format(mousePoint.x(), mousePoint.y()))
-
-        if in_scene and not in_legend:
-            if self.viewport().cursor() != Qt.CrossCursor:
-                # print("in view")
+        # set the corresponding cursor
+        if in_scene and not lin_reg_moving:
+            if in_lin_reg_line:
+                self.viewport().setCursor(Qt.SizeHorCursor)
+            elif in_legend or in_lin_reg:
+                self.viewport().setCursor(Qt.SizeAllCursor)
+            else:
                 self.viewport().setCursor(Qt.CrossCursor)
 
-        if in_scene and in_legend:
-            if self.viewport().cursor() != Qt.SizeAllCursor:
-                # print("in legend")
-                self.viewport().setCursor(Qt.SizeAllCursor)
-
     def add_legend(self, size=None, spacing=5, offset=(-30, 30)):
+        if self.legend is not None:
+            self.legend.clear()
+            self.plotItem.legend = None
+            del self.legend
+
         self.legend = LegendItem(size, verSpacing=spacing, offset=offset)
         self.legend.setParentItem(self.plotItem.vb)
         self.plotItem.legend = self.legend
-        # return self.legend
+
+

@@ -95,7 +95,8 @@ class Model(object):
 
     def __init__(self, exps_data: list, ranges: [list, tuple] = None, varpro: bool = True,
                  exp_dep_params: set = None, n_spec: int = 2,
-                 spec_names: [list, tuple] = None, spec_visible: dict = None, **kwargs):
+                 spec_names: [list, tuple] = None, spec_visible: dict = None,
+                 weight_func=lambda res, y: res, **kwargs):
         """ TODO-->> exp_data is list of 2D ndaarrays """
         self.exps_data = list(exps_data) if isinstance(exps_data, (list, tuple)) else [exps_data]
         self.ranges = ranges  # list of lists or None for no ranges
@@ -105,6 +106,7 @@ class Model(object):
         self.exp_dep_params = exp_dep_params  # experiment dependent params
         self.n_spec = n_spec
         self.params = None
+        self.weight_func = weight_func
 
         self.spec_names = spec_names
         if self.spec_names is None:
@@ -225,10 +227,12 @@ class SeqParModel(Model):
     name = 'Sequential/Parallel Model (1st order)'
 
     def __init__(self, exps_data: list, ranges: [list, tuple] = None, varpro: bool = True, n_spec=2,
-                 exp_dep_params: set = None, spec_visible: dict = None, sequential: bool = True):
+                 exp_dep_params: set = None, spec_visible: dict = None, sequential: bool = True,
+                 weight_func=lambda res, y: res, ):
         spec_names = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')  # use alphabet
         super(SeqParModel, self).__init__(exps_data, ranges=ranges, varpro=varpro, exp_dep_params=exp_dep_params,
-                                          n_spec=n_spec, spec_names=spec_names, spec_visible=spec_visible)
+                                          n_spec=n_spec, spec_names=spec_names, spec_visible=spec_visible,
+                                          weight_func=weight_func)
 
         self.sequential = sequential
         self.fit_intercept_varpro = True
@@ -386,13 +390,14 @@ class SeqParModel(Model):
                 amps = np.asarray([self.params[p].value for p in par_names['amps']])
                 fit = traces.dot(amps) + self.params[par_names['intercept']].value  # weight the simulated traces with amplitudes and calculate the fit
 
-            res = fit - y  # residual
+            res = self.weight_func(fit - y, y)  # residual
             fits.append(fit)
             residuals.append(res)
 
         return x_vals, fits, residuals
 
     def residuals(self, params=None):
+        # TODO--> optimize
         _, _, residuals = self.simulate(params)
 
         # stack all residuals and return

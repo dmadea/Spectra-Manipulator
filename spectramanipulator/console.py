@@ -105,12 +105,14 @@ Enjoy.
             self.console_widget.setFocus()
 
     @staticmethod
-    def showMessage(message):
+    def showMessage(message, add_new_line=True):
         if Console._instance is not None:
-            Console._instance.console_widget.print_text('\n' + message)
+            string = '\n' + message if add_new_line else message
+            Console._instance.console_widget.print_text(string)
 
-    def print_html(self, text):
-        self.console_widget.print_html('\n' + text)
+    def print_html(self, text, add_new_line=True):
+        string = '\n' + text if add_new_line else text
+        self.console_widget.print_html(string)
 
     @staticmethod
     def execute_command(cmd, hidden=True):

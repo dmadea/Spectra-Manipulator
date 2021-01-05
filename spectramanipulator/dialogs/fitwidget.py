@@ -70,47 +70,24 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.fitted_params = None
         self.covariance_matrix = None
         self.errors = None
-        self.fitted_spectrum = None
-        self.residual_spectrum = None
-
-        self.plot_fit = None
-        self.plot_residuals = None
 
         # if spectrum is None - we have just open the widget for function plotting
         self.node = None
-        bounds = None
         if node is not None:
             # could be spectrum or a SpectrumItemGroup for multi and batch fitting
             self.node = [node] if len(node.children) == 0 else node.children
 
-            # find the max range for all of the data
-
-            x0 = self.node[0].data[0, 0]
-            x1 = self.node[0].data[-1, 0]
-
-            for item in self.node[1:]:
-                new_x0 = item.data[0, 0]
-                new_x1 = item.data[-1, 0]
-                if new_x0 < x0:
-                    x0 = new_x0
-                if new_x1 > x1:
-                    x1 = new_x1
-            x0 = -1 if is_nan_or_inf(x0) else x0
-            x1 = 1 if is_nan_or_inf(x1) else x1
-
-            bounds = (x0, x1)
-
-        self.lr = PlotWidget.add_linear_region(bounds=bounds)
+        self.lr = None
+        self.show_region_checked_changed()
 
         # update region when the focus is lost and when the user presses enter
-        self.leX0.returnPressed.connect(self.updateRegion)
-        self.leX1.returnPressed.connect(self.updateRegion)
-        self.leX0.focus_lost.connect(self.updateRegion)
-        self.leX1.focus_lost.connect(self.updateRegion)
+        self.leX0.returnPressed.connect(self.update_region)
+        self.leX1.returnPressed.connect(self.update_region)
+        self.leX0.focus_lost.connect(self.update_region)
+        self.leX1.focus_lost.connect(self.update_region)
 
-        self.lr.sigRegionChanged.connect(self.update_region)
         # self.lr.sigRegionChangeFinished.connect(self.update_initial_values)
-        self.update_region()
+        self.update_region_text_values()
 
         self.btnFit.clicked.connect(self.fit)
         self.btnSimulateModel.clicked.connect(self.simulate_model)
@@ -125,6 +102,9 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.btnSaveCustomModel.clicked.connect(self.save_general_model_as)
         self.sbSpeciesCount.valueChanged.connect(lambda: self.n_spec_changed())
         self.cbVarPro.toggled.connect(self.varpro_checked_changed)
+        self.cbShowResiduals.toggled.connect(self._replot)
+        self.cbFitBlackColor.toggled.connect(self._replot)
+        self.cbShowRegion.toggled.connect(self.show_region_checked_changed)
 
         # specific kinetic model setup
 
@@ -226,6 +206,9 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 cb.toggled.connect(self.species_visible_checkbox_toggled)
                 self.pred_spec_visible_fields[i].append(cb)
                 self.pred_species_hlayouts[i].addWidget(cb)
+            self.pred_species_hlayouts[i].addSpacerItem(QtWidgets.QSpacerItem(1, 1,
+                                                        QtWidgets.QSizePolicy.Expanding,
+                                                        QtWidgets.QSizePolicy.Fixed))
 
         self.setting_params = False
 
@@ -247,6 +230,13 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.gen_models_paths = []
         self.update_general_models()
 
+        self.res_weights = [
+            {'description': 'No weighting', 'func': lambda res, y: res},
+            {'description': 'Proportional weighting: residual *= 1/y^2', 'func': lambda res, y: res / (y * y)},
+        ]
+
+        self.cbResWeighting.addItems(map(lambda m: m['description'], self.res_weights))
+
         # abbr is name that is needed for lmfit.fitting method
         self.methods = [
             {'name': 'Trust Region Reflective method', 'abbr': 'least_squares'},
@@ -263,21 +253,66 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.current_general_model = None
         self.general_model_params = None
         self.fit_result = None
-        self.plotted_spectra = []
+        self.fits = []
+        self.residuals = []
 
         self.accepted = False
         FitWidget.is_opened = True
         FitWidget._instance = self
 
         self.dock_widget.parent().resizeDocks([self.dock_widget], [250], Qt.Vertical)
-        text = 'Function plotter'
+        self.title_text = 'Function plotter'
         if self.node is not None:
-            text = 'Fit of {}'.format(self.node[0].parent.name if len(self.node) > 0 else self.node[0].name)
-        self.dock_widget.titleBarWidget().setText(text)
+            self.title_text = 'Fit of {}'.format(self.node[0].parent.name if len(self.node) > 0 else self.node[0].name)
+        self.dock_widget.titleBarWidget().setText(self.title_text)
         self.dock_widget.setWidget(self)
         self.dock_widget.setVisible(True)
 
         self.model_changed()
+
+    def show_region_checked_changed(self):
+        if not self.cbShowRegion.isChecked():
+            PlotWidget.remove_linear_region()
+            self.lr = None
+            return
+
+        bounds = None
+        if self.node is not None:
+            # find the max range for all of the data
+
+            x0 = self.node[0].data[0, 0]
+            x1 = self.node[0].data[-1, 0]
+
+            for item in self.node[1:]:
+                new_x0 = item.data[0, 0]
+                new_x1 = item.data[-1, 0]
+                if new_x0 < x0:
+                    x0 = new_x0
+                if new_x1 > x1:
+                    x1 = new_x1
+            x0 = -1 if is_nan_or_inf(x0) else x0
+            x1 = 1 if is_nan_or_inf(x1) else x1
+
+            bounds = (x0, x1)
+
+        self.lr = PlotWidget.add_linear_region(bounds=bounds, z_value=1e8)
+        self.update_region()
+        self.lr.sigRegionChanged.connect(self.update_region_text_values)
+
+    def update_region_text_values(self):
+        x0, x1 = self.lr.getRegion()
+        self.leX0.setText("{:.4g}".format(x0))
+        self.leX1.setText("{:.4g}".format(x1))
+
+    def update_region(self):
+        if self.lr is None:
+            return
+
+        try:
+            x0, x1 = float(self.leX0.text()), float(self.leX1.text())
+            self.lr.setRegion((x0, x1))
+        except ValueError:
+            pass
 
     def create_tab_widget(self, tab_widget):
         widget = QtWidgets.QWidget(tab_widget)
@@ -332,13 +367,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     @staticmethod
     def check_state(checked):
         return Qt.Checked if checked else 0
-
-    def updateRegion(self):
-        try:
-            x0, x1 = float(self.leX0.text()), float(self.leX1.text())
-            self.lr.setRegion((x0, x1))
-        except ValueError:
-            pass
 
     def save_general_model_as(self):
         if self.current_general_model is None:
@@ -425,10 +453,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         return init_cond, coefs, rates, l_params[-1]  # last is intercept
 
-    def update_region(self):
-        x0, x1 = self.lr.getRegion()
-        self.leX0.setText("{:.4g}".format(x0))
-        self.leX1.setText("{:.4g}".format(x1))
+
 
     def cbGenModel_changed(self):
         pass
@@ -513,34 +538,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             self.pteEquation.setReadOnly(True)
             for i in range(self.max_param_count):
                 self.params_list[i][0].setReadOnly(True)
-
-    # def update_initial_values(self):
-    #
-    #     if not self.cbUpdateInitValues.isChecked():
-    #         return
-    #
-    #     if self.current_model is None:
-    #         return
-    #
-    #     if self.spectrum is None:
-    #         # iterate parameters and fill the values
-    #         for i, p in enumerate(self.current_model.params.values()):
-    #             self.value_list[i][0].setText("{:.4g}".format(p.value))
-    #         return
-    #
-    #     x0, x1 = self.lr.getRegion()
-    #
-    #     start_idx = fi(self.spectrum.data[:, 0], x0)
-    #     end_idx = fi(self.spectrum.data[:, 0], x1) + 1
-    #
-    #     x_data = self.spectrum.data[start_idx:end_idx, 0]
-    #     y_data = self.spectrum.data[start_idx:end_idx, 1]
-    #
-    #     self.current_model.initialize_values(x_data, y_data)
-    #
-    #     # iterate parameters and fill the values
-    #     for i, p in enumerate(self.current_model.params.values()):
-    #         self.value_list[i][0].setText("{:.4g}".format(p.value))
 
     def cbPredefModelDepParams_check_changed(self, checked_abbrs):
         if self.cbPredefModelDepParams_changing:
@@ -666,163 +663,11 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                                                                       varpro=self.cbVarPro.isChecked())
         self.n_spec_changed()
 
-    def clear_plot(self, keep_spectra=False):
+    def clear_plot(self):
 
-        self.plotted_spectra.clear()
-        PlotWidget.remove_fits()
-
-        # if self.plot_fit is not None and self.plot_residuals is not None:
-        #     self.plot_widget.plotItem.removeItem(self.plot_fit)
-        #     self.plot_widget.plotItem.removeItem(self.plot_residuals)
-        #     try:
-        #         self.plot_widget.legend.remove_last_item()
-        #         self.plot_widget.legend.remove_last_item()
-        #     except IndexError:
-        #         pass
-        #
-        #     self.plot_fit = None
-        #     self.plot_residuals = None
-        #
-        # if len(self.plotted_functions) > 0:
-        #     for item in self.plotted_functions:
-        #         self.plot_widget.plotItem.removeItem(item)
-        #     try:
-        #         for i in range(len(self.plotted_functions)):
-        #             self.plot_widget.legend.remove_last_item()
-        #     except IndexError:
-        #         pass
-        #
-        #     self.plotted_functions = []
-        #     if not keep_spectra:
-        #         self.plotted_function_spectra = []
-
-    def fit(self):
-
-        try:
-            self._fit()
-        except Exception as e:
-            Logger.message(e.__str__())
-            QMessageBox.warning(self, 'Fitting Error', e.__str__(), QMessageBox.Ok)
-
-    # def remove_last_fit(self):
-    #     if self.plot_fit is not None and self.plot_residuals is not None:
-    #         self.plot_widget.plotItem.removeItem(self.plot_fit)
-    #         self.plot_widget.plotItem.removeItem(self.plot_residuals)
-    #         try:
-    #             self.plot_widget.legend.removeLastItem()
-    #             self.plot_widget.legend.removeLastItem()
-    #         except IndexError:
-    #             pass
-
-    def _setup_model(self):
-        # custom model check box checked, we have to create own model from scratch
-        if self.cbCustom.isChecked():
-
-            self.current_model = fitmodels._Model()
-
-            p_names = []
-
-            for i in range(int(self.sbParamsCount.value())):
-                param = self.params_list[i].text()
-                p_names.append(param)
-                self.current_model.params.add(param)
-
-            # create new function, fill params names after x and body of the function (take care of proper indentation)
-            func_command = "def user_defined_func(x, {}):\n\t{}".format(','.join(p_names),
-                                                                        self.pteEquation.toPlainText().replace('\n',
-                                                                                                               '\n\t'))
-            exec(func_command, locals(), globals())  # locals and globals had to be changed
-
-            # change the blank function in abstract model by user defined
-            self.current_model.func = user_defined_func
-
-        if self.current_model is None:
-            self.current_model = self.models[self.cbModel.currentIndex()]()
-
-    def _fit(self):
-        import numpy as np
-
-        x0, x1 = self.lr.getRegion()
-
-        start_idx = fi(self.node.data[:, 0], x0)
-        end_idx = fi(self.node.data[:, 0], x1) + 1
-
-        x_data = self.node.data[start_idx:end_idx, 0]
-        y_data = self.node.data[start_idx:end_idx, 1]
-
-        tab_idx = self.tabWidget.currentIndex()
-
-        if tab_idx == 0:
-            self._setup_model()
-
-        # fill the parameters from fields
-        for i, p in enumerate((self.current_model.params if tab_idx == 0 else self.general_model_params).values()):
-            p.value = float(self.value_list[i][tab_idx].text())
-            p.min = float(self.lower_bound_list[i][tab_idx].text())
-            p.max = float(self.upper_bound_list[i][tab_idx].text())
-            p.vary = not self.fixed_list[i][tab_idx].isChecked()
-
-        def y_fit(params):
-            if tab_idx == 0:
-                y = self.current_model.wrapper_func(x_data, params)
-            else:
-                init, coefs, rates, y0 = self.get_values_from_params(params)
-                sol = self._simul_custom_model(init, rates, x_data)
-                y = (coefs * sol).sum(axis=1, keepdims=False) + y0
-            return y
-
-        def residuals(params):
-            y = y_fit(params)
-            e = y - y_data
-            if self.cbPropWeighting.isChecked():
-                e /= y * y
-
-            return e
-
-        minimizer = Minimizer(residuals, self.current_model.params if tab_idx == 0 else self.general_model_params)
-
-        method = self.methods[self.cbMethod.currentIndex()]['abbr']
-        result = minimizer.minimize(method=method)  # fit
-
-        if tab_idx == 0:
-            self.current_model.params = result.params
-        else:
-            self.general_model_params = result.params
-
-        # fill fields
-        values_errors = np.zeros((len(result.params), 2), dtype=np.float64)
-        for i, p in enumerate(result.params.values()):
-            values_errors[i, 0] = p.value
-            values_errors[i, 1] = p.stderr if p.stderr is not None else 0
-
-            self.value_list[i][tab_idx].setText(f"{p.value:.4g}")
-            self.error_list[i][tab_idx].setText(f"{p.stderr:.4g}" if p.stderr else '')
-
-        y_fit_data = y_fit(result.params)
-        y_residuals = y_data - y_fit_data
-
-        # self.remove_last_fit()
-        self.clear_plot()
-
-        self.plot_fit = self.plot_widget.plotItem.plot(x_data, y_fit_data,
-                                                       pen=pg.mkPen(color=QColor(0, 0, 0, 200), width=2.5),
-                                                       name="Fit of {}".format(self.node.name))
-
-        self.plot_residuals = self.plot_widget.plotItem.plot(x_data, y_residuals,
-                                                             pen=pg.mkPen(color=QColor(255, 0, 0, 150), width=1),
-                                                             name="Residuals of {}".format(self.node.name))
-
-        self.fitted_spectrum = SpectrumItem.from_xy_values(x_data, y_fit_data,
-                                                           name="Fit of {}".format(self.node.name),
-                                                           color='black', line_width=2.5, line_type=Qt.SolidLine)
-
-        self.residual_spectrum = SpectrumItem.from_xy_values(x_data, y_residuals,
-                                                             name="Residuals of {}".format(self.node.name),
-                                                             color='red', line_width=1, line_type=Qt.SolidLine)
-
-        self.fit_result = FitResult(result, minimizer, values_errors, (self.current_model if tab_idx == 0 else self.current_general_model),
-                                    data_item=self.node, fit_item=self.fitted_spectrum,
-                                    residuals_item=self.residual_spectrum)
+        self.fits.clear()
+        self.residuals.clear()
+        PlotWidget.remove_all_fits()
 
     def simulate_model(self):
 
@@ -834,6 +679,172 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # except Exception as e:
         #     Logger.message(e.__str__())
         #     QMessageBox.warning(self, 'Plotting Error', e.__str__(), QMessageBox.Ok)
+
+    def fit(self):
+
+        self._fit()
+        # try:
+        # except Exception as e:
+        #     Logger.message(e.__str__())
+        #     QMessageBox.warning(self, 'Fitting Error', e.__str__(), QMessageBox.Ok)
+
+    def _simulate(self):
+        if self.current_model is None:
+            return
+
+        if self.tabWidget.currentIndex() == 1:  # custom model
+            return
+
+        try:
+            x0, x1 = float(self.leX0.text()), float(self.leX1.text())
+        except ValueError:
+            QMessageBox.warning(self, "Range", "Fitting range is not valid!", QMessageBox.Ok)
+            return
+
+        self.current_model.set_ranges((x0, x1))
+        self.current_model.weight_func = self.res_weights[self.cbResWeighting.currentIndex()]['func']
+
+        start_time = time.perf_counter()
+        x_vals, fits, residuals = self.current_model.simulate()
+        end_time = time.perf_counter()
+        print((end_time - start_time) * 1e3, 'ms for simulation')
+
+        if self.cbVarPro.isChecked():
+            self.pred_setup_field()
+
+        self.plot_fits(x_vals, fits, residuals)
+
+    def _fit(self):
+
+        if self.current_model is None:
+            return
+
+        if self.tabWidget.currentIndex() == 1:  # custom model
+            return
+
+        try:
+            x0, x1 = float(self.leX0.text()), float(self.leX1.text())
+        except ValueError:
+            QMessageBox.warning(self, "Range", "Fitting range is not valid!", QMessageBox.Ok)
+            return
+
+        self.current_model.set_ranges((x0, x1))
+        self.current_model.weight_func = self.res_weights[self.cbResWeighting.currentIndex()]['func']
+
+        start_time = time.perf_counter()
+
+        minimizer = Minimizer(self.current_model.residuals, self.current_model.params)
+
+        method = self.methods[self.cbMethod.currentIndex()]['abbr']
+
+        kwds = {'verbose': 2}
+        result = minimizer.minimize(method=method, **kwds)  # fit
+        self.current_model.params = result.params
+
+        x_vals, fits, residuals = self.current_model.simulate()
+
+        end_time = time.perf_counter()
+        print(end_time - start_time, 's for fitting')
+
+        self.pred_setup_field()
+
+        self.plot_fits(x_vals, fits, residuals)
+
+        values_errors = np.zeros((len(result.params), 2), dtype=np.float64)
+        for i, p in enumerate(result.params.values()):
+            values_errors[i, 0] = p.value
+            values_errors[i, 1] = p.stderr if p.stderr is not None else 0
+
+        self.fit_result = FitResult(result, minimizer, values_errors,
+                                    self.current_model)
+
+    #
+    # def _fit(self):
+    #     import numpy as np
+    #
+    #     x0, x1 = self.lr.getRegion()
+    #
+    #     start_idx = fi(self.node.data[:, 0], x0)
+    #     end_idx = fi(self.node.data[:, 0], x1) + 1
+    #
+    #     x_data = self.node.data[start_idx:end_idx, 0]
+    #     y_data = self.node.data[start_idx:end_idx, 1]
+    #
+    #     tab_idx = self.tabWidget.currentIndex()
+    #
+    #     if tab_idx == 0:
+    #         self._setup_model()
+    #
+    #     # fill the parameters from fields
+    #     for i, p in enumerate((self.current_model.params if tab_idx == 0 else self.general_model_params).values()):
+    #         p.value = float(self.value_list[i][tab_idx].text())
+    #         p.min = float(self.lower_bound_list[i][tab_idx].text())
+    #         p.max = float(self.upper_bound_list[i][tab_idx].text())
+    #         p.vary = not self.fixed_list[i][tab_idx].isChecked()
+    #
+    #     def y_fit(params):
+    #         if tab_idx == 0:
+    #             y = self.current_model.wrapper_func(x_data, params)
+    #         else:
+    #             init, coefs, rates, y0 = self.get_values_from_params(params)
+    #             sol = self._simul_custom_model(init, rates, x_data)
+    #             y = (coefs * sol).sum(axis=1, keepdims=False) + y0
+    #         return y
+    #
+    #     def residuals(params):
+    #         y = y_fit(params)
+    #         e = y - y_data
+    #         if self.cbPropWeighting.isChecked():
+    #             e /= y * y
+    #
+    #         return e
+    #
+    #     minimizer = Minimizer(residuals, self.current_model.params if tab_idx == 0 else self.general_model_params)
+    #
+    #     method = self.methods[self.cbMethod.currentIndex()]['abbr']
+    #     result = minimizer.minimize(method=method)  # fit
+    #
+    #     if tab_idx == 0:
+    #         self.current_model.params = result.params
+    #     else:
+    #         self.general_model_params = result.params
+    #
+    #     # fill fields
+    #     values_errors = np.zeros((len(result.params), 2), dtype=np.float64)
+    #     for i, p in enumerate(result.params.values()):
+    #         values_errors[i, 0] = p.value
+    #         values_errors[i, 1] = p.stderr if p.stderr is not None else 0
+    #
+    #         self.value_list[i][tab_idx].setText(f"{p.value:.4g}")
+    #         self.error_list[i][tab_idx].setText(f"{p.stderr:.4g}" if p.stderr else '')
+    #
+    #     y_fit_data = y_fit(result.params)
+    #     y_residuals = y_data - y_fit_data
+    #
+    #     # self.remove_last_fit()
+    #     self.clear_plot()
+    #
+    #     self.plot_fit = self.plot_widget.plotItem.plot(x_data, y_fit_data,
+    #                                                    pen=pg.mkPen(color=QColor(0, 0, 0, 200), width=2.5),
+    #                                                    name="Fit of {}".format(self.node.name))
+    #
+    #     self.plot_residuals = self.plot_widget.plotItem.plot(x_data, y_residuals,
+    #                                                          pen=pg.mkPen(color=QColor(255, 0, 0, 150), width=1),
+    #                                                          name="Residuals of {}".format(self.node.name))
+    #
+    #     self.fitted_spectrum = SpectrumItem.from_xy_values(x_data, y_fit_data,
+    #                                                        name="Fit of {}".format(self.node.name),
+    #                                                        color='black', line_width=2.5, line_type=Qt.SolidLine)
+    #
+    #     self.residual_spectrum = SpectrumItem.from_xy_values(x_data, y_residuals,
+    #                                                          name="Residuals of {}".format(self.node.name),
+    #                                                          color='red', line_width=1, line_type=Qt.SolidLine)
+    #
+    #     self.fit_result = FitResult(result, minimizer, values_errors, (self.current_model if tab_idx == 0 else self.current_general_model),
+    #                                 data_item=self.node, fit_item=self.fitted_spectrum,
+    #                                 residuals_item=self.residual_spectrum)
+
+
 
     def _simul_custom_model(self, j, rates, x_data):
         if x_data[0] > 0:  # initial conditions are valid for time=0
@@ -852,49 +863,66 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # for x_data[0] == 0
         return odeint(self.current_general_model.func, j, x_data, args=(rates,))
 
-    def _simulate(self):
-        if self.current_model is None:
+
+    @classmethod
+    def replot(cls):
+        if cls._instance is not None:
+            cls._instance._replot()
+
+    @classmethod
+    def clear_plots(cls):
+        if cls._instance is not None:
+            cls._instance.clear_plot()
+
+    def _replot(self):
+        # if no fits simulated, return
+        if len(self.fits) != len(self.node):
             return
-
-        if self.tabWidget.currentIndex() == 1:  # custom model
-            return
-
-        self.current_model.set_ranges(self.lr.getRegion())
-
-        start_time = time.perf_counter()
-        x_vals, fits, residuals = self.current_model.simulate()
-        end_time = time.perf_counter()
-        print((end_time - start_time) * 1e3, 'ms for simulation')
-
-        if self.cbVarPro.isChecked():
-            self.pred_setup_field()
 
         pw_plot_items = PlotWidget.plotted_items()
         df = Settings.fit_dark_factor
 
-        for i in range(len(fits)):
-            # only update data if spectra are already instantiated
-            if len(self.plotted_spectra) == len(fits):
-                sp_fit = self.plotted_spectra[i]
-                sp_fit.data = np.vstack((x_vals[i], fits[i])).T
-            else:
-                sp_fit = SpectrumItem.from_xy_values(x_vals[i], fits[i])
-                self.plotted_spectra.append(sp_fit)
-
+        for i, (sp_fit, sp_res) in enumerate(zip(self.fits, self.residuals)):
             color = QColor(0, 0, 0, 255)
             if self.node[i] in pw_plot_items:  # set color of checked spectra as darkened
-                plot_item = pw_plot_items[self.node[i]]
-                node_color = plot_item.opts['pen'].color()
-                color.setRgbF(node_color.redF() * df,
-                              node_color.greenF() * df,
-                              node_color.blueF() * df,
-                              node_color.alphaF())
-            # else:
-            #     color.setAlpha(0)
+                if not self.cbFitBlackColor.isChecked():
+                    plot_item = pw_plot_items[self.node[i]]
+                    node_color = plot_item.opts['pen'].color()
+                    color.setRgbF(node_color.redF() * df,
+                                  node_color.greenF() * df,
+                                  node_color.blueF() * df,
+                                  node_color.alphaF())
 
-            PlotWidget.plot_fit(sp_fit, name=f'Fif of {self.node[i].name}',
-                                pen=pg.mkPen(color=color, width=2),
-                                zValue=1e5 - i)
+                PlotWidget.plot_fit(sp_fit, name=f'Fif of {self.node[i].name}',
+                                    pen=pg.mkPen(color=color, width=2),
+                                    zValue=2e5 - i)
+
+                if self.cbShowResiduals.isChecked():
+                    PlotWidget.plot_fit(sp_res, name=f'Residual of {self.node[i].name}',
+                                        pen=pg.mkPen(color=QColor(255, 0, 0, 255), width=1),
+                                        zValue=1e5 - i)
+                else:
+                    PlotWidget.remove_fits([sp_res])
+            else:
+                # remove them from plot
+                PlotWidget.remove_fits([sp_fit, sp_res])
+
+    def plot_fits(self, x_vals, fits, residuals):
+
+        assert len(fits) == len(residuals) == len(x_vals)
+
+        for i in range(len(fits)):
+            # only update data if spectra are already instantiated
+            if len(self.fits) == len(fits):
+                self.fits[i].data = np.vstack((x_vals[i], fits[i])).T
+                self.residuals[i].data = np.vstack((x_vals[i], residuals[i])).T
+            else:
+                sp_fit = SpectrumItem.from_xy_values(x_vals[i], fits[i])
+                sp_res = SpectrumItem.from_xy_values(x_vals[i], residuals[i])
+                self.fits.append(sp_fit)
+                self.residuals.append(sp_res)
+
+        self._replot()
 
     def _plot_function(self):
         x0, x1 = self.lr.getRegion()
@@ -1010,11 +1038,11 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     def print_report(self):
         if self.fit_result is None:
             return
+
         try:
-            report = "Fitting of '{}' succeeded. " \
-                     "You can find fit results in variable " \
-                     "'fit'.\n{}\n".format(self.node.name,
-                                           self.fit_result.report(print=False))
+            report = f"Fitting of '{self.node[0].parent.name if len(self.node) > 0 else self.node[0].name}' succeeded. " \
+                     f"You can find fit results in variable 'fit'." \
+                     f"\n{self.fit_result.report(print=False)}\n"
 
             Logger.console_message(report)
             Console.push_variables({'fit': self.fit_result})
@@ -1037,7 +1065,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.dock_widget.setVisible(False)
         self.accepted_func()
         # super(FitWidget, self).accept()
-        PlotWidget.remove_fits()
+        PlotWidget.remove_all_fits()
 
 
     def reject(self):
@@ -1049,7 +1077,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # del self.lr
         PlotWidget.remove_linear_region()
         self.dock_widget.setVisible(False)
-        PlotWidget.remove_fits()
+        PlotWidget.remove_all_fits()
 
 
         # super(FitWidget, self).reject()

@@ -15,7 +15,7 @@ from .treewidget import TreeWidget, get_hierarchic_list
 from .treeview.model import ItemIterator
 from .project import Project
 from .settings import Settings
-from .logger import Logger
+from .logger import Logger, Transcript
 from .plotwidget import PlotWidget
 
 from .user_namespace import UserNamespace
@@ -27,6 +27,7 @@ from .dialogs.settingsdialog import SettingsDialog
 from .treeview.item import SpectrumItemGroup
 from .dataloader import parse_files_specific
 from .spectrum import SpectrumList
+from .dialogs.fitwidget import FitWidget
 import re
 
 import numpy as np
@@ -55,6 +56,7 @@ class Main(QMainWindow):
         self.resize(w, h)
 
         self.console = Console(self)
+        sys.stdout = Transcript()
 
         self.dockTreeWidget = QDockWidget(self)
         self.dockTreeWidget.setTitleBarWidget(QWidget())
@@ -87,6 +89,8 @@ class Main(QMainWindow):
         self.resizeDocks([self.console], [int(h / 3)], Qt.Vertical)
         self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
 
+        Settings.load()
+
         self.coor_label = QLabel()
         self.grpView = PlotWidget(self, coordinates_func=self.coor_label.setText)
         self.setCentralWidget(self.grpView)
@@ -100,10 +104,6 @@ class Main(QMainWindow):
         self.user_namespace = UserNamespace(self)
 
         self.setMenuBar(MenuBar(self))
-
-        Settings.load()
-
-        self.grpView.update_settings()
 
         self.update_recent_files()
 
@@ -447,18 +447,7 @@ class Main(QMainWindow):
             # Console.showMessage("User defined color scheme is not correct.")
 
     def redraw_all_spectra(self):
-        # self.grpView.plotItem.clearPlots()
         self.grpView.clear_plots()
-
-        # try:
-        #     # self.grpView.plotItem.legend.scene().removeItem(self.grpView.plotItem.legend)
-        #     self.grpView.legend.scene().removeItem(self.grpView.plotItem.legend)
-        # except Exception as e:
-        #     print(e)
-
-        # self.grpView.plotItem.addLegend(offset=(-30, 30))
-        # self.grpView.add_legend(spacing=Settings.legend_spacing, offset=(-30, 30))
-
         self.redraw_items()
 
     def update_items_data(self, items):
@@ -469,7 +458,6 @@ class Main(QMainWindow):
         if remove is True:
             for item in items:
                 self.grpView.remove(item)
-
 
         gradient_mat = None
         if Settings.color_scheme == 2:  # user defined
@@ -487,6 +475,7 @@ class Main(QMainWindow):
 
         group_counter = -1
         last_group = None
+
 
         # iterate over all checked items, if iterated item is already plotted, continue
         for item_counter, item in enumerate(self.tree_widget.myModel.iterate_items(ItemIterator.Checked)):
@@ -566,6 +555,8 @@ class Main(QMainWindow):
                               symbol=symbol,
                               symbolSize=symbol_size,
                               zValue=item_counter if Settings.reverse_z_order else -item_counter)
+
+        FitWidget.replot()  # replot all fits if FitWidget is active
 
 
 def my_exception_hook(exctype, value, traceback):
