@@ -101,7 +101,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.cbShowBackwardRates.stateChanged.connect(self.cbShowBackwardRates_checked_changed)
         self.btnSaveCustomModel.clicked.connect(self.save_general_model_as)
         self.sbSpeciesCount.valueChanged.connect(lambda: self.n_spec_changed())
-        self.cbVarPro.toggled.connect(self.varpro_checked_changed)
         self.cbShowResiduals.toggled.connect(self._replot)
         self.cbFitBlackColor.toggled.connect(self._replot)
         self.cbShowRegion.toggled.connect(self.show_region_checked_changed)
@@ -110,7 +109,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         self.ppteScheme_highlighter = KineticModelHighlighter(self.pteScheme.document())
 
-        self.verticalLayout.addWidget(QtWidgets.QLabel('Experiment-independent parameters:'))
+        self.model_options_grid_layout = QtWidgets.QGridLayout(self)
+        self.verticalLayout.addLayout(self.model_options_grid_layout)
         self.pred_model_indep_params_layout = self.create_params_layout()
         self.verticalLayout.addLayout(self.pred_model_indep_params_layout)
 
@@ -193,10 +193,18 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 param_layout.addWidget(fix, i + 1, 4, 1, 1)
                 param_layout.addWidget(err, i + 1, 5, 1, 1)
 
+        def set_tab_order(dict_fields: dict):
+            for i in range(self.max_param_count):
+                for key in dict_fields.keys():
+                    for first, second in zip(dict_fields[key][:-1], dict_fields[key][1:]):
+                        self.setTabOrder(first, second)
+
         add_widgets(self.pred_param_fields['exp_independent'], self.pred_model_indep_params_layout)
+        set_tab_order(self.pred_param_fields['exp_independent'])
 
         for i in range(len(self.node)):
             add_widgets(self.pred_param_fields['exp_dependent'][i], self.pred_model_dep_param_layouts[i])
+            set_tab_order(self.pred_param_fields['exp_dependent'][i])
 
             # setup species visible checkboxes
             for _ in range(self.max_param_count):
@@ -320,7 +328,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         vl.addWidget(QtWidgets.QLabel('Species visible:'))
         species_hlayout = QtWidgets.QHBoxLayout(widget)
         vl.addLayout(species_hlayout)
-        vl.addWidget(QtWidgets.QLabel('Experiment-dependent parameters:'))
+        # vl.addWidget(QtWidgets.QLabel('Experiment-dependent parameters:'))
         params_layout = self.create_params_layout(widget)
         vl.addLayout(params_layout)
 
@@ -454,7 +462,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         return init_cond, coefs, rates, l_params[-1]  # last is intercept
 
 
-
     def cbGenModel_changed(self):
         pass
         # self.current_general_model = GeneralModel.load(self.gen_models_paths[self.cbGenModels.currentIndex()])
@@ -554,12 +561,12 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.current_model.spec_visible[cb.exp_index][cb.text()] = checked
         # dynamically find the corresponding amplitude parameter
 
-        for i, par in enumerate(self.pred_param_fields['exp_dependent'][cb.exp_index]['params']):
-            if par.text().startswith(cb.text()):
-                self.pred_param_fields['exp_dependent'][cb.exp_index]['values'][i].setEnabled(checked)
-                if not checked:
-                    self.pred_param_fields['exp_dependent'][cb.exp_index]['values'][i].setText('0')
-                return
+        # for i, par in enumerate(self.pred_param_fields['exp_dependent'][cb.exp_index]['params']):
+        #     if par.text().startswith(cb.text()):
+        #         self.pred_param_fields['exp_dependent'][cb.exp_index]['values'][i].setEnabled(checked)
+        #         if not checked:
+        #             self.pred_param_fields['exp_dependent'][cb.exp_index]['values'][i].setText('0')
+        #         return
 
     def transfer_param_to_model(self, param_type: str, value):
         """also handles enabling of lower and upper text fields"""
@@ -591,13 +598,19 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
             if visible:
                 p = params[i]
+                enabled = True
+                if hasattr(p, 'enabled'):
+                    enabled = p.enabled
+
                 fields['params'][i].setText(p.name)
                 fields['lower_bounds'][i].setText(f'{p.min:.4g}')
                 fields['lower_bounds'][i].setEnabled(p.vary)
                 fields['values'][i].setText(f'{p.value:.4g}')
+                fields['values'][i].setEnabled(enabled)
                 fields['upper_bounds'][i].setText(f'{p.max:.4g}')
                 fields['upper_bounds'][i].setEnabled(p.vary)
                 fields['fixed'][i].setChecked(not p.vary)
+                fields['fixed'][i].setEnabled(enabled)
                 stderr = f'{p.stderr:.4g}' if p.stderr is not None else '0'
                 fields['errors'][i].setText(stderr)
 
@@ -634,6 +647,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.setting_params = False
 
     def n_spec_changed(self):
+        print('n_spec_changed')
+
         self.cbPredefModelDepParams_changing = True
 
         self.current_model.update_model_options(n_spec=int(self.sbSpeciesCount.value()))
@@ -651,16 +666,59 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.cbPredefModelDepParams_changing = False
         self.cbPredefModelDepParams.update_text()
 
-    def varpro_checked_changed(self, value):
-        self.current_model.update_model_options(varpro=value)
         self.pred_setup_field()
+
+    # def varpro_checked_changed(self, value):
+    #     self.current_model.update_model_options(varpro=value)
+    #     self.pred_setup_field()
+
+    def model_option_changed(self, value):
+        """also handles enabling of lower and upper text fields"""
+        if self.setting_params:
+            return
+
+        opt_name = self.sender().name
+
+        opts = {opt_name: value}
+
+        self.current_model.update_model_options(**opts)
+        self.pred_setup_field()
+
+    def setup_model_options(self):
+
+        opts = self.current_model.model_options()
+
+        # delete all widgets in grid_layout, use walrus operator here
+        while w := self.model_options_grid_layout.takeAt(0) is not None:
+            self.model_options_grid_layout.removeWidget(w)
+
+        for i, op in enumerate(opts):
+
+            if op['type'] is bool:
+                widget = QCheckBox(op['description'])
+                widget.setChecked(op['value'])
+                widget.toggled.connect(self.model_option_changed)
+            else:
+                widget = QLineEdit()
+                widget.setText(op['value'])
+                widget.textChanged.connect(self.model_option_changed)
+
+            widget.name = op['name']  # add param name as attribute to widget
+
+            if op['type'] is bool:
+                self.model_options_grid_layout.addWidget(widget, i, 0, 1, 2)
+            else:
+                self.model_options_grid_layout.addWidget(QtWidgets.QLabel(op['description']), i, 0, 1, 1)
+                self.model_options_grid_layout.addWidget(widget, i, 1, 1, 1)
 
     def model_changed(self):
         # initialize new model
         # self.plotted_fits.clear()
         data = [sp.data for sp in self.node] if self.node is not None else None
-        self.current_model = self.models[self.cbModel.currentIndex()](data, n_spec=int(self.sbSpeciesCount.value()),
-                                                                      varpro=self.cbVarPro.isChecked())
+        self.current_model = self.models[self.cbModel.currentIndex()](data, n_spec=int(self.sbSpeciesCount.value()))
+
+        self.setup_model_options()
+
         self.n_spec_changed()
 
     def clear_plot(self):
@@ -709,7 +767,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         end_time = time.perf_counter()
         print((end_time - start_time) * 1e3, 'ms for simulation')
 
-        if self.cbVarPro.isChecked():
+        if self.current_model.varpro:
             self.pred_setup_field()
 
         self.plot_fits(x_vals, fits, residuals)
@@ -844,8 +902,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     #                                 data_item=self.node, fit_item=self.fitted_spectrum,
     #                                 residuals_item=self.residual_spectrum)
 
-
-
     def _simul_custom_model(self, j, rates, x_data):
         if x_data[0] > 0:  # initial conditions are valid for time=0
             n = 100  # prepend x values with 100 points if not starting with zero time
@@ -883,23 +939,30 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         df = Settings.fit_dark_factor
 
         for i, (sp_fit, sp_res) in enumerate(zip(self.fits, self.residuals)):
-            color = QColor(0, 0, 0, 255)
-            if self.node[i] in pw_plot_items:  # set color of checked spectra as darkened
+            fit_color = QColor(0, 0, 0, 255)
+            res_color = QColor(0, 0, 200, 255)
+
+            if self.node[i] in pw_plot_items:  # set fit_color of checked spectra as darkened
+                plot_item = pw_plot_items[self.node[i]]
+                node_color = plot_item.opts['pen'].color()
                 if not self.cbFitBlackColor.isChecked():
-                    plot_item = pw_plot_items[self.node[i]]
-                    node_color = plot_item.opts['pen'].color()
-                    color.setRgbF(node_color.redF() * df,
-                                  node_color.greenF() * df,
-                                  node_color.blueF() * df,
-                                  node_color.alphaF())
+                    fit_color.setRgbF(node_color.redF() * df,
+                                      node_color.greenF() * df,
+                                      node_color.blueF() * df,
+                                      node_color.alphaF())
+
+                    res_color.setRgbF(node_color.redF() * df * 0.9,
+                                      node_color.greenF() * df * 0.9,
+                                      node_color.blueF() * df * 0.9,
+                                      node_color.alphaF())
 
                 PlotWidget.plot_fit(sp_fit, name=f'Fif of {self.node[i].name}',
-                                    pen=pg.mkPen(color=color, width=2),
+                                    pen=pg.mkPen(color=fit_color, width=2),
                                     zValue=2e5 - i)
 
                 if self.cbShowResiduals.isChecked():
                     PlotWidget.plot_fit(sp_res, name=f'Residual of {self.node[i].name}',
-                                        pen=pg.mkPen(color=QColor(255, 0, 0, 255), width=1),
+                                        pen=pg.mkPen(color=res_color, width=1),
                                         zValue=1e5 - i)
                 else:
                     PlotWidget.remove_fits([sp_res])

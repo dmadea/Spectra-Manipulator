@@ -47,7 +47,7 @@ def OLS_ridge(A, B, alpha=0.000):
     if alpha != 0:
         ATA.flat[::ATA.shape[-1] + 1] += alpha
 
-    # call the LAPACK function
+    # call the LAPACK function, direct solve method
     c, x, info = posv(ATA, ATB, lower=False,
                       overwrite_a=False,
                       overwrite_b=False)
@@ -166,11 +166,14 @@ class Model(object):
         if self.params is not None and old_params is not None:
             for key, par in old_params.items():
                 if key in self.params:
-                    self.params[key].value = par.value
-                    self.params[key].vary = par.vary
-                    self.params[key].min = par.min
-                    self.params[key].max = par.max
-                    self.params[key].stderr = par.stderr
+                    new_par = self.params[key]
+                    new_par.value = par.value
+                    new_par.vary = par.vary
+                    new_par.min = par.min
+                    new_par.max = par.max
+                    new_par.stderr = par.stderr
+                    if hasattr(par, 'enabled'):  # enabled option is added for GUI text fields
+                        new_par.enabled = par.enabled
 
         del old_params
 
@@ -180,7 +183,7 @@ class Model(object):
         pass
 
     def simulate(self):
-        """Simulates the data and returs the tuple of simulated traces and residuals as lists filled with ndarrays"""
+        """Simulates the data and returns the tuple of simulated traces and residuals as lists filled with ndarrays"""
         pass
 
     def residuals(self):
@@ -221,6 +224,13 @@ class Model(object):
     def get_model_dep_params_list(self):
         pass
 
+    def model_options(self):
+        """Returns list of dictionaries of all additional options for a given model that
+        will be added to fitwidget"""
+        # return [dict(type=bool, name='option_name', value=True)]
+        return [dict(type=bool, name='varpro', value=True,
+                     description='Calculate amplitudes from data (=use Variable projection for fitting)')]
+
 
 class SeqParModel(Model):
 
@@ -228,14 +238,39 @@ class SeqParModel(Model):
 
     def __init__(self, exps_data: list, ranges: [list, tuple] = None, varpro: bool = True, n_spec=2,
                  exp_dep_params: set = None, spec_visible: dict = None, sequential: bool = True,
-                 weight_func=lambda res, y: res, ):
+                 fit_intercept_varpro=True, weight_func=lambda res, y: res):
         spec_names = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')  # use alphabet
         super(SeqParModel, self).__init__(exps_data, ranges=ranges, varpro=varpro, exp_dep_params=exp_dep_params,
                                           n_spec=n_spec, spec_names=spec_names, spec_visible=spec_visible,
                                           weight_func=weight_func)
 
         self.sequential = sequential
-        self.fit_intercept_varpro = True
+        self.fit_intercept_varpro = fit_intercept_varpro
+
+    def model_options(self):
+        opts = super(SeqParModel, self).model_options()
+        sequential_opt = dict(type=bool, name='sequential', value=True, description='Use sequential model')
+        fit_intercept_varpro_opt = dict(type=bool, name='fit_intercept_varpro', value=True,
+                                        description='Calculate intercept with Variable projection')
+
+        return opts + [fit_intercept_varpro_opt, sequential_opt]
+
+    def update_model_options(self, **kwargs):
+        super(SeqParModel, self).update_model_options(**kwargs)
+
+        # handle the individual model option changes / override the default implementation
+        for exp_params in self.param_names_dict:
+            pars_j = [self.params[name] for name in exp_params['j']]
+            for i in range(len(pars_j)):
+                pars_j[i].vary = False
+                pars_j[i].value = 1 if i == 0 or not self.sequential else 0
+
+            for amp in (self.params[name] for name in exp_params['amps']):
+                amp.vary = not self.varpro
+                amp.enabled = not self.varpro
+
+            self.params[exp_params['intercept']].vary = not self.fit_intercept_varpro
+            self.params[exp_params['intercept']].enabled = not self.fit_intercept_varpro
 
     def get_available_param_names(self):
         pars = {}
@@ -293,6 +328,8 @@ class SeqParModel(Model):
 
                 dict_params['all'].append(f_par_name)
                 self.params.add(f_par_name, min=min, max=np.inf, value=value, vary=vary)
+                # add an enabled attribute for each parameter
+                self.params[f_par_name].enabled = True
 
         params_indep = dict(all=[], rates=[], j=[], amps=[], intercept='')
 
