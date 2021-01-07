@@ -219,7 +219,6 @@ class PlotWidget(pg.PlotWidget):
         self.setCursor(Qt.ArrowCursor)
 
     def mouseMoveEvent(self, ev):
-
         super(PlotWidget, self).mouseMoveEvent(ev)
 
         pos = ev.pos()
@@ -238,10 +237,10 @@ class PlotWidget(pg.PlotWidget):
 
         if in_scene:
             try:
-                mousePoint = self.plotItem.vb.mapSceneToView(pos)
+                mouse_point = self.plotItem.vb.mapSceneToView(pos)
                 n = Settings.coordinates_sig_figures
                 # double format with n being the number of significant figures of a number
-                self.coordinates_func(f"x={{:.{n}g}}, y={{:.{n}g}}".format(mousePoint.x(), mousePoint.y()))
+                self.coordinates_func(f"x={{:.{n}g}}, y={{:.{n}g}}".format(mouse_point.x(), mouse_point.y()))
             except:
                 pass
 

@@ -218,6 +218,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                                                         QtWidgets.QSizePolicy.Expanding,
                                                         QtWidgets.QSizePolicy.Fixed))
 
+        self.model_option_widgets = []
+
         self.setting_params = False
 
         # get all models from fitmodels, get classes that inherits from Model base class and sort them by name
@@ -240,7 +242,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         self.res_weights = [
             {'description': 'No weighting', 'func': lambda res, y: res},
-            {'description': 'Proportional weighting: residual *= 1/y^2', 'func': lambda res, y: res / (y * y)},
+            {'description': 'Absorbance weighting: noise \u221d 10 ** y', 'func': lambda res, y: res / 10 ** (0.5*y)},
+            {'description': 'Proportional weighting: noise \u221d y', 'func': lambda res, y: res / (y * y)},
         ]
 
         self.cbResWeighting.addItems(map(lambda m: m['description'], self.res_weights))
@@ -461,7 +464,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         return init_cond, coefs, rates, l_params[-1]  # last is intercept
 
-
     def cbGenModel_changed(self):
         pass
         # self.current_general_model = GeneralModel.load(self.gen_models_paths[self.cbGenModels.currentIndex()])
@@ -549,24 +551,18 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     def cbPredefModelDepParams_check_changed(self, checked_abbrs):
         if self.cbPredefModelDepParams_changing:
             return
+        Logger.debug('cbPredefModelDepParams_check_changed')
 
-        print('cbPredefModelDepParams_check_changed')
         self.current_model.update_model_options(exp_dep_params=set(checked_abbrs))
         self.pred_setup_field()
 
     def species_visible_checkbox_toggled(self, checked):
         cb = self.sender()
-        print('species_visible_checkbox_toggled', cb.exp_index, cb.text())
+        Logger.debug('species_visible_checkbox_toggled', cb.exp_index, cb.text())
 
         self.current_model.spec_visible[cb.exp_index][cb.text()] = checked
-        # dynamically find the corresponding amplitude parameter
-
-        # for i, par in enumerate(self.pred_param_fields['exp_dependent'][cb.exp_index]['params']):
-        #     if par.text().startswith(cb.text()):
-        #         self.pred_param_fields['exp_dependent'][cb.exp_index]['values'][i].setEnabled(checked)
-        #         if not checked:
-        #             self.pred_param_fields['exp_dependent'][cb.exp_index]['values'][i].setText('0')
-        #         return
+        self.current_model.update_model_options()
+        self.pred_setup_field()
 
     def transfer_param_to_model(self, param_type: str, value):
         """also handles enabling of lower and upper text fields"""
@@ -625,7 +621,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if self.current_model is None:
             return
 
-        print('pred_setup_field')
+        Logger.debug('pred_setup_field')
         self.setting_params = True
 
         self._setup_fields(self.pred_param_fields['exp_independent'], self.current_model.get_model_indep_params())
@@ -647,13 +643,13 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.setting_params = False
 
     def n_spec_changed(self):
-        print('n_spec_changed')
+        Logger.debug('n_spec_changed')
 
         self.cbPredefModelDepParams_changing = True
 
         self.current_model.update_model_options(n_spec=int(self.sbSpeciesCount.value()))
 
-        av_params = self.current_model.get_available_param_names()  # available parameters
+        av_params = self.current_model.get_all_param_names()  # available parameters
 
         # set default parameters to checkbox of model dependent parameters
         # check the default values
@@ -668,10 +664,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         self.pred_setup_field()
 
-    # def varpro_checked_changed(self, value):
-    #     self.current_model.update_model_options(varpro=value)
-    #     self.pred_setup_field()
-
     def model_option_changed(self, value):
         """also handles enabling of lower and upper text fields"""
         if self.setting_params:
@@ -684,13 +676,26 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.current_model.update_model_options(**opts)
         self.pred_setup_field()
 
+    def model_changed(self):
+        # initialize new model
+        data = [sp.data for sp in self.node] if self.node is not None else None
+        self.current_model = self.models[self.cbModel.currentIndex()](data, n_spec=int(self.sbSpeciesCount.value()))
+
+        self.setup_model_options()
+
+        self.n_spec_changed()
+
     def setup_model_options(self):
+        """Add option fields that are associated with the selected model"""
 
         opts = self.current_model.model_options()
 
         # delete all widgets in grid_layout, use walrus operator here
-        while w := self.model_options_grid_layout.takeAt(0) is not None:
-            self.model_options_grid_layout.removeWidget(w)
+        for w in self.model_option_widgets:
+            self.model_options_grid_layout.removeWidget(w)  # remove widget from layout
+            w.deleteLater()  # delete the widget https://stackoverflow.com/questions/10716300/removing-qwidgets-from-a-qgridlayout
+
+        self.model_option_widgets.clear()
 
         for i, op in enumerate(opts):
 
@@ -705,21 +710,15 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
             widget.name = op['name']  # add param name as attribute to widget
 
+            self.model_option_widgets.append(widget)
+
             if op['type'] is bool:
                 self.model_options_grid_layout.addWidget(widget, i, 0, 1, 2)
             else:
-                self.model_options_grid_layout.addWidget(QtWidgets.QLabel(op['description']), i, 0, 1, 1)
+                qlabel = QtWidgets.QLabel(op['description'])
+                self.model_option_widgets.append(qlabel)
+                self.model_options_grid_layout.addWidget(qlabel, i, 0, 1, 1)
                 self.model_options_grid_layout.addWidget(widget, i, 1, 1, 1)
-
-    def model_changed(self):
-        # initialize new model
-        # self.plotted_fits.clear()
-        data = [sp.data for sp in self.node] if self.node is not None else None
-        self.current_model = self.models[self.cbModel.currentIndex()](data, n_spec=int(self.sbSpeciesCount.value()))
-
-        self.setup_model_options()
-
-        self.n_spec_changed()
 
     def clear_plot(self):
 
@@ -765,7 +764,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         start_time = time.perf_counter()
         x_vals, fits, residuals = self.current_model.simulate()
         end_time = time.perf_counter()
-        print((end_time - start_time) * 1e3, 'ms for simulation')
+        Logger.debug((end_time - start_time) * 1e3, 'ms for simulation')
 
         if self.current_model.varpro:
             self.pred_setup_field()
@@ -792,26 +791,24 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         start_time = time.perf_counter()
 
         minimizer = Minimizer(self.current_model.residuals, self.current_model.params)
-
         method = self.methods[self.cbMethod.currentIndex()]['abbr']
 
         kwds = {'verbose': 2}
         result = minimizer.minimize(method=method, **kwds)  # fit
-        self.current_model.params = result.params
+
+        end_time = time.perf_counter()
+        Logger.debug(end_time - start_time, 's for fitting')
+
+        values_errors = np.zeros((len(result.params), 2), dtype=np.float64)
+        for i, (p, new_p) in enumerate(zip(self.current_model.params.values(), result.params.values())):
+            p.value = new_p.value  # update fitted parameters
+            values_errors[i, 0] = p.value
+            values_errors[i, 1] = p.stderr if p.stderr is not None else 0
 
         x_vals, fits, residuals = self.current_model.simulate()
 
-        end_time = time.perf_counter()
-        print(end_time - start_time, 's for fitting')
-
         self.pred_setup_field()
-
         self.plot_fits(x_vals, fits, residuals)
-
-        values_errors = np.zeros((len(result.params), 2), dtype=np.float64)
-        for i, p in enumerate(result.params.values()):
-            values_errors[i, 0] = p.value
-            values_errors[i, 1] = p.stderr if p.stderr is not None else 0
 
         self.fit_result = FitResult(result, minimizer, values_errors,
                                     self.current_model)

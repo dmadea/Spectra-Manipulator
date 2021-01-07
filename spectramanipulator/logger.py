@@ -1,5 +1,6 @@
 import sys
 
+
 class Logger(object):
 
     _instance = None
@@ -32,6 +33,12 @@ class Logger(object):
 
         cls._instance.console_message(str(text))
         cls._instance.statusbar_message(str(text), delay)
+
+    @staticmethod
+    def debug(*values):
+        from .settings import Settings
+        if Settings.debug:
+            print(*values)
 
 
 class Transcript:

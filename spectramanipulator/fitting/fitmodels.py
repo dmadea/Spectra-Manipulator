@@ -154,7 +154,8 @@ class Model(object):
 
             self.spec_visible = new_spec_visible
 
-        self._update_params()
+        if len(kwargs) > 0:
+            self._update_params()
 
     def _update_params(self):
         """Update the parameters based on new model options."""
@@ -190,9 +191,12 @@ class Model(object):
         """Efficient calculation of only residuals, can be optimized for varpro fitting."""
         pass
 
-    def get_available_param_names(self):
+    def get_all_param_names(self):
         """returns dictionary of available parameters with keys as names and values as explanations"""
         return set()
+
+    # def get_available_params_names(self):
+    #     return set()
 
     def is_rate_par(self, par):
         return par.startswith('k_')
@@ -219,17 +223,22 @@ class Model(object):
         return [self.params[param].value for param in self.param_names_dict[exp_num][type]]
 
     def get_model_indep_params(self):
-        pass
+        return [self.params[name] for name in sorted(self.exp_indep_params)]
 
     def get_model_dep_params_list(self):
-        pass
+        pars_list = []
+
+        for i in range(len(self.exps_data)):
+            pars_list.append([self.params[self.format_exp_par(name, i)] for name in sorted(self.exp_dep_params)])
+
+        return pars_list
 
     def model_options(self):
         """Returns list of dictionaries of all additional options for a given model that
         will be added to fitwidget"""
         # return [dict(type=bool, name='option_name', value=True)]
         return [dict(type=bool, name='varpro', value=True,
-                     description='Calculate amplitudes from data (=use Variable projection for fitting)')]
+                     description='Calculate amplitudes from data by OLS')]
 
 
 class SeqParModel(Model):
@@ -251,7 +260,7 @@ class SeqParModel(Model):
         opts = super(SeqParModel, self).model_options()
         sequential_opt = dict(type=bool, name='sequential', value=True, description='Use sequential model')
         fit_intercept_varpro_opt = dict(type=bool, name='fit_intercept_varpro', value=True,
-                                        description='Calculate intercept with Variable projection')
+                                        description='Calculate intercept from data by OLS')
 
         return opts + [fit_intercept_varpro_opt, sequential_opt]
 
@@ -259,26 +268,39 @@ class SeqParModel(Model):
         super(SeqParModel, self).update_model_options(**kwargs)
 
         # handle the individual model option changes / override the default implementation
-        for exp_params in self.param_names_dict:
+        # also handles visible changes
+        for exp_params, visible in zip(self.param_names_dict, self.spec_visible):
             pars_j = [self.params[name] for name in exp_params['j']]
             for i in range(len(pars_j)):
                 pars_j[i].vary = False
                 pars_j[i].value = 1 if i == 0 or not self.sequential else 0
 
-            for amp in (self.params[name] for name in exp_params['amps']):
-                amp.vary = not self.varpro
-                amp.enabled = not self.varpro
+            for amp, vis in zip((self.params[name] for name in exp_params['amps']), visible.values()):
+                amp.vary = not self.varpro and vis
+                amp.enabled = not self.varpro and vis
+                if not vis:
+                    amp.value = 0
 
             self.params[exp_params['intercept']].vary = not self.fit_intercept_varpro
             self.params[exp_params['intercept']].enabled = not self.fit_intercept_varpro
 
-    def get_available_param_names(self):
+        if 'intercept' in self.exp_indep_params:
+            self.params[self.param_names_dict[0]['intercept']].enabled = True
+
+    def get_all_param_names(self):
         pars = {}
         pars.update({f'_{name}_0': f'Initial concentration of {name}' for name in self.spec_names[:self.n_spec]})
         pars.update({name: f'Amplitude of {name}' for name in self.spec_names[:self.n_spec]})  # amplitudes
         pars.update({f'k_{i+1}': f'Rate constant k_{i+1}' for i in range(self.n_spec)})  # rate constants
         pars.update({'intercept': 'Intercept'})  # intercept
         return pars
+
+    # def get_available_params_names(self):
+    #     pars = {}
+    #     pars.update({f'_{name}_0': f'Initial concentration of {name}' for name in self.spec_names[:self.n_spec]})
+    #     pars.update({f'k_{i + 1}': f'Rate constant k_{i + 1}' for i in range(self.n_spec)})  # rate constants
+    #     pars.update({'intercept': 'Intercept'})  # intercept
+    #     return pars
 
     def init_params(self):
         """Initialize the parameters for current model options"""
@@ -287,7 +309,7 @@ class SeqParModel(Model):
         if self.exps_data is None or not np.iterable(self.exps_data):
             raise ValueError('Experimental data that are not iterable')
 
-        av_params = set(self.get_available_param_names().keys())
+        av_params = set(self.get_all_param_names().keys())
         self.exp_dep_params = self.default_exp_dep_params() if self.exp_dep_params is None else self.exp_dep_params
         self.exp_indep_params = av_params - self.exp_dep_params
 
@@ -350,17 +372,6 @@ class SeqParModel(Model):
             self.param_names_dict[i]['rates'].sort()
             self.param_names_dict[i]['amps'].sort()
 
-    def get_model_indep_params(self):
-        return [self.params[name] for name in sorted(self.exp_indep_params)]
-
-    def get_model_dep_params_list(self):
-        pars_list = []
-
-        for i in range(len(self.exps_data)):
-            pars_list.append([self.params[self.format_exp_par(name, i)] for name in sorted(self.exp_dep_params)])
-
-        return pars_list
-
     def _get_traces(self, t, ks, j):
 
         n = self.n_spec
@@ -393,6 +404,8 @@ class SeqParModel(Model):
         fits = []
         residuals = []
 
+        lstsq_intercept = self.fit_intercept_varpro and 'intercept' in self.exp_dep_params
+
         for data, x_range, par_names, visible in zip(self.exps_data, self.ranges, self.param_names_dict, self.spec_visible):
             x, y = get_xy(data, x0=x_range[0], x1=x_range[1])
             x_vals.append(x)
@@ -400,20 +413,21 @@ class SeqParModel(Model):
             j = np.asarray([self.params[p].value for p in par_names['j']])
             ks = np.asarray([self.params[p].value for p in par_names['rates']])
 
-            traces = self._get_traces(x, ks, j)
+            traces = self._get_traces(x, ks, j)  # simulate
 
             if self.varpro:
                 A = traces[:, list(visible.values())]  # select only visible species
                 # add intercept as constant function
-                if self.fit_intercept_varpro:
+                if lstsq_intercept:
                     A = np.hstack((A, np.ones_like(x)[:, None]))
-                # solve the least squares problem, find the amplitudes of visibile compartments based on data
+
+                # solve the least squares problem, find the amplitudes of visible compartments based on data
                 coefs = OLS_ridge(A, y, 0)
 
                 fit = A.dot(coefs)  # calculate the fit
 
                 # update amplitudes and intercept
-                if self.fit_intercept_varpro:
+                if lstsq_intercept:
                     *coefs, intercept = list(coefs)
                     self.params[par_names['intercept']].value = intercept
                 else:
@@ -441,7 +455,204 @@ class SeqParModel(Model):
         return np.hstack(residuals)
 
 
+class Photosensitization(Model):
 
+    name = 'Photosensitization (PS→, PS+Q→T, T→) [Q]_0 \u226b [PS]_0'
+
+    def __init__(self, exps_data: list, fit_intercept_varpro=True, **kwargs):
+        spec_names = ['PS', 'Q', 'T']
+        spec_visible = [{'PS': True, 'Q': False, 'T': True} for _ in range(len(exps_data))]
+        kwargs.update(n_spec=3, spec_names=spec_names, spec_visible=spec_visible)
+        super(Photosensitization, self).__init__(exps_data, **kwargs)
+
+        self.fit_intercept_varpro = fit_intercept_varpro
+
+    def model_options(self):
+        opts = super(Photosensitization, self).model_options()
+        fit_intercept_varpro_opt = dict(type=bool, name='fit_intercept_varpro', value=True,
+                                        description='Calculate intercept from data by OLS')
+
+        return opts + [fit_intercept_varpro_opt]
+
+    def update_model_options(self, **kwargs):
+        for key, value in kwargs.items():
+            if not hasattr(self, key):
+                raise TypeError(f'Argument {key} is not valid.')
+            self.__setattr__(key, value)
+
+        if len(kwargs) > 0:
+            self._update_params()
+
+        # handle the individual model option changes / override the default implementation
+        # also handles visible changes
+        for exp_params, visible in zip(self.param_names_dict, self.spec_visible):
+            for amp, vis in zip((self.params[name] for name in exp_params['amps']), visible.values()):
+                amp.vary = not self.varpro and vis
+                amp.enabled = not self.varpro and vis
+                if not vis:
+                    amp.value = 0
+
+            self.params[exp_params['intercept']].vary = not self.fit_intercept_varpro
+            self.params[exp_params['intercept']].enabled = not self.fit_intercept_varpro
+
+        if 'intercept' in self.exp_indep_params:
+            self.params[self.param_names_dict[0]['intercept']].enabled = True
+
+    def get_all_param_names(self):
+        pars = {}
+        pars.update({f'_{name}_0': f'Initial concentration of {name}' for name in self.spec_names})
+        pars.update({name: f'Amplitude of {name}' for name in self.spec_names})  # amplitudes
+        pars.update({'k_PS': "Decay rate constant of a PS without a quencher"})
+        pars.update({'k_q': "Quenching rate constant"})
+        pars.update({'k_T': "Decay rate constant of a sensitized triplet T"})
+        pars.update({'intercept': 'Intercept'})  # intercept
+        return pars
+
+    def default_exp_dep_params(self):
+        pars = ['intercept']  # intercepts
+        pars += ['_Q_0']  # initial concentration of a quencher
+        pars += self.spec_names  # amplitudes
+        return set(pars)
+
+    def get_current_species_names(self):
+        return self.spec_names
+
+    def init_params(self):
+        """Initialize the parameters for current model options"""
+        super(Photosensitization, self).init_params()
+
+        if self.exps_data is None or not np.iterable(self.exps_data):
+            raise ValueError('Experimental data that are not iterable')
+
+        av_params = set(self.get_all_param_names().keys())
+        self.exp_dep_params = self.default_exp_dep_params() if self.exp_dep_params is None else self.exp_dep_params
+        self.exp_indep_params = av_params - self.exp_dep_params
+
+        def add_params(param_set: set, dict_params: dict,
+                       species_visible: [dict] = None, par_format=lambda name: name):
+            for par in param_set:
+                f_par_name = par_format(par)
+
+                vary = True
+                value = 1
+                min = -np.inf
+                if self.is_j_par(par):
+                    dict_params['j'].append(f_par_name)
+                    vary = False
+                    if par == '_PS_0' or par == '_Q_0':
+                        value = 1
+                    else:
+                        value = 0
+                elif self.is_rate_par(par):
+                    dict_params['rates'].append(f_par_name)
+                    min = 0
+                elif self.is_amp_par(par):
+                    dict_params['amps'].append(f_par_name)
+                    vary = not self.varpro
+                elif self.is_intercept(par):
+                    dict_params['intercept'] = f_par_name
+                    vary = self.fit_intercept_varpro and not self.varpro
+                    value = 0
+                else:
+                    value = 0
+
+                dict_params['all'].append(f_par_name)
+                self.params.add(f_par_name, min=min, max=np.inf, value=value, vary=vary)
+                # add an enabled attribute for each parameter
+                self.params[f_par_name].enabled = True
+
+        params_indep = dict(all=[], rates=[], j=[], amps=[], intercept='')
+
+        n = len(self.exps_data)
+
+        # add experiment independent parameters
+        add_params(self.exp_indep_params, params_indep)
+
+        self.param_names_dict = [deepcopy(params_indep) for _ in range(n)]
+        # add experiment dependent parameters
+        for i in range(n):
+            add_params(self.exp_dep_params, self.param_names_dict[i],
+                       species_visible=self.spec_visible[i],
+                       par_format=lambda name: self.format_exp_par(name, i))
+
+            self.param_names_dict[i]['all'].sort()
+            self.param_names_dict[i]['j'].sort()
+            self.param_names_dict[i]['rates'].sort()
+            self.param_names_dict[i]['amps'].sort()
+
+    def _get_traces(self, t, ks, j):
+
+        assert ks.shape == j.shape
+
+
+
+
+
+
+        return j[None, :] * np.heaviside(t[:, None], 1) * np.exp(-t[:, None] * ks[None, :])
+
+    def simulate(self, params=None):
+        """Simulates the data and returns the list of simulated traces as ndarrays"""
+
+        if params is not None:
+            self.params = params
+
+        if self.exps_data is None or not np.iterable(self.exps_data):
+            raise ValueError('No experimental data or data are not iterable')
+
+        x_vals = []
+        fits = []
+        residuals = []
+
+        lstsq_intercept = self.fit_intercept_varpro and 'intercept' in self.exp_dep_params
+
+        for data, x_range, par_names, visible in zip(self.exps_data, self.ranges, self.param_names_dict, self.spec_visible):
+            x, y = get_xy(data, x0=x_range[0], x1=x_range[1])
+            x_vals.append(x)
+
+            j = np.asarray([self.params[p].value for p in par_names['j']])
+            ks = np.asarray([self.params[p].value for p in par_names['rates']])
+
+            traces = self._get_traces(x, ks, j)  # simulate
+
+            if self.varpro:
+                A = traces[:, list(visible.values())]  # select only visible species
+                # add intercept as constant function
+                if lstsq_intercept:
+                    A = np.hstack((A, np.ones_like(x)[:, None]))
+
+                # solve the least squares problem, find the amplitudes of visible compartments based on data
+                coefs = OLS_ridge(A, y, 0)
+
+                fit = A.dot(coefs)  # calculate the fit
+
+                # update amplitudes and intercept
+                if lstsq_intercept:
+                    *coefs, intercept = list(coefs)
+                    self.params[par_names['intercept']].value = intercept
+                else:
+                    fit += self.params[par_names['intercept']].value
+
+                amp_names = [amp_name for amp_name, visible in zip(par_names['amps'], visible.values()) if visible]
+                for name, value in zip(amp_names, coefs):
+                    self.params[name].value = value
+
+            else:
+                amps = np.asarray([self.params[p].value for p in par_names['amps']])
+                fit = traces.dot(amps) + self.params[par_names['intercept']].value  # weight the simulated traces with amplitudes and calculate the fit
+
+            res = self.weight_func(fit - y, y)  # residual
+            fits.append(fit)
+            residuals.append(res)
+
+        return x_vals, fits, residuals
+
+    def residuals(self, params=None):
+        # TODO--> optimize
+        _, _, residuals = self.simulate(params)
+
+        # stack all residuals and return
+        return np.hstack(residuals)
 
 
 

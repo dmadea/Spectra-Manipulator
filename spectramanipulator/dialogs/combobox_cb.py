@@ -2,6 +2,8 @@ from PyQt5.QtWidgets import QComboBox, QApplication
 from PyQt5.QtGui import QStandardItem, QStandardItemModel
 from PyQt5.QtCore import Qt, pyqtSignal
 
+from ..logger import Logger
+
 
 class ComboBoxCB(QComboBox):
 
@@ -63,7 +65,7 @@ class ComboBoxCB(QComboBox):
             self.check_changed.emit(key_list)
 
         self.set_text(text)
-        print('data_changed')
+        Logger.debug('data_changed called')
 
     def set_text(self, text):
         l_edit = self.lineEdit()
