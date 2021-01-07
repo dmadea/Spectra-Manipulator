@@ -54,10 +54,10 @@ def OLS_ridge(A, B, alpha=0.000):
 
     return x
 
-def lstsq_fast(A, b):
-    # TODO---->>
-
-    return lstsq(A, b, lapack_driver='gelss')[0]
+# def lstsq_fast(A, b):
+#     # TODO---->>
+#
+#     return lstsq(A, b, lapack_driver='gelss')[0]
 
 # @vectorize(nopython=True)
 # def fold_exp(t, k, fwhm):
@@ -460,9 +460,9 @@ class Photosensitization(Model):
     name = 'Photosensitization (PS→, PS+Q→T, T→) [Q]_0 \u226b [PS]_0'
 
     def __init__(self, exps_data: list, fit_intercept_varpro=True, **kwargs):
-        spec_names = ['PS', 'Q', 'T']
-        spec_visible = [{'PS': True, 'Q': False, 'T': True} for _ in range(len(exps_data))]
-        kwargs.update(n_spec=3, spec_names=spec_names, spec_visible=spec_visible)
+        spec_names = ['PS', 'T']
+        spec_visible = [{'PS': True, 'T': True} for _ in range(len(exps_data))]
+        kwargs.update(n_spec=2, spec_names=spec_names, spec_visible=spec_visible)
         super(Photosensitization, self).__init__(exps_data, **kwargs)
 
         self.fit_intercept_varpro = fit_intercept_varpro
@@ -475,6 +475,7 @@ class Photosensitization(Model):
         return opts + [fit_intercept_varpro_opt]
 
     def update_model_options(self, **kwargs):
+        # handle the individual model option changes / override the default implementation
         for key, value in kwargs.items():
             if not hasattr(self, key):
                 raise TypeError(f'Argument {key} is not valid.')
@@ -483,7 +484,6 @@ class Photosensitization(Model):
         if len(kwargs) > 0:
             self._update_params()
 
-        # handle the individual model option changes / override the default implementation
         # also handles visible changes
         for exp_params, visible in zip(self.param_names_dict, self.spec_visible):
             for amp, vis in zip((self.params[name] for name in exp_params['amps']), visible.values()):
@@ -499,7 +499,7 @@ class Photosensitization(Model):
             self.params[self.param_names_dict[0]['intercept']].enabled = True
 
     def get_all_param_names(self):
-        pars = {}
+        pars = {'_Q_0': 'Concentration of a quencher'}
         pars.update({f'_{name}_0': f'Initial concentration of {name}' for name in self.spec_names})
         pars.update({name: f'Amplitude of {name}' for name in self.spec_names})  # amplitudes
         pars.update({'k_PS': "Decay rate constant of a PS without a quencher"})
@@ -584,12 +584,25 @@ class Photosensitization(Model):
 
         assert ks.shape == j.shape
 
+        # diff equations:
+        #   dPS/dt = -k_PS * [PS] - k_q * [Q]*[PS]
+        #   dT/dt = + k_q * [Q]*[PS] - k_T * [T]
+        #
+        #   solution for [Q]_0 >> [PS]_0
+        #  c(PS) = [PS]_0 * exp(-(k_PS + k_q * [Q]) * t)
+        #  c(T) = ... double exponential
 
+        C = np.empty((t.shape[0], 2), dtype=np.float64)
 
+        j_PS, j_Q, j_T = j
+        k_PS, k_T, k_q = ks
 
+        k_obs = k_PS + k_q * j_Q
 
+        C[:, 0] = j_PS * np.exp(-t * k_obs)
+        C[:, 1] = j_T + (k_q * j_Q / (k_T - k_q * j_Q)) * (np.exp(-k_q * j_Q * t) - np.exp(-k_T * t))
 
-        return j[None, :] * np.heaviside(t[:, None], 1) * np.exp(-t[:, None] * ks[None, :])
+        return np.nan_to_num(np.heaviside(t[:, None], 1) * C)
 
     def simulate(self, params=None):
         """Simulates the data and returns the list of simulated traces as ndarrays"""
