@@ -597,10 +597,10 @@ class Photosensitization(Model):
         j_PS, j_Q, j_T = j
         k_PS, k_T, k_q = ks
 
-        k_obs = k_PS + k_q * j_Q
+        k_form = k_q * j_Q  # formation of T rate constant
 
-        C[:, 0] = j_PS * np.exp(-t * k_obs)
-        C[:, 1] = j_T + (k_q * j_Q / (k_T - k_q * j_Q)) * (np.exp(-k_q * j_Q * t) - np.exp(-k_T * t))
+        C[:, 0] = j_PS * np.exp(-t * (k_PS + k_form))
+        C[:, 1] = j_T + (k_form / (k_T - k_form)) * (np.exp(-k_form * t) - np.exp(-k_T * t))
 
         return np.nan_to_num(np.heaviside(t[:, None], 1) * C)
 

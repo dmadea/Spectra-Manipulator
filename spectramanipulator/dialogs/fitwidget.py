@@ -12,6 +12,7 @@ from spectramanipulator.logger import Logger
 from spectramanipulator.treeview.item import SpectrumItem, SpectrumItemGroup
 from spectramanipulator.console import Console
 from spectramanipulator.spectrum import fi
+from spectramanipulator.dialogs.trust_reg_refl_option_dialog import TrustRegionReflOptionDialog
 import spectramanipulator
 
 import pyqtgraph as pg
@@ -29,7 +30,7 @@ from ..general_model import GeneralModel
 from ..plotwidget import PlotWidget
 from .fitresult import FitResult
 
-from ..utils.syntax_highlighter import PythonHighlighter, KineticModelHighlighter
+from ..utils.syntax_highlighter import KineticModelHighlighter
 
 import glob
 import os
@@ -104,6 +105,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.cbShowResiduals.toggled.connect(self._replot)
         self.cbFitBlackColor.toggled.connect(self._replot)
         self.cbShowRegion.toggled.connect(self.show_region_checked_changed)
+        self.tbAlgorithmSettings.clicked.connect(self.tbAlgorithmSettings_clicked)
 
         # specific kinetic model setup
 
@@ -259,6 +261,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         ]
 
         self.cbMethod.addItems(map(lambda m: m['name'], self.methods))
+        self.model_options_dict = TrustRegionReflOptionDialog.default_opts()
 
         self.current_model = None
         self.current_general_model = None
@@ -726,6 +729,13 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.residuals.clear()
         PlotWidget.remove_all_fits()
 
+    def tbAlgorithmSettings_clicked(self):
+        def set_result():
+            self.model_options_dict = dialog.options
+
+        dialog = TrustRegionReflOptionDialog(set_result=set_result, **self.model_options_dict)
+        dialog.show()
+
     def simulate_model(self):
 
         # self._plot_function()
@@ -793,8 +803,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         minimizer = Minimizer(self.current_model.residuals, self.current_model.params)
         method = self.methods[self.cbMethod.currentIndex()]['abbr']
 
-        kwds = {'verbose': 2}
-        result = minimizer.minimize(method=method, **kwds)  # fit
+        result = minimizer.minimize(method=method, **self.model_options_dict)  # fit
 
         end_time = time.perf_counter()
         Logger.debug(end_time - start_time, 's for fitting')
