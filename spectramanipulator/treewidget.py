@@ -427,7 +427,7 @@ class TreeWidget(TreeView):
         #     return
 
         def accepted():
-            self.import_spectra([fit_dialog.fitted_spectrum, fit_dialog.residual_spectrum])
+            self.import_spectra([fit_dialog.fits, fit_dialog.residuals])
             self.state_changed.emit()
 
         fit_dialog = FitWidget(self.main_widget.var_widget, accepted, selected_node, parent=self)

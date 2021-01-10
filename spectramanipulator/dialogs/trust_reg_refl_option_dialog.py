@@ -10,6 +10,9 @@ class TrustRegionReflOptionDialog(GenericInputDialog):
     def __init__(self, ftol=1e-8, xtol=1e-8, gtol=1e-8, loss: str = 'linear',
                  max_nfev=None, verbose: int = 0, set_result=None):
 
+        if self.is_opened:
+            return
+
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.least_squares.html
 
         self.options = self.default_opts()
@@ -49,14 +52,14 @@ class TrustRegionReflOptionDialog(GenericInputDialog):
         # self.alg_cb.setCurrentIndex(_opts.index(method))
 
         self.loss_cb = QComboBox()
-        self.loss_cb.addItems(map(lambda o: o['description'], self.loss_options))
+        self.loss_cb.addItems(map(lambda o: f"{o['opt']}: {o['description']}", self.loss_options))
         _opts = list(map(lambda o: o['opt'], self.loss_options))
         self.loss_cb.setCurrentIndex(_opts.index(loss))
 
         self.max_nfev_edit = QLineEdit(str(max_nfev))
 
         self.verbose_cb = QComboBox()
-        self.verbose_cb.addItems(map(lambda o: o['description'], self.verbose_opts))
+        self.verbose_cb.addItems(map(lambda o: f"{o['opt']}: {o['description']}", self.verbose_opts))
         _opts = list(map(lambda o: o['opt'], self.verbose_opts))
         self.verbose_cb.setCurrentIndex(_opts.index(verbose))
 

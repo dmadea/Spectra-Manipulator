@@ -78,7 +78,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             # could be spectrum or a SpectrumItemGroup for multi and batch fitting
             self.node = [node] if len(node.children) == 0 else node.children
 
-        self.lr = None
+        self.lr = None  # linear region item
         self.show_region_checked_changed()
 
         # update region when the focus is lost and when the user presses enter
@@ -114,7 +114,10 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.model_options_grid_layout = QtWidgets.QGridLayout(self)
         self.verticalLayout.addLayout(self.model_options_grid_layout)
         self.pred_model_indep_params_layout = self.create_params_layout()
+        self.general_model_indep_params_layout = self.create_params_layout()
         self.verticalLayout.addLayout(self.pred_model_indep_params_layout)
+        self.verticalLayout.addLayout(self.pred_model_indep_params_layout)
+
 
         self.cbPredefModelDepParams = ComboBoxCB(self)
         self.cbPredefModelDepParams_changing = False
@@ -227,11 +230,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # get all models from fitmodels, get classes that inherits from Model base class and sort them by name
         # and number of species
         classes = inspect.getmembers(sys.modules[fitmodels.__name__], inspect.isclass)
-        tuples = filter(lambda tup: issubclass(tup[1], fitmodels.Model) and tup[1] is not fitmodels.Model, classes)
-        # same load user defined fit models
-        # classes_usr = inspect.getmembers(sys.modules[userfitmodels.__name__], inspect.isclass)
-        # tuples_usr = filter(lambda tup: issubclass(tup[1], fitmodels.Model) and tup[1] is not fitmodels.Model,
-        #                     classes_usr)
+        tuples = filter(lambda tup: issubclass(tup[1], fitmodels.Model) and
+                        (tup[1] is not fitmodels.Model and tup[1] is not fitmodels.GeneralFitModel), classes)
         # load models
         self.models = sorted(list(map(lambda tup: tup[1], tuples)), key=lambda cls: cls.name)
         # fill the available models combo box with model names
@@ -244,31 +244,33 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         self.res_weights = [
             {'description': 'No weighting', 'func': lambda res, y: res},
-            {'description': 'Absorbance weighting: noise \u221d 10 ** y', 'func': lambda res, y: res / 10 ** (0.5*y)},
-            {'description': 'Proportional weighting: noise \u221d y', 'func': lambda res, y: res / (y * y)},
+            {'description': 'Absorbance weighting: noise \u221d 10 ^ y', 'func': lambda res, y: res * np.exp(-y * np.log(10))},
+            {'description': 'Proportional weighting: noise \u221d y', 'func': lambda res, y: res / y},
         ]
 
         self.cbResWeighting.addItems(map(lambda m: m['description'], self.res_weights))
 
         # abbr is name that is needed for lmfit.fitting method
         self.methods = [
-            {'name': 'Trust Region Reflective method', 'abbr': 'least_squares'},
-            {'name': 'Levenberg–Marquardt', 'abbr': 'leastsq'},
-            {'name': 'Nelder-Mead, Simplex method (no error)', 'abbr': 'nelder'},
-            {'name': 'Differential evolution', 'abbr': 'differential_evolution'},
-            {'name': 'L-BFGS-B (no error)', 'abbr': 'lbfgsb'},
-            {'name': 'Powell (no error)', 'abbr': 'powell'}
+            {'name': 'Trust Region Reflective method', 'abbr': 'least_squares', 'option_dialog': TrustRegionReflOptionDialog},
+            {'name': 'Levenberg–Marquardt', 'abbr': 'leastsq', 'option_dialog': None},
+            {'name': 'Nelder-Mead, Simplex method (no error)', 'abbr': 'nelder', 'option_dialog': None},
+            {'name': 'Differential evolution', 'abbr': 'differential_evolution', 'option_dialog': None},
+            {'name': 'L-BFGS-B (no error)', 'abbr': 'lbfgsb', 'option_dialog': None},
+            {'name': 'Powell (no error)', 'abbr': 'powell', 'option_dialog': None}
         ]
 
         self.cbMethod.addItems(map(lambda m: m['name'], self.methods))
-        self.model_options_dict = TrustRegionReflOptionDialog.default_opts()
+        self.cbMethod.currentIndexChanged.connect(self.cbMethod_currentIndexChanged)
+        self.cbMethod_currentIndexChanged()
+        self.model_options_dict = {}
 
         self.current_model = None
         self.current_general_model = None
         self.general_model_params = None
         self.fit_result = None
-        self.fits = []
-        self.residuals = []
+        self.fits = SpectrumItemGroup(name='Fits')
+        self.residuals = SpectrumItemGroup(name='Residuals')
 
         self.accepted = False
         FitWidget.is_opened = True
@@ -627,7 +629,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         Logger.debug('pred_setup_field')
         self.setting_params = True
 
-        self._setup_fields(self.pred_param_fields['exp_independent'], self.current_model.get_model_indep_params())
+        self._setup_fields(self.pred_param_fields['exp_independent'], self.current_model.get_model_indep_params_list())
 
         model_dep_params = self.current_model.get_model_dep_params_list()
         spec_names = self.current_model.get_current_species_names()
@@ -724,16 +726,28 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 self.model_options_grid_layout.addWidget(widget, i, 1, 1, 1)
 
     def clear_plot(self):
-
-        self.fits.clear()
-        self.residuals.clear()
+        self.fits.children.clear()
+        self.residuals.children.clear()
         PlotWidget.remove_all_fits()
+
+    def cbMethod_currentIndexChanged(self):
+        dialog_cls = self.methods[self.cbMethod.currentIndex()]['option_dialog']
+        if dialog_cls is None:
+            self.model_options_dict = {}
+            return
+
+        self.model_options_dict = dialog_cls.default_opts()
 
     def tbAlgorithmSettings_clicked(self):
         def set_result():
             self.model_options_dict = dialog.options
 
-        dialog = TrustRegionReflOptionDialog(set_result=set_result, **self.model_options_dict)
+        dialog_cls = self.methods[self.cbMethod.currentIndex()]['option_dialog']
+
+        if dialog_cls is None:
+            return
+
+        dialog = dialog_cls(set_result=set_result, **self.model_options_dict)
         dialog.show()
 
     def simulate_model(self):
@@ -907,24 +921,24 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     #     self.fit_result = FitResult(result, minimizer, values_errors, (self.current_model if tab_idx == 0 else self.current_general_model),
     #                                 data_item=self.node, fit_item=self.fitted_spectrum,
     #                                 residuals_item=self.residual_spectrum)
-
-    def _simul_custom_model(self, j, rates, x_data):
-        if x_data[0] > 0:  # initial conditions are valid for time=0
-            n = 100  # prepend x values with 100 points if not starting with zero time
-            x_prepended = np.concatenate((np.linspace(0, x_data[0], n, endpoint=False), x_data))
-            return odeint(self.current_general_model.func, j, x_prepended, args=(rates,))[n:, :]
-
-        elif x_data[0] < 0:
-            x_pos = x_data[x_data >= 0]  # find x >= 0
-            sol = np.zeros((x_data.shape[0], j.shape[0]), dtype=np.float64)
-            if x_pos.shape[0] > 1:  # simulate only for at least 2 positive values
-                sol[(x_data < 0).sum():, :] = self._simul_custom_model(j, rates, x_pos)  # use recursion here
-
-            return sol
-
-        # for x_data[0] == 0
-        return odeint(self.current_general_model.func, j, x_data, args=(rates,))
-
+    #
+    # def _simul_custom_model(self, j, rates, x_data):
+    #     if x_data[0] > 0:  # initial conditions are valid for time=0
+    #         n = 100  # prepend x values with 100 points if not starting with zero time
+    #         x_prepended = np.concatenate((np.linspace(0, x_data[0], n, endpoint=False), x_data))
+    #         return odeint(self.current_general_model.func, j, x_prepended, args=(rates,))[n:, :]
+    #
+    #     elif x_data[0] < 0:
+    #         x_pos = x_data[x_data >= 0]  # find x >= 0
+    #         sol = np.zeros((x_data.shape[0], j.shape[0]), dtype=np.float64)
+    #         if x_pos.shape[0] > 1:  # simulate only for at least 2 positive values
+    #             sol[(x_data < 0).sum():, :] = self._simul_custom_model(j, rates, x_pos)  # use recursion here
+    #
+    #         return sol
+    #
+    #     # for x_data[0] == 0
+    #     return odeint(self.current_general_model.func, j, x_data, args=(rates,))
+    #
 
     @classmethod
     def replot(cls):
@@ -986,10 +1000,10 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 self.fits[i].data = np.vstack((x_vals[i], fits[i])).T
                 self.residuals[i].data = np.vstack((x_vals[i], residuals[i])).T
             else:
-                sp_fit = SpectrumItem.from_xy_values(x_vals[i], fits[i])
-                sp_res = SpectrumItem.from_xy_values(x_vals[i], residuals[i])
-                self.fits.append(sp_fit)
-                self.residuals.append(sp_res)
+                sp_fit = SpectrumItem.from_xy_values(x_vals[i], fits[i], name=f'Fif of {self.node[i].name}')
+                sp_res = SpectrumItem.from_xy_values(x_vals[i], residuals[i], name=f'Residual of {self.node[i].name}')
+                self.fits.children.append(sp_fit)
+                self.residuals.children.append(sp_res)
 
         self._replot()
 
@@ -1121,35 +1135,24 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             QMessageBox.warning(self, 'Printing Error', e.__str__(), QMessageBox.Ok)
 
     def accept(self):
-        # self.remove_last_fit()
-        self.clear_plot(keep_spectra=True)
+        self.accepted_func()
+
+        self.clear_plot()
+        PlotWidget.remove_linear_region()
+
         self.print_report()
 
         self.accepted = True
-        FitWidget.is_opened = False
-        FitWidget._instance = None
-        # self.plot_widget.removeItem(self.lr)
-        # del self.lr
-        PlotWidget.remove_linear_region()
+        self.is_opened = False
+        self._instance = None
         self.dock_widget.setVisible(False)
-        self.accepted_func()
-        # super(FitWidget, self).accept()
-        PlotWidget.remove_all_fits()
-
 
     def reject(self):
-        # self.remove_last_fit()
         self.clear_plot()
-        FitWidget.is_opened = False
-        FitWidget._instance = None
-        # self.plot_widget.removeItem(self.lr)
-        # del self.lr
         PlotWidget.remove_linear_region()
+        self.is_opened = False
+        self._instance = None
         self.dock_widget.setVisible(False)
-        PlotWidget.remove_all_fits()
-
-
-        # super(FitWidget, self).reject()
 
 
 if __name__ == "__main__":

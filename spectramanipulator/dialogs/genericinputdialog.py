@@ -2,30 +2,28 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
-from spectramanipulator.singleton import Singleton
+from ..singleton import Singleton
 import sys
 
 
-class GenericInputDialog(QtWidgets.QDialog):
+class GenericInputDialog(Singleton, QtWidgets.QDialog):
 
     # static variables
     is_opened = False
 
     def __init__(self, widget_list=None, label_text='Some descriptive text...', title='GenericInputDialog',
                  parent=None, set_result=None):
+
         super(GenericInputDialog, self).__init__(parent, Qt.WindowStaysOnTopHint | Qt.MSWindowsFixedSizeDialogHint)
 
         # # disable resizing of the window,
         # # help from https://stackoverflow.com/questions/16673074/in-qt-c-how-can-i-fully-disable-resizing-a-window-including-the-resize-icon-w
         # self.setWindowFlags(Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
-        GenericInputDialog.is_opened = True
-        GenericInputDialog._instance = self
-
         self.set_result = set_result
 
         self.setWindowTitle(title)
-        self.accepted = False
+        # self.accepted = False
 
         self.button_box = QtWidgets.QDialogButtonBox(self)
         self.button_box.setOrientation(QtCore.Qt.Horizontal)
@@ -72,26 +70,24 @@ class GenericInputDialog(QtWidgets.QDialog):
         if isinstance(self.widget_list[0], QLineEdit):
             self.widget_list[0].selectAll()
 
-    @classmethod
-    def if_opened_activate(cls):
-        """Returns True if dialog is already opened and has been activated, otherwise returns False."""
-        if cls.is_opened:
-            cls._instance.activateWindow()
-            cls._instance.setFocus()
-            return True
-        else:
-            return False
+    def show(self):
+        if self.is_opened:
+            self.activateWindow()
+            self.setFocus()
+            return
+        self.is_opened = True
+        super(GenericInputDialog, self).show()
 
     def accept(self):
         self.set_result()
-        self.accepted = True
-        GenericInputDialog.is_opened = False
-        GenericInputDialog._instance = None
+        # self.accepted = True
+        self.is_opened = False
+        self._instance = None
         super(GenericInputDialog, self).accept()
 
     def reject(self):
-        GenericInputDialog.is_opened = False
-        GenericInputDialog._instance = None
+        self.is_opened = False
+        self._instance = None
         super(GenericInputDialog, self).reject()
 
 
