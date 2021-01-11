@@ -676,12 +676,13 @@ class GeneralFitModel(Model):
 
     name = 'Sequential/Parallel Model (1st order)'
 
-    def __init__(self, exps_data: list, fit_intercept_varpro=True, **kwargs):
+    def __init__(self, exps_data: list, fit_intercept_varpro=True, show_backward_rates=False, **kwargs):
         super(GeneralFitModel, self).__init__(exps_data, **kwargs)
 
         self.general_model = GeneralModel()
 
         self.fit_intercept_varpro = fit_intercept_varpro
+        self.show_backward_rates = show_backward_rates
 
     def model_options(self):
         opts = super(GeneralFitModel, self).model_options()
@@ -720,6 +721,23 @@ class GeneralFitModel(Model):
         pars.update({f'k_{i+1}': f'Rate constant k_{i+1}' for i in range(self.n_spec)})  # rate constants
         pars.update({'intercept': 'Intercept'})  # intercept
         return pars
+
+    def load(self, fpath: str):
+        self.general_model = GeneralModel.load(fpath)
+        self.build()
+
+    def load_from_scheme(self, scheme: str):
+        self.general_model = GeneralModel.from_text(scheme)
+        self.build()
+
+    def build(self):
+        self.general_model.build_func()
+
+
+
+
+
+
 
     def __getattr__(self, item):
         return self.general_model.__getattribute__(item)
