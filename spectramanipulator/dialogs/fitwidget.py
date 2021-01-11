@@ -80,14 +80,13 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.lr = None  # linear region item
         self.show_region_checked_changed()
 
-        self.current_model = None  # acutual model, it could be general model or predefined model
+        self.current_model = None  # actual model, it could be general model or predefined model
         self._general_model = None
 
         self.cbVarProAmps.name = "varpro"
         self.cbVarProAmps.toggled.connect(self.model_option_changed)
         self.cbVarProIntercept.name = "fit_intercept_varpro"
         self.cbVarProIntercept.toggled.connect(self.model_option_changed)
-        self.setup_general_model()
 
         self._predefined_model = None
         self.general_model_params = None
@@ -140,7 +139,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         self.cbGeneralModelDepParams = ComboBoxCB(self)
         # self.cbGeneralModelDepParams_changing = False
-        self.cbGeneralModelDepParams.check_changed.connect(self.cbPredefModelDepParams_check_changed)
+        self.cbGeneralModelDepParams.check_changed.connect(self.cbGeneralModelDepParams_check_changed)
 
         hbox = QtWidgets.QHBoxLayout(self)
         hbox2 = QtWidgets.QHBoxLayout(self)
@@ -332,6 +331,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.dock_widget.setWidget(self)
         self.dock_widget.setVisible(True)
 
+        self.setup_general_model()
         self.predefined_model_changed()
 
     def show_region_checked_changed(self):
@@ -524,90 +524,43 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     #     return init_cond, coefs, rates, l_params[-1]  # last is intercept
 
     def cbGenModel_changed(self):
-        self._general_model.load(self.gen_models_paths[self.cbGenModels.currentIndex()])
+        if self._general_model is None:
+            return
+
+        self._general_model.load_from_file(self.gen_models_paths[self.cbGenModels.currentIndex()])
         self.pteScheme.setPlainText(self._general_model.scheme)
 
-        self.setup_fields()
+        self.setup_fields(self._general_model)
 
     def cbShowBackwardRates_checked_changed(self):
         if self._general_model is None:
             return
 
         self._general_model.update_model_options(show_backward_rates=self.cbShowBackwardRates.isChecked())
-        self.setup_fields()
+        self.setup_fields(self._general_model)
 
-    def build_gen_model(self, load_scheme=True):
-        # if load_scheme:
-        #     try:
-        #         self._general_model = GeneralModel.from_text(self.pteScheme.toPlainText())
-        #     except Exception as e:
-        #         Logger.message(e.__str__())
-        #         QMessageBox.critical(self, 'Build failed', f'Invalid model:\n\n{e.__str__()}', QMessageBox.Ok)
-        #         return
-
+    def build_gen_model(self):
         self._general_model.load_from_scheme(self.pteScheme.toPlainText())
+        self.setup_fields(self._general_model)
 
-        self.setup_fields()
+    def cbGeneralModelDepParams_check_changed(self, checked_abbrs):
+        Logger.debug('cbGeneralModelDepParams_check_changed')
 
-
-        comps = self._general_model.get_compartments()
-        init_comps_names = list(map(lambda n: f'[{n}]0', comps))
-        rates = self.current_general_model.get_rates(self.cbShowBackwardRates.isChecked(),
-                                                     append_values=True)
-
-        n_params = 2 * len(comps) + len(rates) + 1  # + intercept
-        self.set_field_visible(n_params, 1)
-
-        self.general_model_params = Parameters()
-
-        k = 0
-        # initial conditions
-        for init in self.current_general_model.initial_conditions.values():
-            self.general_model_params.add(f'param{k}', value=init,
-                                          vary=False,
-                                          min=0,
-                                          max=np.inf)
-            k += 1
-        # coefficients
-        for i in range(len(comps)):
-            self.general_model_params.add(f'param{k}', value=1 if i == 0 else 0,
-                                          vary=True if i == 0 else False,
-                                          min=-np.inf,
-                                          max=np.inf)
-            k += 1
-
-        # rates
-        rates_names = []
-        for name, value in rates:
-            rates_names.append(name)
-            self.general_model_params.add(f'param{k}', value=value,
-                                          vary=True,
-                                          min=0,
-                                          max=np.inf)
-            k += 1
-
-        # add intercept
-        self.general_model_params.add('y0', value=0, vary=True, min=-np.inf, max=np.inf)
-
-        for i, (p, name) in enumerate(zip(self.general_model_params.values(),
-                                          init_comps_names + comps + rates_names + ['y0'])):
-            self.params_list[i][1].setText(name)
-            self.value_list[i][1].setText(f"{p.value:.5g}")
-            self.lower_bound_list[i][1].setText(str(p.min))
-            self.upper_bound_list[i][1].setText(str(p.max))
-            self.fixed_list[i][1].setChecked(not p.vary)
-
-        self.set_lower_upper_enabled()
+        self.current_model.update_model_options(exp_dep_params=checked_abbrs)
+        self.setup_fields(self._general_model)
 
     def cbPredefModelDepParams_check_changed(self, checked_abbrs):
         if self.cbPredefModelDepParams_changing:
             return
         Logger.debug('cbPredefModelDepParams_check_changed')
 
-        self.current_model.update_model_options(exp_dep_params=set(checked_abbrs))
-        self.setup_fields()
+        # self.current_model.update_model_options(exp_dep_params=set(checked_abbrs))
+        # self.setup_fields()
 
     def species_visible_checkbox_toggled(self, checked):
+        if self.current_model is None:
+            return
+
         cb = self.sender()
         Logger.debug('species_visible_checkbox_toggled', cb.exp_index, cb.text())
 
@@ -668,19 +621,19 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             fields['fixed'][i].setVisible(visible)
             fields['errors'][i].setVisible(visible)
 
-    def setup_fields(self):
-        if self.current_model is None:
-            return
+    def setup_fields(self, model=None):
+        if model is None:
+            model = self.current_model
 
         Logger.debug('pred_setup_field')
         self.setting_params = True
 
-        param_fields = self.pred_param_fields if self.tabWidget.currentIndex() == 0 else self.general_param_fields
+        param_fields = self.pred_param_fields if model == self._predefined_model else self.general_param_fields
 
-        self._fill_fields(param_fields['exp_independent'], self.current_model.get_model_indep_params_list())
+        self._fill_fields(param_fields['exp_independent'], model.get_model_indep_params_list())
 
-        model_dep_params = self.current_model.get_model_dep_params_list()
-        spec_names = self.current_model.get_current_species_names()
+        model_dep_params = model.get_model_dep_params_list()
+        spec_names = model.get_current_species_names()
         for i in range(len(self.node)):
             self._fill_fields(param_fields['exp_dependent'][i], model_dep_params[i])
 
@@ -689,7 +642,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
                 if visible:
                     self.pred_spec_visible_fields[i][j].setText(spec_names[j])
-                    self.pred_spec_visible_fields[i][j].setChecked(self.current_model.spec_visible[i][spec_names[j]])
+                    self.pred_spec_visible_fields[i][j].setChecked(model.spec_visible[i][spec_names[j]])
 
                 self.pred_spec_visible_fields[i][j].setVisible(visible)
 
@@ -700,14 +653,14 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         self.cbPredefModelDepParams_changing = True
 
-        self.current_model.update_model_options(n_spec=int(self.sbSpeciesCount.value()))
+        self._predefined_model.update_model_options(n_spec=int(self.sbSpeciesCount.value()))
 
-        av_params = self.current_model.get_all_param_names()  # available parameters
+        av_params = self._predefined_model.get_all_param_names()  # available parameters
 
         # set default parameters to checkbox of model dependent parameters
         # check the default values
         self.cbPredefModelDepParams.set_data(av_params)
-        default_dep_params = self.current_model.default_exp_dep_params()  # default values
+        default_dep_params = self._predefined_model.default_exp_dep_params()  # default values
         abbrs = list(self.cbPredefModelDepParams.items.keys())
         for i in range(self.cbPredefModelDepParams.items.__len__()):
             self.cbPredefModelDepParams.set_check_state(i, abbrs[i] in default_dep_params)
@@ -715,7 +668,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.cbPredefModelDepParams_changing = False
         self.cbPredefModelDepParams.update_text()
 
-        self.setup_fields()
+        self.setup_fields(self._predefined_model)
 
     def model_option_changed(self, value):
         """also handles enabling of lower and upper text fields"""
@@ -734,7 +687,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self._general_model = fitmodels.GeneralFitModel(data, varpro=self.cbVarProAmps.isChecked(),
                                                         fit_intercept_varpro=self.cbVarProIntercept.isChecked())
 
-        self.setup_fields()
+        self.cbGenModel_changed()
 
     def predefined_model_changed(self):
         # initialize new model
@@ -829,9 +782,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if self.current_model is None:
             return
 
-        if self.tabWidget.currentIndex() == 1:  # custom model
-            return
-
         try:
             x0, x1 = float(self.leX0.text()), float(self.leX1.text())
         except ValueError:
@@ -854,9 +804,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     def _fit(self):
 
         if self.current_model is None:
-            return
-
-        if self.tabWidget.currentIndex() == 1:  # custom model
             return
 
         try:
@@ -978,23 +925,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     #                                 data_item=self.node, fit_item=self.fitted_spectrum,
     #                                 residuals_item=self.residual_spectrum)
     #
-    # def _simul_custom_model(self, j, rates, x_data):
-    #     if x_data[0] > 0:  # initial conditions are valid for time=0
-    #         n = 100  # prepend x values with 100 points if not starting with zero time
-    #         x_prepended = np.concatenate((np.linspace(0, x_data[0], n, endpoint=False), x_data))
-    #         return odeint(self.current_general_model.func, j, x_prepended, args=(rates,))[n:, :]
-    #
-    #     elif x_data[0] < 0:
-    #         x_pos = x_data[x_data >= 0]  # find x >= 0
-    #         sol = np.zeros((x_data.shape[0], j.shape[0]), dtype=np.float64)
-    #         if x_pos.shape[0] > 1:  # simulate only for at least 2 positive values
-    #             sol[(x_data < 0).sum():, :] = self._simul_custom_model(j, rates, x_pos)  # use recursion here
-    #
-    #         return sol
-    #
-    #     # for x_data[0] == 0
-    #     return odeint(self.current_general_model.func, j, x_data, args=(rates,))
-    #
 
     @classmethod
     def replot(cls):
@@ -1063,113 +993,113 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         self._replot()
 
-    def _plot_function(self):
-        x0, x1 = self.lr.getRegion()
+    # def _plot_function(self):
+    #     x0, x1 = self.lr.getRegion()
+    #
+    #     # if this is a fit widget with real spectrum, use x range from that spectrum,
+    #     # otherwise, use np.linspace with defined number of points in Settings
+    #     if self.node is not None:
+    #         start_idx = fi(self.node.data[:, 0], x0)
+    #         end_idx = fi(self.node.data[:, 0], x1) + 1
+    #         x_data = self.node.data[start_idx:end_idx, 0]
+    #     else:
+    #         x_data = np.linspace(x0, x1, num=Settings.FP_num_of_points)
+    #
+    #     tab_idx = self.tabWidget.currentIndex()
+    #
+    #     if tab_idx == 0:  # equation-based model
+    #         self._setup_model()
+    #
+    #         par_count = self.current_model.par_count()
+    #
+    #         # get params from field to current model
+    #         for i in range(par_count):
+    #             param = self.params_list[i][0].text()
+    #             self.current_model.params[param].value = float(self.value_list[i][0].text())
+    #
+    #         # calculate the y values according to our model
+    #         y_data = self.current_model.wrapper_func(x_data, self.current_model.params)
+    #     else:  # custom kinetic model
+    #         if self.current_general_model is None:
+    #             self.cbGenModel_changed()
+    #
+    #         init, coefs, rates, y0 = self.get_params_from_fields()
+    #         par_count = 2 * init.shape[0] + rates.shape[0]
+    #         n_params = len(init)
+    #
+    #         sol = self._simul_custom_model(init, rates, x_data)
+    #
+    #         if self.cbPlotAllComps.isChecked():
+    #             spectra = SpectrumItemGroup(name='all comparments plot')
+    #             for i in range(n_params):
+    #                 name = self.params_list[i+n_params][tab_idx].text()
+    #                 self.plotted_functions.append(self.plot_widget.plotItem.plot(x_data, sol[:, i],
+    #                                                                          pen=pg.mkPen(color=int_default_color_scheme(i),
+    #                                                                                       width=1),
+    #                                                                          name=name))
+    #                 spectra.children.append(SpectrumItem.from_xy_values(x_data, sol[:, i], name=name))
+    #             self.plotted_function_spectra.append(spectra)
+    #             return
+    #
+    #         y_data = (sol * coefs).sum(axis=1, keepdims=False) + y0
+    #
+    #     params = ', '.join([f"{self.params_list[i][tab_idx].text()}={self.value_list[i][tab_idx].text()}" for i in range(par_count)])
+    #
+    #     name = f"Func plot: {params}"
+    #     self.plotted_functions.append(self.plot_widget.plotItem.plot(x_data, y_data,
+    #                                                                  pen=pg.mkPen(color=QColor(0, 0, 0, 255),
+    #                                                                               width=1),
+    #                                                                  name=name))
+    #
+    #     self.plotted_function_spectra.append(SpectrumItem.from_xy_values(x_data, y_data, name=name))
 
-        # if this is a fit widget with real spectrum, use x range from that spectrum,
-        # otherwise, use np.linspace with defined number of points in Settings
-        if self.node is not None:
-            start_idx = fi(self.node.data[:, 0], x0)
-            end_idx = fi(self.node.data[:, 0], x1) + 1
-            x_data = self.node.data[start_idx:end_idx, 0]
-        else:
-            x_data = np.linspace(x0, x1, num=Settings.FP_num_of_points)
+    # def set_lower_upper_enabled(self):
+    #     if self.node is None:
+    #         return
+    #     for i in range(len(self.fixed_list)):
+    #         enabled_0 = not self.fixed_list[i][0].isChecked()
+    #         enabled_1 = not self.fixed_list[i][1].isChecked()
+    #
+    #         self.lower_bound_list[i][0].setEnabled(enabled_0)
+    #         self.upper_bound_list[i][0].setEnabled(enabled_0)
+    #
+    #         self.lower_bound_list[i][1].setEnabled(enabled_1)
+    #         self.upper_bound_list[i][1].setEnabled(enabled_1)
 
-        tab_idx = self.tabWidget.currentIndex()
+    # def fixed_checked_changed(self, value):
+    #     if self.node is None:
+    #         return
+    #
+    #     checkbox = self.sender()  # get the checkbox that was clicked on
+    #
+    #     idx = self.tabWidget.currentIndex()
+    #
+    #     i = 0
+    #     for i, (ch1, ch2) in enumerate(self.fixed_list):
+    #         if ch1 == checkbox or ch2 == checkbox:
+    #             break
+    #
+    #     enabled = True if value == Qt.Unchecked else False
+    #
+    #     self.lower_bound_list[i][idx].setEnabled(enabled)
+    #     self.upper_bound_list[i][idx].setEnabled(enabled)
 
-        if tab_idx == 0:  # equation-based model
-            self._setup_model()
+    # def params_count_changed(self):
+    #
+    #     count = int(self.sbParamsCount.value())
+    #
+    #     self.set_field_visible(count, 0)
 
-            par_count = self.current_model.par_count()
-
-            # get params from field to current model
-            for i in range(par_count):
-                param = self.params_list[i][0].text()
-                self.current_model.params[param].value = float(self.value_list[i][0].text())
-
-            # calculate the y values according to our model
-            y_data = self.current_model.wrapper_func(x_data, self.current_model.params)
-        else:  # custom kinetic model
-            if self.current_general_model is None:
-                self.cbGenModel_changed()
-
-            init, coefs, rates, y0 = self.get_params_from_fields()
-            par_count = 2 * init.shape[0] + rates.shape[0]
-            n_params = len(init)
-
-            sol = self._simul_custom_model(init, rates, x_data)
-
-            if self.cbPlotAllComps.isChecked():
-                spectra = SpectrumItemGroup(name='all comparments plot')
-                for i in range(n_params):
-                    name = self.params_list[i+n_params][tab_idx].text()
-                    self.plotted_functions.append(self.plot_widget.plotItem.plot(x_data, sol[:, i],
-                                                                             pen=pg.mkPen(color=int_default_color_scheme(i),
-                                                                                          width=1),
-                                                                             name=name))
-                    spectra.children.append(SpectrumItem.from_xy_values(x_data, sol[:, i], name=name))
-                self.plotted_function_spectra.append(spectra)
-                return
-
-            y_data = (sol * coefs).sum(axis=1, keepdims=False) + y0
-
-        params = ', '.join([f"{self.params_list[i][tab_idx].text()}={self.value_list[i][tab_idx].text()}" for i in range(par_count)])
-
-        name = f"Func plot: {params}"
-        self.plotted_functions.append(self.plot_widget.plotItem.plot(x_data, y_data,
-                                                                     pen=pg.mkPen(color=QColor(0, 0, 0, 255),
-                                                                                  width=1),
-                                                                     name=name))
-
-        self.plotted_function_spectra.append(SpectrumItem.from_xy_values(x_data, y_data, name=name))
-
-    def set_lower_upper_enabled(self):
-        if self.node is None:
-            return
-        for i in range(len(self.fixed_list)):
-            enabled_0 = not self.fixed_list[i][0].isChecked()
-            enabled_1 = not self.fixed_list[i][1].isChecked()
-
-            self.lower_bound_list[i][0].setEnabled(enabled_0)
-            self.upper_bound_list[i][0].setEnabled(enabled_0)
-
-            self.lower_bound_list[i][1].setEnabled(enabled_1)
-            self.upper_bound_list[i][1].setEnabled(enabled_1)
-
-    def fixed_checked_changed(self, value):
-        if self.node is None:
-            return
-
-        checkbox = self.sender()  # get the checkbox that was clicked on
-
-        idx = self.tabWidget.currentIndex()
-
-        i = 0
-        for i, (ch1, ch2) in enumerate(self.fixed_list):
-            if ch1 == checkbox or ch2 == checkbox:
-                break
-
-        enabled = True if value == Qt.Unchecked else False
-
-        self.lower_bound_list[i][idx].setEnabled(enabled)
-        self.upper_bound_list[i][idx].setEnabled(enabled)
-
-    def params_count_changed(self):
-
-        count = int(self.sbParamsCount.value())
-
-        self.set_field_visible(count, 0)
-
-    def set_field_visible(self, n_params, idx=0):
-        for i in range(self.max_param_count):
-            visible = n_params > i
-
-            self.params_list[i][idx].setVisible(visible)
-            self.lower_bound_list[i][idx].setVisible(visible)
-            self.value_list[i][idx].setVisible(visible)
-            self.upper_bound_list[i][idx].setVisible(visible)
-            self.fixed_list[i][idx].setVisible(visible)
-            self.error_list[i][idx].setVisible(visible)
+    # def set_field_visible(self, n_params, idx=0):
+    #     for i in range(self.max_param_count):
+    #         visible = n_params > i
+    #
+    #         self.params_list[i][idx].setVisible(visible)
+    #         self.lower_bound_list[i][idx].setVisible(visible)
+    #         self.value_list[i][idx].setVisible(visible)
+    #         self.upper_bound_list[i][idx].setVisible(visible)
+    #         self.fixed_list[i][idx].setVisible(visible)
+    #         self.error_list[i][idx].setVisible(visible)
 
     def set_result(self):
         pass

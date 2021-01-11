@@ -182,7 +182,9 @@ class Model(object):
     def init_params(self):
         """Initialized the parameters for current model options"""
         self.params = Parameters()
-        pass
+
+        if self.exps_data is None or not np.iterable(self.exps_data):
+            raise ValueError('Experimental data that are not iterable')
 
     def simulate(self):
         """Simulates the data and returns the tuple of simulated traces and residuals as lists filled with ndarrays"""
@@ -697,11 +699,6 @@ class GeneralFitModel(Model):
         # handle the individual model option changes / override the default implementation
         # also handles visible changes
         for exp_params, visible in zip(self.param_names_dict, self.spec_visible):
-            pars_j = [self.params[name] for name in exp_params['j']]
-            for i in range(len(pars_j)):
-                pars_j[i].vary = False
-                pars_j[i].value = 1 if i == 0 or not self.sequential else 0
-
             for amp, vis in zip((self.params[name] for name in exp_params['amps']), visible.values()):
                 amp.vary = not self.varpro and vis
                 amp.enabled = not self.varpro and vis
@@ -714,15 +711,42 @@ class GeneralFitModel(Model):
         if 'intercept' in self.exp_indep_params:
             self.params[self.param_names_dict[0]['intercept']].enabled = True
 
+        # TODO if amps in self.exp_indep params, enabled = True
+
     def get_all_param_names(self):
         pars = {}
-        pars.update({f'_{name}_0': f'Initial concentration of {name}' for name in self.spec_names[:self.n_spec]})
-        pars.update({name: f'Amplitude of {name}' for name in self.spec_names[:self.n_spec]})  # amplitudes
-        pars.update({f'k_{i+1}': f'Rate constant k_{i+1}' for i in range(self.n_spec)})  # rate constants
+
+        comps = self.general_model.get_compartments()
+
+        # initial conditions
+        pars.update({f'_{name}_0': f'Initial concentration of {name}' for name in comps})
+        pars.update({name: f'Amplitude of {name}' for name in comps})  # amplitudes
+        pars.update({rate: f'Rate constant {rate}' for rate in
+                     self.general_model.get_rates(self.show_backward_rates, False)})  # rate constants
         pars.update({'intercept': 'Intercept'})  # intercept
         return pars
 
-    def load(self, fpath: str):
+    def get_current_species_names(self):
+        return self.general_model.get_compartments()
+
+    def default_exp_dep_params(self):
+        """Returns the set of default experiment-dependent parameters."""
+        pars = self.general_model.get_compartments()
+        pars += ['intercept']  # intercept
+        return pars
+
+    def get_model_indep_params_list(self):
+        return [self.params[name] for name in self.exp_indep_params]
+
+    def get_model_dep_params_list(self):
+        pars_list = []
+
+        for i in range(len(self.exps_data)):
+            pars_list.append([self.params[self.format_exp_par(name, i)] for name in self.exp_dep_params])
+
+        return pars_list
+
+    def load_from_file(self, fpath: str):
         self.general_model = GeneralModel.load(fpath)
         self.build()
 
@@ -732,12 +756,9 @@ class GeneralFitModel(Model):
 
     def build(self):
         self.general_model.build_func()
-
-
-
-
-
-
+        comps = self.general_model.get_compartments()
+        self.exp_dep_params = None
+        self.update_model_options(n_spec=len(comps), spec_names=comps)
 
     def __getattr__(self, item):
         return self.general_model.__getattribute__(item)
@@ -746,17 +767,15 @@ class GeneralFitModel(Model):
         """Initialize the parameters for current model options"""
         super(GeneralFitModel, self).init_params()
 
-        if self.exps_data is None or not np.iterable(self.exps_data):
-            raise ValueError('Experimental data that are not iterable')
-
-        av_params = set(self.get_all_param_names().keys())
+        av_params = self.get_all_param_names().keys()
         self.exp_dep_params = self.default_exp_dep_params() if self.exp_dep_params is None else self.exp_dep_params
-        self.exp_indep_params = av_params - self.exp_dep_params
+        self.exp_indep_params = []
+        for par in av_params:  # keep the order
+            if par not in self.exp_dep_params:
+                self.exp_indep_params.append(par)
 
-        def add_params(param_set: set, dict_params: dict,
-                       species_visible: [dict] = None, par_format=lambda name: name):
-            has_been = False
-            for par in param_set:
+        def add_params(param_list: list, dict_params: dict, par_format=lambda name: name):
+            for par in param_list:
                 f_par_name = par_format(par)
 
                 vary = True
@@ -764,23 +783,17 @@ class GeneralFitModel(Model):
                 min = -np.inf
                 if self.is_j_par(par):
                     dict_params['j'].append(f_par_name)
+                    try:
+                        value = self.general_model.initial_conditions[par]  # TODO>>>--
+                    except KeyError:
+                        pass
                     vary = False
-                    if self.sequential:
-                        value = 0 if has_been else 1
-                        has_been = True
-
                 elif self.is_rate_par(par):
                     dict_params['rates'].append(f_par_name)
                     min = 0
-
                 elif self.is_amp_par(par):
                     dict_params['amps'].append(f_par_name)
                     vary = not self.varpro
-
-                    if species_visible is not None and par in species_visible:
-                        value = 1 if species_visible[par] else 0
-                    else:
-                        value = 1
                 elif self.is_intercept(par):
                     dict_params['intercept'] = f_par_name
                     vary = self.fit_intercept_varpro and not self.varpro
@@ -788,12 +801,11 @@ class GeneralFitModel(Model):
                 else:
                     value = 0
 
-                dict_params['all'].append(f_par_name)
                 self.params.add(f_par_name, min=min, max=np.inf, value=value, vary=vary)
                 # add an enabled attribute for each parameter
                 self.params[f_par_name].enabled = True
 
-        params_indep = dict(all=[], rates=[], j=[], amps=[], intercept='')
+        params_indep = dict(rates=[], j=[], amps=[], intercept='')
 
         n = len(self.exps_data)
 
@@ -804,13 +816,7 @@ class GeneralFitModel(Model):
         # add experiment dependent parameters
         for i in range(n):
             add_params(self.exp_dep_params, self.param_names_dict[i],
-                       species_visible=self.spec_visible[i],
                        par_format=lambda name: self.format_exp_par(name, i))
-
-            self.param_names_dict[i]['all'].sort()
-            self.param_names_dict[i]['j'].sort()
-            self.param_names_dict[i]['rates'].sort()
-            self.param_names_dict[i]['amps'].sort()
 
     def _get_traces(self, x_data, rates, j):
         if x_data[0] > 0:  # initial conditions are valid for time=0
@@ -851,7 +857,15 @@ class GeneralFitModel(Model):
             j = np.asarray([self.params[p].value for p in par_names['j']])
             ks = np.asarray([self.params[p].value for p in par_names['rates']])
 
-            traces = self._get_traces(x, ks, j)  # simulate
+            # transform ks to 2d array, needed for general model
+            if self.show_backward_rates:
+                rates = np.empty((ks.shape[0] // 2, 2))
+                rates[:, 0] = ks[::2]
+                rates[:, 1] = ks[1::2]
+            else:
+                rates = np.vstack((ks, np.ones(ks.shape[0]))).T
+
+            traces = self._get_traces(x, rates, j)  # simulate
 
             if self.varpro:
                 A = traces[:, list(visible.values())]  # select only visible species

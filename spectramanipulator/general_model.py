@@ -186,12 +186,20 @@ class GeneralModel:
     def get_rates(self, get_backwards_rates=True, append_values=True):
         rates = []
 
+        # for el in self.elem_reactions:
+        #     name = f"k({','.join(el['from_comp'])}\u2192{','.join(el['to_comp'])})"
+        #     rates.append([name, el['forward_rate']] if append_values else name)
+        #
+        #     if get_backwards_rates:
+        #         name = f"k({','.join(el['to_comp'])}\u2192{','.join(el['from_comp'])})"
+        #         rates.append([name, el['backward_rate']] if append_values else name)
+
         for el in self.elem_reactions:
-            name = f"k({','.join(el['from_comp'])}\u2192{','.join(el['to_comp'])})"
+            name = f"k_{'_'.join(el['from_comp'])}_{'_'.join(el['to_comp'])}"
             rates.append([name, el['forward_rate']] if append_values else name)
 
             if get_backwards_rates:
-                name = f"k({','.join(el['to_comp'])}\u2192{','.join(el['from_comp'])})"
+                name = f"k_{'_'.join(el['to_comp'])}_{'_'.join(el['from_comp'])}"
                 rates.append([name, el['backward_rate']] if append_values else name)
 
         return rates
