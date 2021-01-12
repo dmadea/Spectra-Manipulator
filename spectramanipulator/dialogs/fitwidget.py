@@ -7,7 +7,7 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QMessageBox, QLineEdit, QCheckBox, QFileDialog
 import numpy as np
 
-from .checkbox import CheckBoxRC
+from .checkbox_rc import CheckBoxRC
 
 from spectramanipulator.settings import Settings
 from spectramanipulator.logger import Logger
@@ -16,6 +16,7 @@ from spectramanipulator.console import Console
 from spectramanipulator.spectrum import fi
 from spectramanipulator.dialogs.trust_reg_refl_option_dialog import TrustRegionReflOptionDialog
 import spectramanipulator
+from .param_settings_dialog import ParamSettingsDialog
 
 import pyqtgraph as pg
 
@@ -56,7 +57,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     _instance = None
 
     # maximum number of parameters
-    max_param_count = 25
+    max_param_count = 45
 
     def __init__(self, dock_widget, accepted_func, node: [SpectrumItem, SpectrumItemGroup] = None, parent=None):
         super(FitWidget, self).__init__(parent)
@@ -82,7 +83,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.lr = None  # linear region item
         self.show_region_checked_changed()
 
-        self.current_model = None  # actual model, it could be general model or predefined model
+        # self.current_model = None  # actual model, it could be general model or predefined model
         self._general_model = None
 
         self.cbVarProAmps.name = "varpro"
@@ -122,7 +123,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.cbFitBlackColor.toggled.connect(self._replot)
         self.cbShowRegion.toggled.connect(self.show_region_checked_changed)
         self.tbAlgorithmSettings.clicked.connect(self.tbAlgorithmSettings_clicked)
-        self.tabWidget.currentChanged.connect(self.tabWidget_index_changed)
+        # self.tabWidget.currentChanged.connect(self.tabWidget_index_changed)
 
         # specific kinetic model setup
 
@@ -245,7 +246,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 param_layout.addWidget(err, i + 1, 5, 1, 1)
 
         def set_tab_order(dict_fields: dict):
-            for i in range(self.max_param_count):
+            for _ in range(self.max_param_count):
                 for key in dict_fields.keys():
                     for first, second in zip(dict_fields[key][:-1], dict_fields[key][1:]):
                         self.setTabOrder(first, second)
@@ -388,11 +389,13 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         except ValueError:
             pass
 
-    def tabWidget_index_changed(self):
-        if self.tabWidget.currentIndex() == 0:  # predefined model
-            self.current_model = self._predefined_model
-        else:
-            self.current_model = self._general_model
+    # def tabWidget_index_changed(self):
+    #     pass
+    #     # Logger.debug('tabWidget_index_changed called')
+    #     # if self.tabWidget.currentIndex() == 0:  # predefined model
+    #     #     self.current_model = self._predefined_model
+    #     # else:
+    #     #     self.current_model = self._general_model
 
     def create_tab_widget(self, tab_widget):
         widget = QtWidgets.QWidget(tab_widget)
@@ -448,7 +451,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     def check_state(checked):
         return Qt.Checked if checked else 0
 
-    def save_general_model_as(self):
+    def save_general_model_as(self):  # TODO ---->>>
         if self._general_model is None:
             return
         curr_model_path = self.gen_models_paths[self.cbGenModels.currentIndex()]
@@ -505,11 +508,11 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.setup_fields(self._general_model)
 
     def cbGeneralModelDepParams_check_changed(self, checked_abbrs):
-        if self.cbGeneralModelDepParams_changing or self.current_model is None:
+        if self.cbGeneralModelDepParams_changing:
             return
         Logger.debug('cbGeneralModelDepParams_check_changed')
 
-        self.current_model.update_model_options(exp_dep_params=checked_abbrs)
+        self._general_model.update_model_options(exp_dep_params=checked_abbrs)
         self.setup_fields(self._general_model)
 
     def cbPredefModelDepParams_check_changed(self, checked_abbrs):
@@ -517,28 +520,32 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             return
         Logger.debug('cbPredefModelDepParams_check_changed')
 
-        self.current_model.update_model_options(exp_dep_params=set(checked_abbrs))
+        self._predefined_model.update_model_options(exp_dep_params=set(checked_abbrs))
         self.setup_fields(self._predefined_model)
 
     def species_visible_checkbox_toggled(self, checked):
-        if self.current_model is None:
+        model = self._predefined_model if self.tabWidget.currentIndex() == 0 else self._general_model
+
+        if model is None or self.setting_params:
             return
 
         cb = self.sender()
         Logger.debug('species_visible_checkbox_toggled', cb.exp_index, cb.text())
 
         if cb.right_button_pressed:
-            self.current_model.set_all_spec_visible(checked, cb.text())
+            model.set_all_spec_visible(checked, cb.text())
         else:
-            self.current_model.spec_visible[cb.exp_index][cb.text()] = checked
+            model.spec_visible[cb.exp_index][cb.text()] = checked
 
-        self.current_model.update_model_options()
+        model.update_model_options()
         self.setup_fields()
 
     def transfer_param_to_model(self, param_type: str, value):
         """also handles enabling of lower and upper text fields"""
         if self.setting_params:
             return
+
+        model = self._predefined_model if self.tabWidget.currentIndex() == 0 else self._general_model
 
         par_name = self.sender().par.text()
         if par_name == '':
@@ -555,13 +562,13 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
             # if right mouse button was pressed, fix/unfix all experiments params
             if self.sender().right_button_pressed:
-                self.current_model.fix_all_exp_dep_params(value, par_name)
+                model.fix_all_exp_dep_params(value, par_name)
                 self.setup_fields()
                 return
 
         # print('par name:', par_name, 'type', param_type, 'value', value)
         try:
-            self.current_model.params[par_name].__setattr__(param_type, value)
+            model.params[par_name].__setattr__(param_type, value)
         except KeyError as e:
             print(e.__repr__())
 
@@ -595,14 +602,19 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             fields['errors'][i].setVisible(visible)
 
     def setup_fields(self, model=None):
+        """Transfer parameters from model to all fields"""
         if model is None:
-            model = self.current_model
+            model = self._predefined_model if self.tabWidget.currentIndex() == 0 else self._general_model
 
         Logger.debug('setup_field')
-        self.setting_params = True
+        self.setting_params = True  # prevent calling transfer_param_to_model and species_visible_checkbox_toggled
 
-        param_fields = self.pred_param_fields if model == self._predefined_model else self.general_param_fields
-        vis_fields = self.pred_spec_visible_fields if model == self._predefined_model else self.general_spec_visible_fields
+        if model == self._predefined_model:
+            param_fields = self.pred_param_fields
+            vis_fields = self.pred_spec_visible_fields
+        else:
+            param_fields = self.general_param_fields
+            vis_fields = self.general_spec_visible_fields
 
         self._fill_fields(param_fields['exp_independent'], model.get_model_indep_params_list())
 
@@ -623,14 +635,38 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.setting_params = False
 
     def exp_dep_param_sett_clicked(self):
-        if self.current_model is None:
+        model = self._predefined_model if self.tabWidget.currentIndex() == 0 else self._general_model
+
+        if model is None or self.setting_params:
             return
 
+        param_fields = self.pred_param_fields if model == self._predefined_model else self.general_param_fields
+        par_names = list(model.exp_dep_params)
 
+        exp_dep_params = []
 
+        for i in range(len(par_names)):  # number of parameters
+            lst_vals = []
+            d = dict(name=par_names[i], values=lst_vals)
+            for j in range(len(self.node)):  # number of experiments
+                lst_vals.append(param_fields['exp_dependent'][j]['values'][i].text())
+            exp_dep_params.append(d)
 
+        def set_result():
+            for i in range(len(psd.exp_dep_params)):  # number of parameters
+                for j in range(len(self.node)):  # number of experiments
+                    par_value = psd.exp_dep_params[i]['values'][j]
+                    par_name = param_fields['exp_dependent'][j]['params'][i].text()
 
+                    try:
+                        model.params[par_name].value = par_value
+                    except KeyError as e:
+                        print(e.__repr__())
 
+            self.setup_fields()  # update fields
+
+        psd = ParamSettingsDialog(exp_dep_params, set_result=set_result)
+        psd.show()
 
     def general_model_setup_dep_params(self):
         self.cbGeneralModelDepParams_changing = True
@@ -645,6 +681,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             self.cbGeneralModelDepParams.set_check_state(i, abbrs[i] in self._general_model.exp_dep_params)
 
         self.cbGeneralModelDepParams_changing = False
+        # self.cbGeneralModelDepParams_check_changed()
         self.cbGeneralModelDepParams.update_text()
 
     def n_spec_changed(self):
@@ -675,25 +712,25 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if self.setting_params:
             return
 
+        model = self._predefined_model if self.tabWidget.currentIndex() == 0 else self._general_model
+
         opt_name = self.sender().name
 
         opts = {opt_name: value}
 
-        self.current_model.update_model_options(**opts)
+        model.update_model_options(**opts)
         self.setup_fields()
 
     def setup_general_model(self):
         data = [sp.data for sp in self.node] if self.node is not None else None
         self._general_model = fitmodels.GeneralFitModel(data, varpro=self.cbVarProAmps.isChecked(),
                                                         fit_intercept_varpro=self.cbVarProIntercept.isChecked())
-
         self.cbGenModel_changed()
 
     def predefined_model_changed(self):
         # initialize new model
         data = [sp.data for sp in self.node] if self.node is not None else None
         self._predefined_model = self.models[self.cbModel.currentIndex()](data, n_spec=int(self.sbSpeciesCount.value()))
-        self.tabWidget_index_changed()
 
         self.setup_pred_model_options()
 
@@ -702,7 +739,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     def setup_pred_model_options(self):
         """Add option fields that are associated with the selected model"""
 
-        opts = self.current_model.model_options()
+        opts = self._predefined_model.model_options()
 
         # delete all widgets in grid_layout, use walrus operator here
         for w in self.model_option_widgets:
@@ -779,7 +816,9 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         #     QMessageBox.warning(self, 'Fitting Error', e.__str__(), QMessageBox.Ok)
 
     def _simulate(self):
-        if self.current_model is None:
+        model = self._predefined_model if self.tabWidget.currentIndex() == 0 else self._general_model
+
+        if model is None:
             return
 
         try:
@@ -788,22 +827,23 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             QMessageBox.warning(self, "Range", "Fitting range is not valid!", QMessageBox.Ok)
             return
 
-        self.current_model.set_ranges((x0, x1))
-        self.current_model.weight_func = self.res_weights[self.cbResWeighting.currentIndex()]['func']
+        model.set_ranges((x0, x1))
+        model.weight_func = self.res_weights[self.cbResWeighting.currentIndex()]['func']
 
         start_time = time.perf_counter()
-        x_vals, fits, residuals = self.current_model.simulate()
+        x_vals, fits, residuals = model.simulate()
         end_time = time.perf_counter()
         Logger.debug((end_time - start_time) * 1e3, 'ms for simulation')
 
-        if self.current_model.varpro:
+        if model.varpro:
             self.setup_fields()
 
         self.plot_fits(x_vals, fits, residuals)
 
     def _fit(self):
+        model = self._predefined_model if self.tabWidget.currentIndex() == 0 else self._general_model
 
-        if self.current_model is None:
+        if model is None:
             return
 
         try:
@@ -812,12 +852,12 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             QMessageBox.warning(self, "Range", "Fitting range is not valid!", QMessageBox.Ok)
             return
 
-        self.current_model.set_ranges((x0, x1))
-        self.current_model.weight_func = self.res_weights[self.cbResWeighting.currentIndex()]['func']
+        model.set_ranges((x0, x1))
+        model.weight_func = self.res_weights[self.cbResWeighting.currentIndex()]['func']
 
         start_time = time.perf_counter()
 
-        minimizer = Minimizer(self.current_model.residuals, self.current_model.params)
+        minimizer = Minimizer(model.residuals, model.params)
         method = self.methods[self.cbMethod.currentIndex()]['abbr']
 
         result = minimizer.minimize(method=method, **self.model_options_dict)  # fit
@@ -826,18 +866,18 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         Logger.debug(end_time - start_time, 's for fitting')
 
         values_errors = np.zeros((len(result.params), 2), dtype=np.float64)
-        for i, (p, new_p) in enumerate(zip(self.current_model.params.values(), result.params.values())):
+        for i, (p, new_p) in enumerate(zip(model.params.values(), result.params.values())):
             p.value = new_p.value  # update fitted parameters
             values_errors[i, 0] = p.value
             values_errors[i, 1] = p.stderr if p.stderr is not None else 0
 
-        x_vals, fits, residuals = self.current_model.simulate()
+        x_vals, fits, residuals = model.simulate()
 
         self.setup_fields()
         self.plot_fits(x_vals, fits, residuals)
 
         self.fit_result = FitResult(result, minimizer, values_errors,
-                                    self.current_model)
+                                    model)
 
     #
     # def _fit(self):

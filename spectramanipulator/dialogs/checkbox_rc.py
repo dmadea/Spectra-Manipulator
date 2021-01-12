@@ -2,7 +2,7 @@
 
 from PyQt5.QtWidgets import QCheckBox
 from PyQt5.QtGui import QMouseEvent
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt
 
 
 class CheckBoxRC(QCheckBox):
@@ -16,13 +16,10 @@ class CheckBoxRC(QCheckBox):
 
     def mousePressEvent(self, e: QMouseEvent):
         if e.button() == Qt.LeftButton:
-            # print('left button clicked')
             self.right_button_pressed = False
             super(CheckBoxRC, self).mousePressEvent(e)
         elif e.button() == Qt.RightButton:
-            # print('right button clicked')
             self.right_button_pressed = True
             self.setChecked(not self.isChecked())
-            # self.right_button_clicked.emit(checked)
 
 

@@ -8,7 +8,7 @@ from spectramanipulator.dialogs.genericinputdialog import GenericInputDialog
 class TrustRegionReflOptionDialog(GenericInputDialog):
 
     def __init__(self, ftol=1e-8, xtol=1e-8, gtol=1e-8, loss: str = 'linear',
-                 max_nfev=None, verbose: int = 0, set_result=None):
+                 max_nfev=None, verbose: int = 2, set_result=None):
 
         if self.is_opened:
             return
@@ -79,7 +79,7 @@ class TrustRegionReflOptionDialog(GenericInputDialog):
     @staticmethod
     def default_opts():
         return dict(ftol=1e-8, xtol=1e-8, gtol=1e-8, loss='linear',
-                    max_nfev=None, verbose=0)
+                    max_nfev=None, verbose=2)
 
     def accept(self):
         # self.options['method'] = self.minim_alg_opts[self.alg_cb.currentIndex()]['opt']
