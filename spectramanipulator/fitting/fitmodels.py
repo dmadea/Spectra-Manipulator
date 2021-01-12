@@ -236,6 +236,26 @@ class Model(object):
 
         return pars_list
 
+    def fix_all_exp_dep_params(self, vary: bool, par_name: str):
+        if par_name in self.exp_indep_params:
+            return
+
+        all_params = map(lambda d: d['all'], self.param_names_dict)
+
+        exp_entry = list(filter(lambda lst: par_name in lst, all_params))[0]
+
+        index = exp_entry.index(par_name)
+        for exp_pars in map(lambda d: d['all'], self.param_names_dict):
+            parameter = self.params[exp_pars[index]]
+            parameter.vary = vary
+
+    def set_all_spec_visible(self, visible: bool, species: str):
+        if species not in self.spec_visible[0]:
+            return
+
+        for vis_exps in self.spec_visible:
+            vis_exps[species] = visible
+
     def model_options(self):
         """Returns list of dictionaries of all additional options for a given model that
         will be added to fitwidget"""
@@ -802,10 +822,11 @@ class GeneralFitModel(Model):
                     value = 0
 
                 self.params.add(f_par_name, min=min, max=np.inf, value=value, vary=vary)
+                dict_params['all'].append(f_par_name)
                 # add an enabled attribute for each parameter
                 self.params[f_par_name].enabled = True
 
-        params_indep = dict(rates=[], j=[], amps=[], intercept='')
+        params_indep = dict(all=[], rates=[], j=[], amps=[], intercept='')
 
         n = len(self.exps_data)
 

@@ -7,6 +7,8 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QMessageBox, QLineEdit, QCheckBox, QFileDialog
 import numpy as np
 
+from .checkbox import CheckBoxRC
+
 from spectramanipulator.settings import Settings
 from spectramanipulator.logger import Logger
 from spectramanipulator.treeview.item import SpectrumItem, SpectrumItemGroup
@@ -138,7 +140,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.cbPredefModelDepParams.check_changed.connect(self.cbPredefModelDepParams_check_changed)
 
         self.cbGeneralModelDepParams = ComboBoxCB(self)
-        # self.cbGeneralModelDepParams_changing = False
+        self.cbGeneralModelDepParams_changing = False
         self.cbGeneralModelDepParams.check_changed.connect(self.cbGeneralModelDepParams_check_changed)
 
         hbox = QtWidgets.QHBoxLayout(self)
@@ -147,6 +149,14 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         hbox2.addWidget(QtWidgets.QLabel('Selected experiment-dependent parameters:'))
         hbox.addWidget(self.cbPredefModelDepParams)
         hbox2.addWidget(self.cbGeneralModelDepParams)
+        btnExperimentParamsSettings_predefined = QtWidgets.QToolButton()
+        btnExperimentParamsSettings_genearal = QtWidgets.QToolButton()
+        btnExperimentParamsSettings_predefined.setText('...')
+        btnExperimentParamsSettings_genearal.setText('...')
+        btnExperimentParamsSettings_predefined.clicked.connect(self.exp_dep_param_sett_clicked)
+        btnExperimentParamsSettings_genearal.clicked.connect(self.exp_dep_param_sett_clicked)
+        hbox.addWidget(btnExperimentParamsSettings_predefined)
+        hbox2.addWidget(btnExperimentParamsSettings_genearal)
         self.verticalLayout.addLayout(hbox)
         self.verticalLayout_2.addLayout(hbox2)
 
@@ -189,7 +199,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 lb = QLineEdit()  # lower bound text field
                 val = QLineEdit()  # value text field
                 ub = QLineEdit()  # upper bound text field
-                fix = QCheckBox()  # fixed checkbox
+                fix = CheckBoxRC()  # fixed checkbox
                 err = QLineEdit()  # std err text field
 
                 par.setReadOnly(True)
@@ -255,10 +265,10 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
             # setup species visible checkboxes
             for _ in range(self.max_param_count):
-                cb_predefined_model = QCheckBox('')
+                cb_predefined_model = CheckBoxRC('')
                 cb_predefined_model.exp_index = i
                 cb_predefined_model.setVisible(False)
-                cb_general_model = QCheckBox('')
+                cb_general_model = CheckBoxRC('')
                 cb_general_model.exp_index = i
                 cb_general_model.setVisible(False)
 
@@ -268,8 +278,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 self.pred_spec_visible_fields[i].append(cb_predefined_model)
                 self.pred_species_hlayouts[i].addWidget(cb_predefined_model)
 
-                self.general_spec_visible_fields[i].append(cb_predefined_model)
-                self.general_species_hlayouts[i].addWidget(cb_predefined_model)
+                self.general_spec_visible_fields[i].append(cb_general_model)
+                self.general_species_hlayouts[i].addWidget(cb_general_model)
             self.pred_species_hlayouts[i].addSpacerItem(QtWidgets.QSpacerItem(1, 1,
                                                         QtWidgets.QSizePolicy.Expanding,
                                                         QtWidgets.QSizePolicy.Fixed))
@@ -472,64 +482,13 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # set saved model as current index
         self.cbGenModels.setCurrentIndex(k)
 
-    # def get_params_from_fields(self):
-    #     if self.current_general_model is None:
-    #         return
-    #
-    #     n_comps = len(self.current_general_model.get_compartments())
-    #     n_params = len(self.current_general_model.elem_reactions)
-    #
-    #     init_cond = np.empty(n_comps, dtype=np.float64)
-    #     coefs = np.empty(n_comps, dtype=np.float64)
-    #     rates = np.zeros((n_params, 2), dtype=np.float64)
-    #
-    #     for i, (i_idx, coef_idx) in enumerate(zip(range(n_comps), range(n_comps, 2*n_comps))):
-    #         init_cond[i] = float(self.value_list[i_idx][1].text())
-    #         coefs[i] = float(self.value_list[coef_idx][1].text())
-    #
-    #     show_bw_rates = self.cbShowBackwardRates.isChecked()
-    #     last_idx = 2*n_comps + n_params * (2 if show_bw_rates else 1)
-    #     forward_idxs = range(2*n_comps, last_idx, (2 if show_bw_rates else 1))
-    #
-    #     for i, idx in enumerate(forward_idxs):
-    #         rates[i, 0] = float(self.value_list[idx][1].text())
-    #         if show_bw_rates:
-    #             rates[i, 1] = float(self.value_list[idx + 1][1].text())
-    #
-    #     return init_cond, coefs, rates, float(self.value_list[last_idx][1].text())
-
-    # def get_values_from_params(self, params):
-    #
-    #     n_comps = len(self.current_general_model.get_compartments())
-    #     n_params = len(self.current_general_model.elem_reactions)
-    #
-    #     init_cond = np.empty(n_comps, dtype=np.float64)
-    #     coefs = np.empty(n_comps, dtype=np.float64)
-    #     rates = np.zeros((n_params, 2), dtype=np.float64)
-    #
-    #     l_params = list(params.values())
-    #
-    #     for i, (i_idx, coef_idx) in enumerate(zip(range(n_comps), range(n_comps, 2*n_comps))):
-    #         init_cond[i] = l_params[i_idx].value
-    #         coefs[i] = l_params[coef_idx].value
-    #
-    #     show_bw_rates = self.cbShowBackwardRates.isChecked()
-    #     forward_idxs = range(2*n_comps, 2*n_comps + n_params * (2 if show_bw_rates else 1), (2 if show_bw_rates else 1))
-    #
-    #     for i, idx in enumerate(forward_idxs):
-    #         rates[i, 0] = l_params[idx].value
-    #         if show_bw_rates:
-    #             rates[i, 1] = l_params[idx + 1].value
-    #
-    #     return init_cond, coefs, rates, l_params[-1]  # last is intercept
-
     def cbGenModel_changed(self):
         if self._general_model is None:
             return
 
         self._general_model.load_from_file(self.gen_models_paths[self.cbGenModels.currentIndex()])
         self.pteScheme.setPlainText(self._general_model.scheme)
-
+        self.general_model_setup_dep_params()
         self.setup_fields(self._general_model)
 
     def cbShowBackwardRates_checked_changed(self):
@@ -537,13 +496,17 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             return
 
         self._general_model.update_model_options(show_backward_rates=self.cbShowBackwardRates.isChecked())
+        self.general_model_setup_dep_params()
         self.setup_fields(self._general_model)
 
     def build_gen_model(self):
         self._general_model.load_from_scheme(self.pteScheme.toPlainText())
+        self.general_model_setup_dep_params()
         self.setup_fields(self._general_model)
 
     def cbGeneralModelDepParams_check_changed(self, checked_abbrs):
+        if self.cbGeneralModelDepParams_changing or self.current_model is None:
+            return
         Logger.debug('cbGeneralModelDepParams_check_changed')
 
         self.current_model.update_model_options(exp_dep_params=checked_abbrs)
@@ -554,8 +517,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             return
         Logger.debug('cbPredefModelDepParams_check_changed')
 
-        # self.current_model.update_model_options(exp_dep_params=set(checked_abbrs))
-        # self.setup_fields()
+        self.current_model.update_model_options(exp_dep_params=set(checked_abbrs))
+        self.setup_fields(self._predefined_model)
 
     def species_visible_checkbox_toggled(self, checked):
         if self.current_model is None:
@@ -564,7 +527,11 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         cb = self.sender()
         Logger.debug('species_visible_checkbox_toggled', cb.exp_index, cb.text())
 
-        self.current_model.spec_visible[cb.exp_index][cb.text()] = checked
+        if cb.right_button_pressed:
+            self.current_model.set_all_spec_visible(checked, cb.text())
+        else:
+            self.current_model.spec_visible[cb.exp_index][cb.text()] = checked
+
         self.current_model.update_model_options()
         self.setup_fields()
 
@@ -581,10 +548,16 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 value = float(value)
             except ValueError:
                 return
-        else:
+        else:  # handles fix toggle
             # set enabled for lower and upper bound fields
             self.sender().lb.setEnabled(value)
             self.sender().ub.setEnabled(value)
+
+            # if right mouse button was pressed, fix/unfix all experiments params
+            if self.sender().right_button_pressed:
+                self.current_model.fix_all_exp_dep_params(value, par_name)
+                self.setup_fields()
+                return
 
         # print('par name:', par_name, 'type', param_type, 'value', value)
         try:
@@ -625,10 +598,11 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if model is None:
             model = self.current_model
 
-        Logger.debug('pred_setup_field')
+        Logger.debug('setup_field')
         self.setting_params = True
 
         param_fields = self.pred_param_fields if model == self._predefined_model else self.general_param_fields
+        vis_fields = self.pred_spec_visible_fields if model == self._predefined_model else self.general_spec_visible_fields
 
         self._fill_fields(param_fields['exp_independent'], model.get_model_indep_params_list())
 
@@ -641,12 +615,37 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 visible = len(spec_names) > j
 
                 if visible:
-                    self.pred_spec_visible_fields[i][j].setText(spec_names[j])
-                    self.pred_spec_visible_fields[i][j].setChecked(model.spec_visible[i][spec_names[j]])
+                    vis_fields[i][j].setText(spec_names[j])
+                    vis_fields[i][j].setChecked(model.spec_visible[i][spec_names[j]])
 
-                self.pred_spec_visible_fields[i][j].setVisible(visible)
+                vis_fields[i][j].setVisible(visible)
 
         self.setting_params = False
+
+    def exp_dep_param_sett_clicked(self):
+        if self.current_model is None:
+            return
+
+
+
+
+
+
+
+    def general_model_setup_dep_params(self):
+        self.cbGeneralModelDepParams_changing = True
+
+        av_params = self._general_model.get_all_param_names()  # available parameters
+
+        # set default parameters to checkbox of model dependent parameters
+        # check the default values
+        self.cbGeneralModelDepParams.set_data(av_params)
+        abbrs = list(self.cbGeneralModelDepParams.items.keys())
+        for i in range(self.cbGeneralModelDepParams.items.__len__()):
+            self.cbGeneralModelDepParams.set_check_state(i, abbrs[i] in self._general_model.exp_dep_params)
+
+        self.cbGeneralModelDepParams_changing = False
+        self.cbGeneralModelDepParams.update_text()
 
     def n_spec_changed(self):
         Logger.debug('n_spec_changed')
@@ -656,14 +655,15 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self._predefined_model.update_model_options(n_spec=int(self.sbSpeciesCount.value()))
 
         av_params = self._predefined_model.get_all_param_names()  # available parameters
+        default_params = self._predefined_model.default_exp_dep_params()
 
         # set default parameters to checkbox of model dependent parameters
         # check the default values
         self.cbPredefModelDepParams.set_data(av_params)
-        default_dep_params = self._predefined_model.default_exp_dep_params()  # default values
+        # default_dep_params = self._predefined_model.default_exp_dep_params()  # default values
         abbrs = list(self.cbPredefModelDepParams.items.keys())
         for i in range(self.cbPredefModelDepParams.items.__len__()):
-            self.cbPredefModelDepParams.set_check_state(i, abbrs[i] in default_dep_params)
+            self.cbPredefModelDepParams.set_check_state(i, abbrs[i] in default_params)
 
         self.cbPredefModelDepParams_changing = False
         self.cbPredefModelDepParams.update_text()
