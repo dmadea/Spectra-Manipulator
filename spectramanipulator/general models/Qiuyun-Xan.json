@@ -1,0 +1,56 @@
+{
+    "scheme": "Xan = GS\n2Xan = Xan + GS\nXan + Q = T\n2T = T + Q",
+    "initial_conditions": {
+        "Xan": 1,
+        "GS": 0,
+        "Q": 0,
+        "T": 0
+    },
+    "elementary_reactions": [
+        {
+            "from_comp": [
+                "Xan"
+            ],
+            "to_comp": [
+                "GS"
+            ],
+            "forward_rate": 368148.7775548146,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "Xan",
+                "Xan"
+            ],
+            "to_comp": [
+                "Xan",
+                "GS"
+            ],
+            "forward_rate": 103734.50511863428,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "Xan",
+                "Q"
+            ],
+            "to_comp": [
+                "T"
+            ],
+            "forward_rate": 7627.535496449294,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "T",
+                "T"
+            ],
+            "to_comp": [
+                "T",
+                "Q"
+            ],
+            "forward_rate": 166778.51818319538,
+            "backward_rate": 0.0
+        }
+    ]
+}

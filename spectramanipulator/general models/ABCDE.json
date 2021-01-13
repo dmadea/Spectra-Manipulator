@@ -1,0 +1,52 @@
+{
+    "scheme": "A = B = C = D = E",
+    "initial_conditions": {
+        "A": 1.0,
+        "B": 0.0,
+        "C": 0.0,
+        "D": 0.0,
+        "E": 0.0
+    },
+    "elementary_reactions": [
+        {
+            "from_comp": [
+                "A"
+            ],
+            "to_comp": [
+                "B"
+            ],
+            "forward_rate": 1,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "B"
+            ],
+            "to_comp": [
+                "C"
+            ],
+            "forward_rate": 0.5,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "C"
+            ],
+            "to_comp": [
+                "D"
+            ],
+            "forward_rate": 0.2,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "D"
+            ],
+            "to_comp": [
+                "E"
+            ],
+            "forward_rate": 0.1,
+            "backward_rate": 0.0
+        }
+    ]
+}

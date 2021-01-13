@@ -85,6 +85,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         # self.current_model = None  # actual model, it could be general model or predefined model
         self._general_model = None
+        self.saving_general_model = False
 
         self.cbVarProAmps.name = "varpro"
         self.cbVarProAmps.toggled.connect(self.model_option_changed)
@@ -104,14 +105,12 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.leX0.focus_lost.connect(self.update_region)
         self.leX1.focus_lost.connect(self.update_region)
 
-        # self.lr.sigRegionChangeFinished.connect(self.update_initial_values)
         self.update_region_text_values()
 
         self.btnFit.clicked.connect(self.fit)
         self.btnSimulateModel.clicked.connect(self.simulate_model)
         self.btnPrintReport.clicked.connect(self.print_report)
         self.btnClearPlot.clicked.connect(self.clear_plot)
-        # self.btnPrintDiffEquations.clicked.connect(self.print_diff_eq)
         self.btnOK.clicked.connect(self.accept)
         self.btnCancel.clicked.connect(self.reject)
         self.cbGenModels.currentIndexChanged.connect(self.cbGenModel_changed)
@@ -123,9 +122,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.cbFitBlackColor.toggled.connect(self._replot)
         self.cbShowRegion.toggled.connect(self.show_region_checked_changed)
         self.tbAlgorithmSettings.clicked.connect(self.tbAlgorithmSettings_clicked)
-        # self.tabWidget.currentChanged.connect(self.tabWidget_index_changed)
 
-        # specific kinetic model setup
+        # predefined kinetic model setup
 
         self.ppteScheme_highlighter = KineticModelHighlighter(self.pteScheme.document())
 
@@ -389,14 +387,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         except ValueError:
             pass
 
-    # def tabWidget_index_changed(self):
-    #     pass
-    #     # Logger.debug('tabWidget_index_changed called')
-    #     # if self.tabWidget.currentIndex() == 0:  # predefined model
-    #     #     self.current_model = self._predefined_model
-    #     # else:
-    #     #     self.current_model = self._general_model
-
     def create_tab_widget(self, tab_widget):
         widget = QtWidgets.QWidget(tab_widget)
         vl = QtWidgets.QVBoxLayout(widget)
@@ -451,46 +441,49 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     def check_state(checked):
         return Qt.Checked if checked else 0
 
-    def save_general_model_as(self):  # TODO ---->>>
+    def save_general_model_as(self):
         if self._general_model is None:
             return
+
         curr_model_path = self.gen_models_paths[self.cbGenModels.currentIndex()]
-        fil = "Json (*.json)"
+        file = "Json (*.json)"
 
         filepath = QFileDialog.getSaveFileName(caption="Save Custom Kinetic Model",
                                                directory=curr_model_path,
-                                               filter=fil, initialFilter=fil)
+                                               filter=file, initialFilter=file)
         if filepath[0] == '':
             return
 
         try:
-            init, _, rates, _ = self.get_params_from_fields()
             self._general_model.scheme = self.pteScheme.toPlainText()
+            j = np.asarray([self._general_model.params[p].value for p in self._general_model.param_names_dict[0]['j']])
+            rates = self._general_model.get_rate_values(0)
+
             self._general_model.set_rates(rates)
-            self._general_model.initial_conditions = dict(
-                zip(self._general_model.get_compartments(), init))
+            self._general_model.initial_conditions = dict(zip(self._general_model.get_compartments(), j))
             self._general_model.save(filepath[0])
         except Exception as e:
             Logger.message(e.__str__())
             QMessageBox.critical(self, 'Saving error', 'Error, first build the model.', QMessageBox.Ok)
             return
 
+        self.saving_general_model = True
         self.update_general_models()
-        k = 0
+        # set saved model as current index
         for k, fpath in enumerate(self.gen_models_paths):
             fname = os.path.splitext(os.path.split(fpath)[1])[0]
             if fname == os.path.splitext(os.path.split(filepath[0])[1])[0]:
+                self.cbGenModels.setCurrentIndex(k)
                 break
 
-        # set saved model as current index
-        self.cbGenModels.setCurrentIndex(k)
+        self.saving_general_model = False
 
     def cbGenModel_changed(self):
-        if self._general_model is None:
+        if self._general_model is None or self.saving_general_model:
             return
 
         self._general_model.load_from_file(self.gen_models_paths[self.cbGenModels.currentIndex()])
-        self.pteScheme.setPlainText(self._general_model.scheme)
+        self.pteScheme.setPlainText(self._general_model.general_model.scheme)
         self.general_model_setup_dep_params()
         self.setup_fields(self._general_model)
 

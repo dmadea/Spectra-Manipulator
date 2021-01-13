@@ -740,7 +740,7 @@ class GeneralFitModel(Model):
 
         # initial conditions
         pars.update({f'_{name}_0': f'Initial concentration of {name}' for name in comps})
-        pars.update({name: f'Amplitude of {name}' for name in comps})  # amplitudes
+        pars.update({name: f' Amplitude of {name}' for name in comps})  # amplitudes
         pars.update({rate: f'Rate constant {rate}' for rate in
                      self.general_model.get_rates(self.show_backward_rates, False)})  # rate constants
         pars.update({'intercept': 'Intercept'})  # intercept
@@ -776,8 +776,16 @@ class GeneralFitModel(Model):
 
     def build(self):
         self.general_model.build_func()
+        if self.exp_dep_params is not None:
+            all_params = self.get_all_param_names().keys()
+            exp_dep_pars_old = self.exp_dep_params
+
+            self.exp_dep_params = self.default_exp_dep_params()
+            for old_par in exp_dep_pars_old:
+                if old_par in all_params and old_par not in self.exp_dep_params:
+                    self.exp_dep_params.append(old_par)
+
         comps = self.general_model.get_compartments()
-        self.exp_dep_params = None
         self.update_model_options(n_spec=len(comps), spec_names=comps)
 
     def __getattr__(self, item):
@@ -794,6 +802,11 @@ class GeneralFitModel(Model):
             if par not in self.exp_dep_params:
                 self.exp_indep_params.append(par)
 
+        rates_vals = self.general_model.get_rates(self.show_backward_rates, True)
+        rates_dict = {rate[0]: i for i, rate in enumerate(rates_vals)}
+        amps_dict = {name: i for i, name in enumerate(self.spec_names)}
+        j_dict = {f'_{name}_0': i for i, name in enumerate(self.spec_names)}
+
         def add_params(param_list: list, dict_params: dict, par_format=lambda name: name):
             for par in param_list:
                 f_par_name = par_format(par)
@@ -802,17 +815,22 @@ class GeneralFitModel(Model):
                 value = 1
                 min = -np.inf
                 if self.is_j_par(par):
-                    dict_params['j'].append(f_par_name)
+                    dict_params['j'][j_dict[par]] = f_par_name  # place at correct position
                     try:
-                        value = self.general_model.initial_conditions[par]  # TODO>>>--
+                        # get species name from j format = remove initial _ sign and last 2 characters
+                        value = self.general_model.initial_conditions[par[1:-2]]
                     except KeyError:
                         pass
                     vary = False
                 elif self.is_rate_par(par):
-                    dict_params['rates'].append(f_par_name)
+                    dict_params['rates'][rates_dict[par]] = f_par_name
+
+                    f = list(filter(lambda r: par == r[0], rates_vals))  # get rates from general model
+                    if len(f) > 0:
+                        value = f[0][1]
                     min = 0
                 elif self.is_amp_par(par):
-                    dict_params['amps'].append(f_par_name)
+                    dict_params['amps'][amps_dict[par]] = f_par_name
                     vary = not self.varpro
                 elif self.is_intercept(par):
                     dict_params['intercept'] = f_par_name
@@ -826,7 +844,9 @@ class GeneralFitModel(Model):
                 # add an enabled attribute for each parameter
                 self.params[f_par_name].enabled = True
 
-        params_indep = dict(all=[], rates=[], j=[], amps=[], intercept='')
+        params_indep = dict(all=[], rates=[''] * len(rates_dict),
+                            j=[''] * len(j_dict),
+                            amps=[''] * len(amps_dict), intercept='')
 
         n = len(self.exps_data)
 
@@ -856,6 +876,19 @@ class GeneralFitModel(Model):
         # for x_data[0] == 0
         return odeint(self.general_model.func, j, x_data, args=(rates,))
 
+    def get_rate_values(self, exp_num=0):
+        ks = np.asarray([self.params[p].value for p in self.param_names_dict[exp_num]['rates']])
+
+        # transform ks to 2d array, needed for general model
+        if self.show_backward_rates:
+            rates = np.empty((ks.shape[0] // 2, 2))
+            rates[:, 0] = ks[::2]
+            rates[:, 1] = ks[1::2]
+        else:
+            rates = np.vstack((ks, np.zeros(ks.shape[0]))).T
+
+        return rates
+
     def simulate(self, params=None):
         """Simulates the data and returns the list of simulated traces as ndarrays"""
 
@@ -871,20 +904,13 @@ class GeneralFitModel(Model):
 
         lstsq_intercept = self.fit_intercept_varpro and 'intercept' in self.exp_dep_params
 
+        i = 0
         for data, x_range, par_names, visible in zip(self.exps_data, self.ranges, self.param_names_dict, self.spec_visible):
             x, y = get_xy(data, x0=x_range[0], x1=x_range[1])
             x_vals.append(x)
 
             j = np.asarray([self.params[p].value for p in par_names['j']])
-            ks = np.asarray([self.params[p].value for p in par_names['rates']])
-
-            # transform ks to 2d array, needed for general model
-            if self.show_backward_rates:
-                rates = np.empty((ks.shape[0] // 2, 2))
-                rates[:, 0] = ks[::2]
-                rates[:, 1] = ks[1::2]
-            else:
-                rates = np.vstack((ks, np.ones(ks.shape[0]))).T
+            rates = self.get_rate_values(i)
 
             traces = self._get_traces(x, rates, j)  # simulate
 
@@ -917,6 +943,7 @@ class GeneralFitModel(Model):
             res = self.weight_func(fit - y, y)  # residual
             fits.append(fit)
             residuals.append(res)
+            i += 1
 
         return x_vals, fits, residuals
 
