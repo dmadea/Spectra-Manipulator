@@ -17,6 +17,7 @@ from spectramanipulator.spectrum import fi
 from spectramanipulator.dialogs.trust_reg_refl_option_dialog import TrustRegionReflOptionDialog
 import spectramanipulator
 from .param_settings_dialog import ParamSettingsDialog
+from .dial_lineedit import DialLineEdit
 
 import pyqtgraph as pg
 
@@ -57,7 +58,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     _instance = None
 
     # maximum number of parameters
-    max_param_count = 45
+    max_param_count = 25
 
     def __init__(self, dock_widget, accepted_func, node: [SpectrumItem, SpectrumItemGroup] = None, parent=None):
         super(FitWidget, self).__init__(parent)
@@ -194,19 +195,19 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         def add_widgets(dict_fields: dict, param_layout: QtWidgets.QGridLayout):
             for i in range(self.max_param_count):
-                par = QLineEdit()  # parameter text field
                 lb = QLineEdit()  # lower bound text field
-                val = QLineEdit()  # value text field
+                par = QLineEdit()  # value text field
                 ub = QLineEdit()  # upper bound text field
                 fix = CheckBoxRC()  # fixed checkbox
                 err = QLineEdit()  # std err text field
+                val = DialLineEdit(lb_val=lb.text, ub_val=ub.text)  # parameter text field
 
                 par.setReadOnly(True)
                 err.setReadOnly(True)
 
                 # set par as an attribute to all other field to be able to access the param field from them
                 lb.par = par
-                val.par = par
+                val.le.par = par
                 ub.par = par
                 fix.par = par
 
@@ -226,6 +227,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 val.textChanged.connect(lambda value: self.transfer_param_to_model('value', value))
                 ub.textChanged.connect(lambda value: self.transfer_param_to_model('max', value))
                 fix.toggled.connect(lambda value: self.transfer_param_to_model('vary', not value))
+                val.simulation_requested.connect(self._simulate) # simulate
 
                 # put references to dictionary
                 dict_fields['params'].append(par)
