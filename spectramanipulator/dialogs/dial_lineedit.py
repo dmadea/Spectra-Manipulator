@@ -16,7 +16,7 @@ def decor_t2f(func):
     return text2float
 
 
-class DialLineEdit(QWidget):
+class DialLineEdit(QHBoxLayout):
 
     # check_changed = pyqtSignal(list)  # list of abbreviations of checked items
     simulation_requested = pyqtSignal()
@@ -30,27 +30,30 @@ class DialLineEdit(QWidget):
 
         self.le = _DialLineEdit(text, self)
         self.dial = RoundButton(self.le, self)
+        self.addWidget(self.le)
+        self.addWidget(self.dial)
 
-        self.layout = QHBoxLayout(self)
-        self.layout.addWidget(self.le)
-        self.layout.addWidget(self.dial)
-        self.setLayout(self.layout)
+    def setVisible(self, visible):
+        self.le.setVisible(visible)
+        self.dial.setVisible(visible)
+
+    def setEnabled(self, enabled: bool):
+        self.le.setEnabled(enabled)
+        self.dial.setEnabled(enabled)
+        super(DialLineEdit, self).setEnabled(enabled)
 
     def __getattr__(self, item):  # redirect to main QLineEdit
         return self.le.__getattribute__(item)
-
-    # def __setattr__(self, key, value):  # redirect to main QLineEdit
-    #     if not hasattr(self, key):
-    #         self.le.key = value
 
 
 class _DialLineEdit(QLineEdit):
 
     def __init__(self, text: str = '', parent=None):
-        super(_DialLineEdit, self).__init__(text, parent)
-        self.lb_val = self.parent().lb_val  # lower bound func
-        self.ub_val = self.parent().ub_val  # upper bound func
-        self.simulation_requested = self.parent().simulation_requested
+        super(_DialLineEdit, self).__init__(text, None)
+        self.lb_val = parent.lb_val  # lower bound func
+        self.ub_val = parent.ub_val  # upper bound func
+        self.simulation_requested = parent.simulation_requested
+        self.returnPressed.connect(lambda: self.simulation_requested.emit())  # simulate when enter was pressed
 
     def wheelEvent(self, e: QWheelEvent):
         super(_DialLineEdit, self).wheelEvent(e)
@@ -81,11 +84,11 @@ class _DialLineEdit(QLineEdit):
 
 class RoundButton(QToolButton):
     def __init__(self, lineedit, parent=None):
-        super(RoundButton, self).__init__(parent)
+        super(RoundButton, self).__init__(None)
 
-        self.lb_val = self.parent().lb_val  # lower bound func
-        self.ub_val = self.parent().ub_val  # upper bound func
-        self.simulation_requested = self.parent().simulation_requested
+        self.lb_val = parent.lb_val  # lower bound func
+        self.ub_val = parent.ub_val  # upper bound func
+        self.simulation_requested = parent.simulation_requested
 
         # self.left_btn_pressed = False
         self.init_val = None

@@ -227,7 +227,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 val.textChanged.connect(lambda value: self.transfer_param_to_model('value', value))
                 ub.textChanged.connect(lambda value: self.transfer_param_to_model('max', value))
                 fix.toggled.connect(lambda value: self.transfer_param_to_model('vary', not value))
-                val.simulation_requested.connect(self._simulate) # simulate
+                val.simulation_requested.connect(self._simulate)  # simulate
 
                 # put references to dictionary
                 dict_fields['params'].append(par)
@@ -240,7 +240,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                 # add widgets to layout
                 param_layout.addWidget(par, i + 1, 0, 1, 1)
                 param_layout.addWidget(lb, i + 1, 1, 1, 1)
-                param_layout.addWidget(val, i + 1, 2, 1, 1)
+                param_layout.addLayout(val, i + 1, 2, 1, 1)
                 param_layout.addWidget(ub, i + 1, 3, 1, 1)
                 param_layout.addWidget(fix, i + 1, 4, 1, 1)
                 param_layout.addWidget(err, i + 1, 5, 1, 1)
@@ -249,6 +249,12 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             for _ in range(self.max_param_count):
                 for key in dict_fields.keys():
                     for first, second in zip(dict_fields[key][:-1], dict_fields[key][1:]):
+                        if isinstance(first, DialLineEdit):
+                            first = first.le
+
+                        if isinstance(second, DialLineEdit):
+                            second = second.le
+
                         self.setTabOrder(first, second)
 
         add_widgets(self.pred_param_fields['exp_independent'], self.pred_model_indep_params_layout)
