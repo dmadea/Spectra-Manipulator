@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QEvent
 from .gui_fit_widget import Ui_Form
 
 from PyQt5.QtGui import QColor
@@ -127,13 +127,20 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # predefined kinetic model setup
 
         self.ppteScheme_highlighter = KineticModelHighlighter(self.pteScheme.document())
+        self.scrollAreaPredefinedModel.viewport().installEventFilter(self)
+        self.scrollAreaCustomModel.viewport().installEventFilter(self)
 
         self.model_options_grid_layout = QtWidgets.QGridLayout(self)
-        self.verticalLayout.addLayout(self.model_options_grid_layout)
+        self.pred_model_VLayout = QtWidgets.QVBoxLayout(self)
+        self.general_model_VLayout = QtWidgets.QVBoxLayout(self)
+        self.scrollAreaPredefinedModelContent.setLayout(self.pred_model_VLayout)
+        self.scrollAreaCustomModelContent.setLayout(self.general_model_VLayout)
+
+        self.pred_model_VLayout.addLayout(self.model_options_grid_layout)
         self.pred_model_indep_params_layout = self.create_params_layout()
         self.general_model_indep_params_layout = self.create_params_layout()
-        self.verticalLayout.addLayout(self.pred_model_indep_params_layout)
-        self.verticalLayout_2.addLayout(self.general_model_indep_params_layout)
+        self.pred_model_VLayout.addLayout(self.pred_model_indep_params_layout)
+        self.general_model_VLayout.addLayout(self.general_model_indep_params_layout)
 
         self.cbPredefModelDepParams = ComboBoxCB(self)
         self.cbPredefModelDepParams_changing = False
@@ -157,14 +164,14 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         btnExperimentParamsSettings_genearal.clicked.connect(self.exp_dep_param_sett_clicked)
         hbox.addWidget(btnExperimentParamsSettings_predefined)
         hbox2.addWidget(btnExperimentParamsSettings_genearal)
-        self.verticalLayout.addLayout(hbox)
-        self.verticalLayout_2.addLayout(hbox2)
+        self.pred_model_VLayout.addLayout(hbox)
+        self.general_model_VLayout.addLayout(hbox2)
 
         self.tab_widget_pred_model = QtWidgets.QTabWidget(self)
-        self.verticalLayout.addWidget(self.tab_widget_pred_model)
+        self.pred_model_VLayout.addWidget(self.tab_widget_pred_model)
 
         self.tab_widget_general_model = QtWidgets.QTabWidget(self)
-        self.verticalLayout_2.addWidget(self.tab_widget_general_model)
+        self.general_model_VLayout.addWidget(self.tab_widget_general_model)
 
         self.pred_species_hlayouts = []
         self.pred_model_dep_param_layouts = []
@@ -351,6 +358,15 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.setup_general_model()
         self.predefined_model_changed()
 
+    def eventFilter(self, source, event):
+        # disable scrolling from inside of QScrollAreas
+        # https://stackoverflow.com/questions/46745800/disable-mouse-wheel-scroll-on-qscrollarea
+        if (event.type() == QEvent.Wheel and
+                (source is self.scrollAreaCustomModel.viewport() or
+                 source is self.scrollAreaPredefinedModel.viewport())):
+            return True
+        return super(FitWidget, self).eventFilter(source, event)
+
     def show_region_checked_changed(self):
         if not self.cbShowRegion.isChecked():
             PlotWidget.remove_linear_region()
@@ -429,6 +445,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         params_layout_template.addWidget(ub_label, 0, 3, 1, 1)
         params_layout_template.addWidget(fix_label, 0, 4, 1, 1)
         params_layout_template.addWidget(err_label, 0, 5, 1, 1)
+        params_layout_template.setVerticalSpacing(0)
 
         return params_layout_template
 

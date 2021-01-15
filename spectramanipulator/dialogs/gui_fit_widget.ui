@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>420</width>
-    <height>589</height>
+    <width>448</width>
+    <height>662</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,7 +25,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>1</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="tab">
         <attribute name="title">
@@ -78,6 +78,29 @@
            </item>
           </layout>
          </item>
+         <item row="2" column="0">
+          <widget class="QScrollArea" name="scrollAreaPredefinedModel">
+           <property name="verticalScrollBarPolicy">
+            <enum>Qt::ScrollBarAsNeeded</enum>
+           </property>
+           <property name="horizontalScrollBarPolicy">
+            <enum>Qt::ScrollBarAsNeeded</enum>
+           </property>
+           <property name="widgetResizable">
+            <bool>true</bool>
+           </property>
+           <widget class="QWidget" name="scrollAreaPredefinedModelContent">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>402</width>
+              <height>343</height>
+             </rect>
+            </property>
+           </widget>
+          </widget>
+         </item>
         </layout>
        </widget>
        <widget class="QWidget" name="tab_2">
@@ -125,21 +148,21 @@
            <item>
             <widget class="QPlainTextEdit" name="pteScheme">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+              <sizepolicy hsizetype="Expanding" vsizetype="Ignored">
                <horstretch>0</horstretch>
-               <verstretch>4</verstretch>
+               <verstretch>1</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
                <width>0</width>
-               <height>0</height>
+               <height>30</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
                <width>16777215</width>
-               <height>300</height>
+               <height>100</height>
               </size>
              </property>
              <property name="plainText">
@@ -186,6 +209,35 @@
              <property name="checked">
               <bool>true</bool>
              </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QScrollArea" name="scrollAreaCustomModel">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>4</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="verticalScrollBarPolicy">
+              <enum>Qt::ScrollBarAsNeeded</enum>
+             </property>
+             <property name="horizontalScrollBarPolicy">
+              <enum>Qt::ScrollBarAsNeeded</enum>
+             </property>
+             <property name="widgetResizable">
+              <bool>true</bool>
+             </property>
+             <widget class="QWidget" name="scrollAreaCustomModelContent">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>400</width>
+                <height>212</height>
+               </rect>
+              </property>
+             </widget>
             </widget>
            </item>
           </layout>
