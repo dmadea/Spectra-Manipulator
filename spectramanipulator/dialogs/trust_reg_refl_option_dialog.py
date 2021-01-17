@@ -1,8 +1,9 @@
 from PyQt5 import QtWidgets
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QMessageBox, QLineEdit, QCheckBox, QFileDialog, QDialog, QComboBox
+from PyQt5.QtWidgets import QLineEdit, QComboBox
 from spectramanipulator.dialogs.genericinputdialog import GenericInputDialog
+
+from webbrowser import open_new_tab
 
 
 class TrustRegionReflOptionDialog(GenericInputDialog):
@@ -71,11 +72,19 @@ class TrustRegionReflOptionDialog(GenericInputDialog):
         widget_list.append(('Max n_fev:', self.max_nfev_edit))
         widget_list.append(('Verbose:', self.verbose_cb))
 
+        description = """<html><head/><body><p>For explanation, see 
+        <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.least_squares.html">
+        <span style=" text-decoration: underline; color:#0000ff;">scipy.optimize.least_squares</span></a>.</p></body></html>"""
+
         super(TrustRegionReflOptionDialog, self).__init__(widget_list=widget_list,
-                                                          label_text='For explanations, see https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.least_squares.html.',
+                                                          label_text=description,
                                                           title='Settings of Trust Region Reflective algorithm',
                                                           parent=None,
                                                           set_result=set_result)
+
+        self.label.linkActivated.connect(lambda: open_new_tab("https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.least_squares.html"))
+
+
     @staticmethod
     def default_opts():
         return dict(ftol=1e-8, xtol=1e-8, gtol=1e-8, loss='linear',

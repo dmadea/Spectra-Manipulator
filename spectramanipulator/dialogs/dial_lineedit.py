@@ -21,7 +21,7 @@ class DialLineEdit(QHBoxLayout):
     # check_changed = pyqtSignal(list)  # list of abbreviations of checked items
     simulation_requested = pyqtSignal()
 
-    def __init__(self, text: str = '', lb_val=lambda: -10, ub_val=lambda: np.inf, parent=None):
+    def __init__(self, text: str = '', lb_val=lambda: 0, ub_val=lambda: np.inf, parent=None):
         """items is dictionary that uses short names as keys and longer description as values"""
         super(DialLineEdit, self).__init__(parent)
 
@@ -123,7 +123,16 @@ class RoundButton(QToolButton):
             return
 
         dy = self.initial_y_pos - e.y()
-        val = self.init_val * (1 + np.sign(self.init_val) * dy * 1e-2)
+
+        cb = ub if dy >= 0 else lb  # current bound
+
+        if np.abs(cb) != np.inf:
+            exp_term = (1 - np.exp(-np.abs(dy * 1e-2)))
+            diff = cb - self.init_val
+
+            val = self.init_val + diff * exp_term
+        else:
+            val = self.init_val * (1 + np.sign(self.init_val) * dy * 1e-2)
 
         if val < lb:
             val = lb
@@ -163,6 +172,8 @@ if __name__ == '__main__':
     import sys
 
     app = QApplication(sys.argv)
-    cb = DialLineEdit('10')
-    cb.show()
+    w = QWidget(None)
+    w.setLayout(DialLineEdit('10'))
+    # cb = DialLineEdit('10')
+    w.show()
     sys.exit(app.exec_())

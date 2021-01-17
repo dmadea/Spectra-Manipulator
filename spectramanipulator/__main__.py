@@ -74,7 +74,7 @@ class Main(QMainWindow):
         self.var_widget.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.var_widget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea)
         self.var_widget.setVisible(False)
-        self.var_widget.titleBarWidget()
+        # self.var_widget.titleBarWidget()
 
         self.tree_widget = TreeWidget(self.dockTreeWidget)
         self.dockTreeWidget.setWidget(self.tree_widget)
@@ -84,9 +84,9 @@ class Main(QMainWindow):
         self.addDockWidget(Qt.BottomDockWidgetArea, self.console)
 
         # fixing the resize bug https://stackoverflow.com/questions/48119969/qdockwidget-splitter-jumps-when-qmainwindow-resized
-        self.resizeDocks([self.dockTreeWidget], [int(w / 4)], Qt.Horizontal)
+        self.resizeDocks([self.dockTreeWidget], [3 * w // 7], Qt.Horizontal)
         # self.resizeDocks([self.var_widget], [250], Qt.Vertical)
-        self.resizeDocks([self.console], [int(h / 3)], Qt.Vertical)
+        self.resizeDocks([self.console], [h // 3], Qt.Vertical)
         self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
 
         Settings.load()

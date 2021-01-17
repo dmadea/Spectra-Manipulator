@@ -415,11 +415,14 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         widget = QtWidgets.QWidget(tab_widget)
         vl = QtWidgets.QVBoxLayout(widget)
         vl.addWidget(QtWidgets.QLabel('Species visible:'))
-        species_hlayout = QtWidgets.QHBoxLayout(widget)
+        species_hlayout = QtWidgets.QHBoxLayout(widget)  # species visible layout
         vl.addLayout(species_hlayout)
         # vl.addWidget(QtWidgets.QLabel('Experiment-dependent parameters:'))
         params_layout = self.create_params_layout(widget)
         vl.addLayout(params_layout)
+        vl.addSpacerItem(QtWidgets.QSpacerItem(1, 1,
+                         QtWidgets.QSizePolicy.Fixed,
+                         QtWidgets.QSizePolicy.Expanding))
 
         widget.setLayout(vl)
 
