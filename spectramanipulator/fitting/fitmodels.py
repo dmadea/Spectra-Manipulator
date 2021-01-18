@@ -720,8 +720,9 @@ class GeneralFitModel(Model):
         # also handles visible changes
         for exp_params, visible in zip(self.param_names_dict, self.spec_visible):
             for amp, vis in zip((self.params[name] for name in exp_params['amps']), visible.values()):
-                amp.vary = not self.varpro and vis
-                amp.enabled = not self.varpro and vis
+                cond = not self.varpro and vis and amp.name not in self.exp_indep_params
+                amp.vary = cond
+                amp.enabled = cond
                 if not vis:
                     amp.value = 0
 
@@ -731,7 +732,11 @@ class GeneralFitModel(Model):
         if 'intercept' in self.exp_indep_params:
             self.params[self.param_names_dict[0]['intercept']].enabled = True
 
-        # TODO if amps in self.exp_indep params, enabled = True
+        for par_name in self.exp_indep_params:
+            if self.is_amp_par(par_name):
+                p = self.params[par_name]
+                p.vary = True
+                p.enabled = True
 
     def get_all_param_names(self):
         pars = {}
@@ -879,7 +884,7 @@ class GeneralFitModel(Model):
     def get_rate_values(self, exp_num=0):
         ks = np.asarray([self.params[p].value for p in self.param_names_dict[exp_num]['rates']])
 
-        # transform ks to 2d array, needed for general model
+        # transform ks to 2d array, needed for general model, first column are forward rates, the second backward rates
         if self.show_backward_rates:
             rates = np.empty((ks.shape[0] // 2, 2))
             rates[:, 0] = ks[::2]
@@ -904,9 +909,12 @@ class GeneralFitModel(Model):
 
         lstsq_intercept = self.fit_intercept_varpro and 'intercept' in self.exp_dep_params
 
+        exp_indep_amps = [par for par in self.exp_indep_params if self.is_amp_par(par)]
+
         i = 0
         for data, x_range, par_names, visible in zip(self.exps_data, self.ranges, self.param_names_dict, self.spec_visible):
             x, y = get_xy(data, x0=x_range[0], x1=x_range[1])
+            _y = y.copy()  # copy view of y, it may change, otherwise, original data would be changed
             x_vals.append(x)
 
             j = np.asarray([self.params[p].value for p in par_names['j']])
@@ -915,32 +923,52 @@ class GeneralFitModel(Model):
             traces = self._get_traces(x, rates, j)  # simulate
 
             if self.varpro:
-                A = traces[:, list(visible.values())]  # select only visible species
+
+                amps_params = [self.params[p] for p in par_names['amps']]
+
+                # exp indep traces
+                exp_dep_select = []
+                exp_indep_select = []
+                for key, visible in visible.items():
+                    is_independent = key in exp_indep_amps
+                    exp_indep_select.append(is_independent and visible)
+                    exp_dep_select.append(not is_independent and visible)
+
+                A = traces[:, exp_dep_select]  # select only visible species
                 # add intercept as constant function
+
+                fit = 0
                 if lstsq_intercept:
                     A = np.hstack((A, np.ones_like(x)[:, None]))
+                else:
+                    fit = self.params[par_names['intercept']].value
+                    _y -= fit
+
+                if any(exp_indep_select):
+                    _coefs = np.asarray([p.value for p, indep in zip(amps_params, exp_indep_select) if indep])
+                    exp_indep_traces = traces[:, exp_indep_select].dot(_coefs)  # add calculated traces
+                    fit += exp_indep_traces
+                    _y -= exp_indep_traces
 
                 # solve the least squares problem, find the amplitudes of visible compartments based on data
-                coefs = OLS_ridge(A, y, 0)
+                coefs = OLS_ridge(A, _y, 0)  # A @ amps = y - A_fixed @ amps_fixes - intercept
 
-                fit = A.dot(coefs)  # calculate the fit
+                fit += A.dot(coefs)  # calculate the fit and add it
 
                 # update amplitudes and intercept
                 if lstsq_intercept:
                     *coefs, intercept = list(coefs)
                     self.params[par_names['intercept']].value = intercept
-                else:
-                    fit += self.params[par_names['intercept']].value
 
-                amp_names = [amp_name for amp_name, visible in zip(par_names['amps'], visible.values()) if visible]
-                for name, value in zip(amp_names, coefs):
-                    self.params[name].value = value
+                amp_names = [amp for amp, selected in zip(amps_params, exp_dep_select) if selected]
+                for par, coef in zip(amp_names, coefs):
+                    par.value = coef
 
             else:
                 amps = np.asarray([self.params[p].value for p in par_names['amps']])
                 fit = traces.dot(amps) + self.params[par_names['intercept']].value  # weight the simulated traces with amplitudes and calculate the fit
 
-            res = self.weight_func(fit - y, y)  # residual
+            res = self.weight_func(fit - y, y)  # residual, use original data
             fits.append(fit)
             residuals.append(res)
             i += 1

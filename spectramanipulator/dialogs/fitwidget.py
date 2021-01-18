@@ -33,6 +33,7 @@ from ..general_model import GeneralModel
 
 from ..plotwidget import PlotWidget
 from .fitresult import FitResult
+from ..fitting.task_fit import TaskFit
 
 from ..utils.syntax_highlighter import KineticModelHighlighter
 
@@ -88,6 +89,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self._general_model = None
         self.saving_general_model = False
 
+        # setup general model option fields
+
         self.cbVarProAmps.name = "varpro"
         self.cbVarProAmps.toggled.connect(self.model_option_changed)
         self.cbVarProIntercept.name = "fit_intercept_varpro"
@@ -96,6 +99,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self._predefined_model = None
         self.general_model_params = None
         self.fit_result = None
+        self.t_fit = None
 
         self.fits = SpectrumItemGroup(name='Fits')
         self.residuals = SpectrumItemGroup(name='Residuals')
@@ -357,6 +361,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         self.setup_general_model()
         self.predefined_model_changed()
+        self.cbMethod_currentIndexChanged()
 
     def eventFilter(self, source, event):
         # disable scrolling from inside of QScrollAreas
@@ -861,7 +866,13 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         self.plot_fits(x_vals, fits, residuals)
 
-    def _fit(self):
+    def _fit(self, run_non_blocking=True):
+
+        if self.t_fit is not None and self.t_fit.isRunning():
+            self.t_fit.requestInterruption()
+            Logger.debug('Cancelling...')
+            return
+
         model = self._predefined_model if self.tabWidget.currentIndex() == 0 else self._general_model
 
         if model is None:
@@ -875,117 +886,15 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         model.set_ranges((x0, x1))
         model.weight_func = self.res_weights[self.cbResWeighting.currentIndex()]['func']
-
-        start_time = time.perf_counter()
-
-        minimizer = Minimizer(model.residuals, model.params)
         method = self.methods[self.cbMethod.currentIndex()]['abbr']
 
-        result = minimizer.minimize(method=method, **self.model_options_dict)  # fit
-
-        end_time = time.perf_counter()
-        Logger.debug(end_time - start_time, 's for fitting')
-
-        values_errors = np.zeros((len(result.params), 2), dtype=np.float64)
-        for i, (p, new_p) in enumerate(zip(model.params.values(), result.params.values())):
-            p.value = new_p.value  # update fitted parameters
-            values_errors[i, 0] = p.value
-            values_errors[i, 1] = p.stderr if p.stderr is not None else 0
-
-        x_vals, fits, residuals = model.simulate()
-
-        self.setup_fields()
-        self.plot_fits(x_vals, fits, residuals)
-
-        self.fit_result = FitResult(result, minimizer, values_errors,
-                                    model)
-
-    #
-    # def _fit(self):
-    #     import numpy as np
-    #
-    #     x0, x1 = self.lr.getRegion()
-    #
-    #     start_idx = fi(self.node.data[:, 0], x0)
-    #     end_idx = fi(self.node.data[:, 0], x1) + 1
-    #
-    #     x_data = self.node.data[start_idx:end_idx, 0]
-    #     y_data = self.node.data[start_idx:end_idx, 1]
-    #
-    #     tab_idx = self.tabWidget.currentIndex()
-    #
-    #     if tab_idx == 0:
-    #         self._setup_model()
-    #
-    #     # fill the parameters from fields
-    #     for i, p in enumerate((self.current_model.params if tab_idx == 0 else self.general_model_params).values()):
-    #         p.value = float(self.value_list[i][tab_idx].text())
-    #         p.min = float(self.lower_bound_list[i][tab_idx].text())
-    #         p.max = float(self.upper_bound_list[i][tab_idx].text())
-    #         p.vary = not self.fixed_list[i][tab_idx].isChecked()
-    #
-    #     def y_fit(params):
-    #         if tab_idx == 0:
-    #             y = self.current_model.wrapper_func(x_data, params)
-    #         else:
-    #             init, coefs, rates, y0 = self.get_values_from_params(params)
-    #             sol = self._simul_custom_model(init, rates, x_data)
-    #             y = (coefs * sol).sum(axis=1, keepdims=False) + y0
-    #         return y
-    #
-    #     def residuals(params):
-    #         y = y_fit(params)
-    #         e = y - y_data
-    #         if self.cbPropWeighting.isChecked():
-    #             e /= y * y
-    #
-    #         return e
-    #
-    #     minimizer = Minimizer(residuals, self.current_model.params if tab_idx == 0 else self.general_model_params)
-    #
-    #     method = self.methods[self.cbMethod.currentIndex()]['abbr']
-    #     result = minimizer.minimize(method=method)  # fit
-    #
-    #     if tab_idx == 0:
-    #         self.current_model.params = result.params
-    #     else:
-    #         self.general_model_params = result.params
-    #
-    #     # fill fields
-    #     values_errors = np.zeros((len(result.params), 2), dtype=np.float64)
-    #     for i, p in enumerate(result.params.values()):
-    #         values_errors[i, 0] = p.value
-    #         values_errors[i, 1] = p.stderr if p.stderr is not None else 0
-    #
-    #         self.value_list[i][tab_idx].setText(f"{p.value:.4g}")
-    #         self.error_list[i][tab_idx].setText(f"{p.stderr:.4g}" if p.stderr else '')
-    #
-    #     y_fit_data = y_fit(result.params)
-    #     y_residuals = y_data - y_fit_data
-    #
-    #     # self.remove_last_fit()
-    #     self.clear_plot()
-    #
-    #     self.plot_fit = self.plot_widget.plotItem.plot(x_data, y_fit_data,
-    #                                                    pen=pg.mkPen(color=QColor(0, 0, 0, 200), width=2.5),
-    #                                                    name="Fit of {}".format(self.node.name))
-    #
-    #     self.plot_residuals = self.plot_widget.plotItem.plot(x_data, y_residuals,
-    #                                                          pen=pg.mkPen(color=QColor(255, 0, 0, 150), width=1),
-    #                                                          name="Residuals of {}".format(self.node.name))
-    #
-    #     self.fitted_spectrum = SpectrumItem.from_xy_values(x_data, y_fit_data,
-    #                                                        name="Fit of {}".format(self.node.name),
-    #                                                        color='black', line_width=2.5, line_type=Qt.SolidLine)
-    #
-    #     self.residual_spectrum = SpectrumItem.from_xy_values(x_data, y_residuals,
-    #                                                          name="Residuals of {}".format(self.node.name),
-    #                                                          color='red', line_width=1, line_type=Qt.SolidLine)
-    #
-    #     self.fit_result = FitResult(result, minimizer, values_errors, (self.current_model if tab_idx == 0 else self.current_general_model),
-    #                                 data_item=self.node, fit_item=self.fitted_spectrum,
-    #                                 residuals_item=self.residual_spectrum)
-    #
+        self.t_fit = TaskFit(self, model, method, self.model_options_dict)
+        if run_non_blocking:
+            self.t_fit.start()
+        else:  # runs with blocking of main thread
+            self.t_fit.preRun()
+            self.t_fit.run_fit()
+            self.t_fit.postRun()
 
     @classmethod
     def replot(cls):
