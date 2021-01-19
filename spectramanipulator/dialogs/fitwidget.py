@@ -718,7 +718,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self._predefined_model.update_model_options(n_spec=int(self.sbSpeciesCount.value()))
 
         av_params = self._predefined_model.get_all_param_names()  # available parameters
-        default_params = self._predefined_model.default_exp_dep_params()
+        # default_params = self._predefined_model.exp_dep_params
 
         # set default parameters to checkbox of model dependent parameters
         # check the default values
@@ -726,7 +726,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # default_dep_params = self._predefined_model.default_exp_dep_params()  # default values
         abbrs = list(self.cbPredefModelDepParams.items.keys())
         for i in range(self.cbPredefModelDepParams.items.__len__()):
-            self.cbPredefModelDepParams.set_check_state(i, abbrs[i] in default_params)
+            self.cbPredefModelDepParams.set_check_state(i, abbrs[i] in self._predefined_model.exp_dep_params)
 
         self.cbPredefModelDepParams_changing = False
         self.cbPredefModelDepParams.update_text()

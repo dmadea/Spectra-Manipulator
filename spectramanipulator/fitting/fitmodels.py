@@ -95,7 +95,7 @@ class Model(object):
     name = '--model name--'
 
     def __init__(self, exps_data: list, ranges: [list, tuple] = None, varpro: bool = True,
-                 exp_dep_params: set = None, n_spec: int = 2,
+                 exp_dep_params: list = None, n_spec: int = 2,
                  spec_names: [list, tuple] = None, spec_visible: dict = None,
                  weight_func=lambda res, y: res, **kwargs):
         """ TODO-->> exp_data is list of 2D ndaarrays """
@@ -155,6 +155,24 @@ class Model(object):
 
             self.spec_visible = new_spec_visible
 
+        if 'n_spec' in kwargs:
+            if self.exp_dep_params is not None and self.exp_indep_params is not None:
+                all_params = self.get_all_param_names().keys()
+                exp_dep_pars_old = self.exp_dep_params
+
+                self.exp_dep_params = self.default_exp_dep_params()
+                for old_par in exp_dep_pars_old:
+                    if old_par in all_params:
+                        if old_par not in self.exp_dep_params:
+                            self.exp_dep_params.append(old_par)
+                for old_par in self.exp_indep_params:
+                    if old_par in all_params:
+                        if old_par in self.exp_dep_params:
+                            self.exp_dep_params.remove(old_par)
+
+            else:
+                self.exp_dep_params = self.default_exp_dep_params()
+
         if len(kwargs) > 0:
             self._update_params()
 
@@ -196,7 +214,7 @@ class Model(object):
 
     def get_all_param_names(self):
         """returns dictionary of available parameters with keys as names and values as explanations"""
-        return set()
+        return dict()
 
     # def get_available_params_names(self):
     #     return set()
@@ -218,9 +236,9 @@ class Model(object):
 
     def default_exp_dep_params(self):
         """Returns the set of default experiment-dependent parameters."""
-        pars = ['intercept']
-        pars += self.spec_names[:self.n_spec]
-        return set(pars)
+        pars = self.spec_names[:self.n_spec]
+        pars += ['intercept']
+        return pars
 
     def get_ordered_values(self, type: str, exp_num=0):
         return [self.params[param].value for param in self.param_names_dict[exp_num][type]]
@@ -299,8 +317,9 @@ class SeqParModel(Model):
                 pars_j[i].value = 1 if i == 0 or not self.sequential else 0
 
             for amp, vis in zip((self.params[name] for name in exp_params['amps']), visible.values()):
-                amp.vary = not self.varpro and vis
-                amp.enabled = not self.varpro and vis
+                cond = not self.varpro and vis and amp.name not in self.exp_indep_params
+                amp.vary = cond
+                amp.enabled = cond
                 if not vis:
                     amp.value = 0
 
@@ -310,6 +329,12 @@ class SeqParModel(Model):
         if 'intercept' in self.exp_indep_params:
             self.params[self.param_names_dict[0]['intercept']].enabled = True
 
+        for par_name in self.exp_indep_params:
+            if self.is_amp_par(par_name):
+                p = self.params[par_name]
+                p.vary = True
+                p.enabled = True
+
     def get_all_param_names(self):
         pars = {}
         pars.update({f'_{name}_0': f'Initial concentration of {name}' for name in self.spec_names[:self.n_spec]})
@@ -318,25 +343,22 @@ class SeqParModel(Model):
         pars.update({'intercept': 'Intercept'})  # intercept
         return pars
 
-    # def get_available_params_names(self):
-    #     pars = {}
-    #     pars.update({f'_{name}_0': f'Initial concentration of {name}' for name in self.spec_names[:self.n_spec]})
-    #     pars.update({f'k_{i + 1}': f'Rate constant k_{i + 1}' for i in range(self.n_spec)})  # rate constants
-    #     pars.update({'intercept': 'Intercept'})  # intercept
-    #     return pars
-
     def init_params(self):
         """Initialize the parameters for current model options"""
         super(SeqParModel, self).init_params()
 
-        if self.exps_data is None or not np.iterable(self.exps_data):
-            raise ValueError('Experimental data that are not iterable')
+        av_params = self.get_all_param_names().keys()
+        # self.exp_dep_params = self.default_exp_dep_params() if self.exp_dep_params is None else self.exp_dep_params
+        self.exp_indep_params = []
+        for par in av_params:  # keep the order
+            if par not in self.exp_dep_params:
+                self.exp_indep_params.append(par)
 
-        av_params = set(self.get_all_param_names().keys())
-        self.exp_dep_params = self.default_exp_dep_params() if self.exp_dep_params is None else self.exp_dep_params
-        self.exp_indep_params = av_params - self.exp_dep_params
+        rates_dict = {f'k_{i+1}': i for i in range(self.n_spec)}
+        amps_dict = {name: i for i, name in enumerate(self.spec_names[:self.n_spec])}
+        j_dict = {f'_{name}_0': i for i, name in enumerate(self.spec_names[:self.n_spec])}
 
-        def add_params(param_set: set, dict_params: dict,
+        def add_params(param_set: list, dict_params: dict,
                        species_visible: [dict] = None, par_format=lambda name: name):
             has_been = False
             for par in param_set:
@@ -346,18 +368,18 @@ class SeqParModel(Model):
                 value = 1
                 min = -np.inf
                 if self.is_j_par(par):
-                    dict_params['j'].append(f_par_name)
+                    dict_params['j'][j_dict[par]] = f_par_name
                     vary = False
                     if self.sequential:
                         value = 0 if has_been else 1
                         has_been = True
 
                 elif self.is_rate_par(par):
-                    dict_params['rates'].append(f_par_name)
+                    dict_params['rates'][rates_dict[par]] = f_par_name
                     min = 0
 
                 elif self.is_amp_par(par):
-                    dict_params['amps'].append(f_par_name)
+                    dict_params['amps'][amps_dict[par]] = f_par_name
                     vary = not self.varpro
 
                     if species_visible is not None and par in species_visible:
@@ -376,7 +398,9 @@ class SeqParModel(Model):
                 # add an enabled attribute for each parameter
                 self.params[f_par_name].enabled = True
 
-        params_indep = dict(all=[], rates=[], j=[], amps=[], intercept='')
+        params_indep = dict(all=[], rates=[''] * len(rates_dict),
+                            j=[''] * len(j_dict),
+                            amps=[''] * len(amps_dict), intercept='')
 
         n = len(self.exps_data)
 
@@ -386,14 +410,8 @@ class SeqParModel(Model):
         self.param_names_dict = [deepcopy(params_indep) for _ in range(n)]
         # add experiment dependent parameters
         for i in range(n):
-            add_params(self.exp_dep_params, self.param_names_dict[i],
-                       species_visible=self.spec_visible[i],
+            add_params(self.exp_dep_params, self.param_names_dict[i], species_visible=self.spec_visible[i],
                        par_format=lambda name: self.format_exp_par(name, i))
-
-            self.param_names_dict[i]['all'].sort()
-            self.param_names_dict[i]['j'].sort()
-            self.param_names_dict[i]['rates'].sort()
-            self.param_names_dict[i]['amps'].sort()
 
     def _get_traces(self, t, ks, j):
 
@@ -429,8 +447,11 @@ class SeqParModel(Model):
 
         lstsq_intercept = self.fit_intercept_varpro and 'intercept' in self.exp_dep_params
 
+        exp_indep_amps = [par for par in self.exp_indep_params if self.is_amp_par(par)]
+
         for data, x_range, par_names, visible in zip(self.exps_data, self.ranges, self.param_names_dict, self.spec_visible):
             x, y = get_xy(data, x0=x_range[0], x1=x_range[1])
+            _y = y.copy()  # copy view of y, it may change, otherwise, original data would be changed
             x_vals.append(x)
 
             j = np.asarray([self.params[p].value for p in par_names['j']])
@@ -439,32 +460,52 @@ class SeqParModel(Model):
             traces = self._get_traces(x, ks, j)  # simulate
 
             if self.varpro:
-                A = traces[:, list(visible.values())]  # select only visible species
+
+                amps_params = [self.params[p] for p in par_names['amps']]
+
+                # exp indep traces
+                exp_dep_select = []
+                exp_indep_select = []
+                for key, visible in visible.items():
+                    is_independent = key in exp_indep_amps
+                    exp_indep_select.append(is_independent and visible)
+                    exp_dep_select.append(not is_independent and visible)
+
+                A = traces[:, exp_dep_select]  # select only visible species
                 # add intercept as constant function
+
+                fit = 0
                 if lstsq_intercept:
                     A = np.hstack((A, np.ones_like(x)[:, None]))
+                else:
+                    fit = self.params[par_names['intercept']].value
+                    _y -= fit
+
+                if any(exp_indep_select):
+                    _coefs = np.asarray([p.value for p, indep in zip(amps_params, exp_indep_select) if indep])
+                    exp_indep_traces = traces[:, exp_indep_select].dot(_coefs)  # add calculated traces
+                    fit += exp_indep_traces
+                    _y -= exp_indep_traces
 
                 # solve the least squares problem, find the amplitudes of visible compartments based on data
-                coefs = OLS_ridge(A, y, 0)
+                coefs = OLS_ridge(A, _y, 0)  # A @ amps = y - A_fixed @ amps_fixes - intercept
 
-                fit = A.dot(coefs)  # calculate the fit
+                fit += A.dot(coefs)  # calculate the fit and add it
 
                 # update amplitudes and intercept
                 if lstsq_intercept:
                     *coefs, intercept = list(coefs)
                     self.params[par_names['intercept']].value = intercept
-                else:
-                    fit += self.params[par_names['intercept']].value
 
-                amp_names = [amp_name for amp_name, visible in zip(par_names['amps'], visible.values()) if visible]
-                for name, value in zip(amp_names, coefs):
-                    self.params[name].value = value
+                amp_names = [amp for amp, selected in zip(amps_params, exp_dep_select) if selected]
+                for par, coef in zip(amp_names, coefs):
+                    par.value = coef
 
             else:
                 amps = np.asarray([self.params[p].value for p in par_names['amps']])
                 fit = traces.dot(amps) + self.params[par_names['intercept']].value  # weight the simulated traces with amplitudes and calculate the fit
 
-            res = self.weight_func(fit - y, y)  # residual
+            res = self.weight_func(fit - y, y)  # residual, use original data
             fits.append(fit)
             residuals.append(res)
 
@@ -535,7 +576,7 @@ class Photosensitization(Model):
         pars = ['intercept']  # intercepts
         pars += ['_Q_0']  # initial concentration of a quencher
         pars += self.spec_names  # amplitudes
-        return set(pars)
+        return pars
 
     def get_current_species_names(self):
         return self.spec_names
@@ -691,9 +732,6 @@ class Photosensitization(Model):
         return np.hstack(residuals)
 
 
-
-
-
 class GeneralFitModel(Model):
 
     name = 'Sequential/Parallel Model (1st order)'
@@ -781,15 +819,6 @@ class GeneralFitModel(Model):
 
     def build(self):
         self.general_model.build_func()
-        if self.exp_dep_params is not None:
-            all_params = self.get_all_param_names().keys()
-            exp_dep_pars_old = self.exp_dep_params
-
-            self.exp_dep_params = self.default_exp_dep_params()
-            for old_par in exp_dep_pars_old:
-                if old_par in all_params and old_par not in self.exp_dep_params:
-                    self.exp_dep_params.append(old_par)
-
         comps = self.general_model.get_compartments()
         self.update_model_options(n_spec=len(comps), spec_names=comps)
 
