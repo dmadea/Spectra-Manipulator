@@ -365,6 +365,9 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.predefined_model_changed()
         self.cbMethod_currentIndexChanged()
 
+        self.tab_widget_pred_model.currentChanged.connect(lambda: self.setup_fields(self._predefined_model))
+        self.tab_widget_general_model.currentChanged.connect(lambda: self.setup_fields(self._general_model))
+
     def eventFilter(self, source, event):
         # disable scrolling from inside of QScrollAreas
         # https://stackoverflow.com/questions/46745800/disable-mouse-wheel-scroll-on-qscrollarea

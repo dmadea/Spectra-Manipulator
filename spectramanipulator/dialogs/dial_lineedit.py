@@ -70,7 +70,9 @@ class _DialLineEdit(QLineEdit):
         if lb is None or ub is None:
             return
 
-        val += val * turns * np.sign(val) / 10  # increase/decrease in 10th of original value
+        coef = turns / 10 if turns > 0 else turns / 11
+
+        val += val * np.sign(val) * coef  # increase/decrease in 10th of original value
 
         if val < lb:
             val = lb

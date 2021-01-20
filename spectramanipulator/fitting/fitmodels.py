@@ -124,6 +124,7 @@ class Model(object):
 
         self.spec_visible = spec_visible  # dictionary
         self.exp_indep_params = None  # experimental independent parameters, will be set in init_params method
+        self.equal_pars = {}
 
         if self.spec_visible is None:
             self.spec_visible = [{name: True for name in self.spec_names[:self.n_spec]} for _ in range(len(self.exps_data))]
@@ -253,13 +254,20 @@ class Model(object):
         return [self.params[param].value for param in self.param_names_dict[exp_num][type]]
 
     def get_model_indep_params_list(self):
-        return [self.params[name] for name in sorted(self.exp_indep_params)]
+        return [self.params[name] for name in self.exp_indep_params]
 
     def get_model_dep_params_list(self):
         pars_list = []
 
+        # find experiment-dependent parameters form 'all' field
         for i in range(len(self.exps_data)):
-            pars_list.append([self.params[self.format_exp_par(name, i)] for name in sorted(self.exp_dep_params)])
+            exp_pars = []
+            for exp_dep_par in self.exp_dep_params:
+                for par in self.param_names_dict[i]['all']:
+                    if par.startswith(exp_dep_par):
+                        exp_pars.append(self.params[par])
+
+            pars_list.append(exp_pars)
 
         return pars_list
 
@@ -298,6 +306,37 @@ class _InterceptVarProModel(Model):
 
         self.fit_intercept_varpro = fit_intercept_varpro
 
+    def set_equal_param(self, par_name: str = '_Q_0', pairs=None):
+        if pairs is None:
+            return
+
+        if par_name not in self.equal_pars:
+            self.equal_pars[par_name] = ['' for _ in range(len(self.exps_data))]
+
+        assert len(self.equal_pars[par_name]) == len(self.exps_data)
+        for pair in pairs:
+            idx_name = ''.join([str(i) for i in pair])
+            for idx in pair:
+                self.equal_pars[par_name][idx] = idx_name
+
+        self._update_params()
+
+    def set_equal_param_first(self, par_name: str = '_Q_0', num: int = 2):
+        n = len(self.exps_data)
+        if n % num != 0:
+            raise ValueError(f"Number of experiments is not divisible by {num}.")
+
+        space = np.arange(0, n).reshape((n // num, num))
+        pairs = [tuple(row) for row in space]
+        self.set_equal_param(par_name, pairs)
+
+    def model_options(self):
+        opts = super(_InterceptVarProModel, self).model_options()
+        fit_intercept_varpro_opt = dict(type=bool, name='fit_intercept_varpro', value=True,
+                                        description='Calculate intercept from data by OLS')
+
+        return opts + [fit_intercept_varpro_opt]
+
     def _get_traces(self, t, ks, j):
         raise NotImplementedError()
 
@@ -335,11 +374,19 @@ class _InterceptVarProModel(Model):
         self.add_params(self.exp_indep_params, params_indep, **kwargs)
 
         self.param_names_dict = [deepcopy(params_indep) for _ in range(n)]
+
         # add experiment dependent parameters
         for i in range(n):
+            def par_format(name):
+                if name in self.equal_pars:
+                    idx = self.equal_pars[name][i]
+                    return self.format_exp_par(name, idx)
+
+                return self.format_exp_par(name, i)
+
             self.add_params(self.exp_dep_params, self.param_names_dict[i], **kwargs,
                             species_visible=self.spec_visible[i],
-                            par_format=lambda name: self.format_exp_par(name, i))
+                            par_format=par_format)
 
     def get_rate_values(self, exp_num):
         return np.asarray([self.params[p].value for p in self.param_names_dict[exp_num]['rates']])
@@ -444,15 +491,12 @@ class SeqParModel(_InterceptVarProModel):
         super(SeqParModel, self).__init__(*args, **kwargs)
 
         self.sequential = sequential
-        # self.fit_intercept_varpro = fit_intercept_varpro
 
     def model_options(self):
         opts = super(SeqParModel, self).model_options()
         sequential_opt = dict(type=bool, name='sequential', value=True, description='Use sequential model')
-        fit_intercept_varpro_opt = dict(type=bool, name='fit_intercept_varpro', value=True,
-                                        description='Calculate intercept from data by OLS')
 
-        return opts + [fit_intercept_varpro_opt, sequential_opt]
+        return opts + [sequential_opt]
 
     def update_model_options(self, **kwargs):
         super(SeqParModel, self).update_model_options(**kwargs)
@@ -492,6 +536,13 @@ class SeqParModel(_InterceptVarProModel):
         pars.update({'intercept': 'Intercept'})  # intercept
         return pars
 
+    def get_param_dicts(self):
+        rates_dict = {f'k_{i + 1}': i for i in range(self.n_spec)}
+        amps_dict = {name: i for i, name in enumerate(self.spec_names[:self.n_spec])}
+        j_dict = {f'_{name}_0': i for i, name in enumerate(self.spec_names[:self.n_spec])}
+
+        return dict(rates_dict=rates_dict, amps_dict=amps_dict, j_dict=j_dict)
+
     def add_params(self, param_set: list = None, dict_params: dict = None, j_dict: dict = None, rates_dict: dict = None,
                    amps_dict: dict = None, species_visible: [dict] = None, par_format=lambda name: name, **kwargs):
         has_been = False
@@ -528,9 +579,10 @@ class SeqParModel(_InterceptVarProModel):
                 value = 0
 
             dict_params['all'].append(f_par_name)
-            self.params.add(f_par_name, min=min, max=np.inf, value=value, vary=vary)
-            # add an enabled attribute for each parameter
-            self.params[f_par_name].enabled = True
+            if f_par_name not in self.params:
+                self.params.add(f_par_name, min=min, max=np.inf, value=value, vary=vary)
+                # add an enabled attribute for each parameter
+                self.params[f_par_name].enabled = True
 
     def _get_traces(self, t, ks, j):
 
@@ -562,13 +614,6 @@ class Photosensitization(_InterceptVarProModel):
         spec_visible = [{'PS': True, 'T': True} for _ in range(len(exps_data))]
         kwargs.update(n_spec=2, spec_names=spec_names, spec_visible=spec_visible)
         super(Photosensitization, self).__init__(*args, **kwargs)
-
-    def model_options(self):
-        opts = super(Photosensitization, self).model_options()
-        fit_intercept_varpro_opt = dict(type=bool, name='fit_intercept_varpro', value=True,
-                                        description='Calculate intercept from data by OLS')
-
-        return opts + [fit_intercept_varpro_opt]
 
     def update_model_options(self, **kwargs):
         # handle the individual model option changes / override the default implementation
@@ -659,9 +704,10 @@ class Photosensitization(_InterceptVarProModel):
                 value = 0
 
             dict_params['all'].append(f_par_name)
-            self.params.add(f_par_name, min=min, max=np.inf, value=value, vary=vary)
-            # add an enabled attribute for each parameter
-            self.params[f_par_name].enabled = True
+            if f_par_name not in self.params:
+                self.params.add(f_par_name, min=min, max=np.inf, value=value, vary=vary)
+                # add an enabled attribute for each parameter
+                self.params[f_par_name].enabled = True
 
     def _get_traces(self, t, ks, j):
 
@@ -690,22 +736,14 @@ class Photosensitization(_InterceptVarProModel):
 
 class GeneralFitModel(_InterceptVarProModel):
 
-    name = 'Sequential/Parallel Model (1st order)'
+    name = 'General model'
 
     def __init__(self, *args, show_backward_rates=False, **kwargs):
         super(GeneralFitModel, self).__init__(*args, **kwargs)
 
         self.general_model = GeneralModel()
 
-        # self.fit_intercept_varpro = fit_intercept_varpro
         self.show_backward_rates = show_backward_rates
-
-    def model_options(self):
-        opts = super(GeneralFitModel, self).model_options()
-        fit_intercept_varpro_opt = dict(type=bool, name='fit_intercept_varpro', value=True,
-                                        description='Calculate intercept from data by OLS')
-
-        return opts + [fit_intercept_varpro_opt]
 
     def update_model_options(self, **kwargs):
         super(GeneralFitModel, self).update_model_options(**kwargs)
@@ -823,10 +861,11 @@ class GeneralFitModel(_InterceptVarProModel):
             else:
                 value = 0
 
-            self.params.add(f_par_name, min=min, max=np.inf, value=value, vary=vary)
             dict_params['all'].append(f_par_name)
-            # add an enabled attribute for each parameter
-            self.params[f_par_name].enabled = True
+            if f_par_name not in self.params:
+                self.params.add(f_par_name, min=min, max=np.inf, value=value, vary=vary)
+                # add an enabled attribute for each parameter
+                self.params[f_par_name].enabled = True
 
     def _get_traces(self, x_data, rates, j):
         if x_data[0] > 0:  # initial conditions are valid for time=0
