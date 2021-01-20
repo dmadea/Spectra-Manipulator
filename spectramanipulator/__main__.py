@@ -151,15 +151,17 @@ class Main(QMainWindow):
             self.menuBar().recent_file_actions[i].setVisible(False)
 
     def add_recent_file(self, filepath):
+        filepath = filepath.replace('\\', '/')  # replace \ for /
+
         # if there is the same filepath in the list, remove this entry
         if filepath in Settings.recent_project_filepaths:
             Settings.recent_project_filepaths.remove(filepath)
 
-        Settings.recent_project_filepaths.insert(0, filepath.replace('\\', '/'))  # keep the style the same, so with /
-        while len(Settings.recent_project_filepaths) > len(self.menuBar().recent_file_actions):
-            # remove last one
-            Settings.recent_project_filepaths = Settings.recent_project_filepaths[:-1]
+        Settings.recent_project_filepaths.insert(0, filepath)
+        Settings.recent_project_filepaths = Settings.recent_project_filepaths[:self.menuBar().MAX_RECENT_FILES]
+
         Settings.save()
+
         self.update_recent_files()
 
     def actioncopy_to_svg_clicked(self):
@@ -229,9 +231,11 @@ class Main(QMainWindow):
             Settings.save()
 
         if not os.path.exists(filepath):
+            filepath = filepath.replace('\\', '/')
             Logger.message(f"File {filepath} does not exist.")
             if filepath in Settings.recent_project_filepaths:
                 Settings.recent_project_filepaths.remove(filepath)
+                Settings.save()
 
             self.update_recent_files()
             return
@@ -294,7 +298,7 @@ class Main(QMainWindow):
         if self.tree_widget.top_level_items_count() == 0:
             return
 
-        if self.current_file is not None:
+        if self.current_file is not None and os.path.exists(self.current_file):
             project = Project(generic_item=self.tree_widget.myModel.root)
             project.serialize(self.current_file)
 

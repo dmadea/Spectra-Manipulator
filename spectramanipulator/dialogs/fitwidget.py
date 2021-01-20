@@ -313,7 +313,9 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # and number of species
         classes = inspect.getmembers(sys.modules[fitmodels.__name__], inspect.isclass)
         tuples = filter(lambda tup: issubclass(tup[1], fitmodels.Model) and
-                        (tup[1] is not fitmodels.Model and tup[1] is not fitmodels.GeneralFitModel), classes)
+                        (tup[1] is not fitmodels.Model
+                         and tup[1] is not fitmodels.GeneralFitModel
+                         and tup[1] is not fitmodels._InterceptVarProModel), classes)
         # load models
         self.models = sorted(list(map(lambda tup: tup[1], tuples)), key=lambda cls: cls.name)
         # fill the available models combo box with model names
