@@ -1,19 +1,20 @@
 # from abc import abstractmethod
+# from abc import ABC
+# import inspect
+
 from lmfit import Parameters
 import numpy as np
-import inspect
 from scipy.integrate import odeint
 from ..spectrum import fi
 import scipy
 from copy import deepcopy
 from scipy.linalg import lstsq
 from ..general_model import GeneralModel
+import numba as nb
 
 posv = scipy.linalg.get_lapack_funcs(('posv'))
 # gels = scipy.linalg.get_lapack_funcs(('gels'))
 
-
-import numba as nb
 
 # import matplotlib.pyplot as plt
 # from sympy import Derivative, symbols, Function, Equality
@@ -337,7 +338,8 @@ class _InterceptVarProModel(Model):
 
         return opts + [fit_intercept_varpro_opt]
 
-    def _get_traces(self, t, ks, j):
+    def _get_traces(self, t, ks, j, i):
+        """i is the current exp index"""
         raise NotImplementedError()
 
     def add_params(self, param_set: list = None, dict_params: dict = None, j_dict: dict = None, rates_dict: dict = None,
@@ -418,7 +420,7 @@ class _InterceptVarProModel(Model):
             j = np.asarray([self.params[p].value for p in par_names['j']])
             rates = self.get_rate_values(i)
 
-            traces = self._get_traces(x, rates, j)  # simulate
+            traces = self._get_traces(x, rates, j, i)  # simulate
 
             if self.varpro:
 
@@ -584,7 +586,7 @@ class SeqParModel(_InterceptVarProModel):
                 # add an enabled attribute for each parameter
                 self.params[f_par_name].enabled = True
 
-    def _get_traces(self, t, ks, j):
+    def _get_traces(self, t, ks, j, i):
 
         n = self.n_spec
 
@@ -593,10 +595,10 @@ class SeqParModel(_InterceptVarProModel):
         if self.sequential:
             # build the transfer matrix for sequential model
             K = np.zeros((n, n))
-            for i in range(n):
-                K[i, i] = -ks[i]
-                if i < n - 1:
-                    K[i + 1, i] = ks[i]
+            for idx in range(n):
+                K[idx, idx] = -ks[idx]
+                if idx < n - 1:
+                    K[idx + 1, idx] = ks[idx]
             # calculate and return the target model simulation
             return target_1st_order(t, K, j)
 
@@ -604,16 +606,7 @@ class SeqParModel(_InterceptVarProModel):
             return parallel_model(j[None, :], t[:, None], ks[None, :])
 
 
-class Photosensitization(_InterceptVarProModel):
-
-    name = 'Photosensitization (PS→, PS+Q→T, T→) [Q]_0 \u226b [PS]_0'
-
-    def __init__(self, *args, **kwargs):
-        exps_data = args[0]  # exps_data must be first
-        spec_names = ['PS', 'T']
-        spec_visible = [{'PS': True, 'T': True} for _ in range(len(exps_data))]
-        kwargs.update(n_spec=2, spec_names=spec_names, spec_visible=spec_visible)
-        super(Photosensitization, self).__init__(*args, **kwargs)
+class _FixedParametersModel(_InterceptVarProModel):
 
     def update_model_options(self, **kwargs):
         # handle the individual model option changes / override the default implementation
@@ -622,7 +615,8 @@ class Photosensitization(_InterceptVarProModel):
                 raise TypeError(f'Argument {key} is not valid.')
             self.__setattr__(key, value)
 
-        self.exp_dep_params = self.default_exp_dep_params()
+        if self.exp_dep_params is None:
+            self.exp_dep_params = self.default_exp_dep_params()
 
         if len(kwargs) > 0:
             self._update_params()
@@ -647,6 +641,118 @@ class Photosensitization(_InterceptVarProModel):
                 p.vary = True
                 p.enabled = True
 
+    def get_current_species_names(self):
+        return self.spec_names
+
+    def _get_traces(self, t, ks, j, i):
+        raise NotImplementedError()
+
+
+class VarOrderModel(_FixedParametersModel):
+
+    name = 'Variable Order A→B model'
+
+    def __init__(self, *args, **kwargs):
+        exps_data = args[0]  # exps_data must be first
+        spec_names = ['A', 'B']
+        spec_visible = [{'A': True, 'B': False} for _ in range(len(exps_data))]
+        kwargs.update(n_spec=2, spec_names=spec_names, spec_visible=spec_visible)
+        super(VarOrderModel, self).__init__(*args, **kwargs)
+
+    def get_all_param_names(self):
+        pars = {f'_{name}_0': f'Initial concentration of {name}' for name in self.spec_names}
+        pars.update({name: f'Amplitude of {name}' for name in self.spec_names})  # amplitudes
+        pars.update({'k': "The rate constant"})
+        pars.update({'n': "Order of the reaction"})
+        pars.update({'intercept': 'Intercept'})  # intercept
+        return pars
+
+    def default_exp_dep_params(self):
+        pars = self.spec_names[:]  # amplitudes  # make a copy!!!
+        pars += ['intercept']  # intercepts
+        return pars
+
+    def get_param_dicts(self):
+        rates_dict = {'k': 0}
+        amps_dict = {name: i for i, name in enumerate(self.spec_names)}
+        j_dict = {f'_{name}_0': i for i, name in enumerate(self.spec_names)}
+
+        return dict(rates_dict=rates_dict, amps_dict=amps_dict, j_dict=j_dict)
+
+    def add_params(self, param_set: list = None, dict_params: dict = None, j_dict: dict = None, rates_dict: dict = None,
+                   amps_dict: dict = None, species_visible: [dict] = None, par_format=lambda name: name, **kwargs):
+
+        for par in param_set:
+            f_par_name = par_format(par)
+
+            vary = True
+            value = 1
+            min = -np.inf
+            max = np.inf
+            if self.is_j_par(par):
+                dict_params['j'][j_dict[par]] = f_par_name
+                vary = False
+                if par == '_A_0':
+                    value = 1
+                else:
+                    value = 0
+            elif par.startswith('k'):
+                dict_params['rates'][rates_dict[par]] = f_par_name
+                min = 0
+            elif self.is_amp_par(par):
+                dict_params['amps'][amps_dict[par]] = f_par_name
+                vary = not self.varpro
+            elif self.is_intercept(par):
+                dict_params['intercept'] = f_par_name
+                vary = self.fit_intercept_varpro and not self.varpro
+                value = 0
+            elif par.startswith('n'):
+                value = 1
+                vary = True
+                min = 0
+                max = 20
+            else:
+                value = 0
+
+            dict_params['all'].append(f_par_name)
+            if f_par_name not in self.params:
+                self.params.add(f_par_name, min=min, max=max, value=value, vary=vary)
+                # add an enabled attribute for each parameter
+                self.params[f_par_name].enabled = True
+
+    def _get_traces(self, t, ks, j, i):
+
+        j_A, j_B = j
+        k = ks[0]
+
+        n_par = list(filter(lambda name: name.startswith('n'), self.param_names_dict[i]['all']))[0]
+        n = self.params[n_par].value
+
+        C = np.empty((t.shape[0], 2), dtype=np.float64)
+
+        if n == 1:  # first order
+            C[:, 0] = j_A * np.exp(-k * t)
+        else:  # n-th order, this wont work for negative x values, c(t) = 1-n root of (c^(1-n) + k*(n-1)*t)
+            expr_in_root = np.power(float(j_A), 1 - n) + k * (n - 1) * t
+            expr_in_root = expr_in_root.clip(min=0)  # set to 0 all the negative values
+            C[:, 0] = np.power(expr_in_root, 1.0 / (1 - n))
+
+        C[:, 1] = j_B + j_A - C[:, 0]
+
+        return np.nan_to_num(np.heaviside(t[:, None], 1) * C)
+
+
+class Photosensitization(_FixedParametersModel):
+
+    name = 'Photosensitization (PS→, PS+Q→T, T→) [Q]_0 \u226b [PS]_0'
+
+    def __init__(self, *args, **kwargs):
+        exps_data = args[0]  # exps_data must be first
+        spec_names = ['PS', 'T']
+        spec_visible = [{'PS': True, 'T': True} for _ in range(len(exps_data))]
+        kwargs.update(n_spec=2, spec_names=spec_names, spec_visible=spec_visible)
+        super(Photosensitization, self).__init__(*args, **kwargs)
+
     def get_all_param_names(self):
         pars = {'_Q_0': 'Concentration of a quencher'}
         pars.update({f'_{name}_0': f'Initial concentration of {name}' for name in self.spec_names})
@@ -670,9 +776,6 @@ class Photosensitization(_InterceptVarProModel):
         j_dict.update({f'_{name}_0': i+1 for i, name in enumerate(self.spec_names)})
 
         return dict(rates_dict=rates_dict, amps_dict=amps_dict, j_dict=j_dict)
-
-    def get_current_species_names(self):
-        return self.spec_names
 
     def add_params(self, param_set: list = None, dict_params: dict = None, j_dict: dict = None, rates_dict: dict = None,
                    amps_dict: dict = None, species_visible: [dict] = None, par_format=lambda name: name, **kwargs):
@@ -709,7 +812,7 @@ class Photosensitization(_InterceptVarProModel):
                 # add an enabled attribute for each parameter
                 self.params[f_par_name].enabled = True
 
-    def _get_traces(self, t, ks, j):
+    def _get_traces(self, t, ks, j, i):
 
         assert ks.shape == j.shape
 
@@ -867,7 +970,7 @@ class GeneralFitModel(_InterceptVarProModel):
                 # add an enabled attribute for each parameter
                 self.params[f_par_name].enabled = True
 
-    def _get_traces(self, x_data, rates, j):
+    def _get_traces(self, x_data, rates, j, i):
         if x_data[0] > 0:  # initial conditions are valid for time=0
             n = 100  # prepend x values with 100 points if not starting with zero time
             x_prepended = np.concatenate((np.linspace(0, x_data[0], n, endpoint=False), x_data))
@@ -877,7 +980,7 @@ class GeneralFitModel(_InterceptVarProModel):
             x_pos = x_data[x_data >= 0]  # find x >= 0
             sol = np.zeros((x_data.shape[0], j.shape[0]), dtype=np.float64)
             if x_pos.shape[0] > 1:  # simulate only for at least 2 positive values
-                sol[(x_data < 0).sum():, :] = self._get_traces(x_pos, rates, j)  # use recursion here
+                sol[(x_data < 0).sum():, :] = self._get_traces(x_pos, rates, j, i)  # use recursion here
 
             return sol
 
@@ -897,373 +1000,7 @@ class GeneralFitModel(_InterceptVarProModel):
 
         return rates
 
-#
-# class AB1stModel(_Model):
-#     """This is the A→B model, 1st order kinetics. Differential equations:
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k[\mathrm{A}]`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k[\mathrm{A}]`
-#
-#     initial conditions: :math:`[\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = 0`
-#     """
-#
-#     name = 'A→B (1st order)'
-#
-#     def init_params(self):
-#         self.params.add('A', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('B', value=0, min=-np.inf, max=np.inf, vary=False)
-#         self.params.add('k', value=1, min=0, max=np.inf, vary=True)
-#         self.params.add('y0', value=0, min=-np.inf, max=np.inf, vary=True)
-#
-#     def initialize_values(self, x_data, y_data):
-#         self.params['A'].value = y_data[0]
-#
-#     @staticmethod
-#     def func(x, A, B, k, y0):
-#         cA = np.exp(-k * x)
-#         return A * cA + B * (1 - cA) + y0
-#
-#
-# class ABVarOrderModel(_Model):
-#     """This is the A→B model, variable order kinetics. Differential equations:
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k[\mathrm{A}]^n`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k[\mathrm{A}]^n`
-#
-#     initial conditions: :math:`[\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = 0`
-#     """
-#
-#     name = 'A→B (var order)'
-#
-#     def init_params(self):
-#         self.params.add('c0', value=1, min=0, max=np.inf, vary=False)
-#         self.params.add('A', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('B', value=0, min=-np.inf, max=np.inf, vary=False)
-#         self.params.add('k', value=1, min=0, max=np.inf, vary=True)
-#         self.params.add('n', value=1, min=0, max=100, vary=True)
-#         self.params.add('y0', value=0, min=-np.inf, max=np.inf, vary=True)
-#
-#     def initialize_values(self, x_data, y_data):
-#         self.params['A'].value = y_data[0]
-#
-#     @staticmethod
-#     def func(x, c0, A, B, k, n, y0):
-#         if n == 1:  # first order
-#             cA = c0 * np.exp(-k * x)
-#         else:  # n-th order, this wont work for negative x values, c(t) = 1-n root of (c^(1-n) + k*(n-1)*t)
-#             expr_in_root = np.power(float(c0), 1 - n) + k * (n - 1) * x
-#             expr_in_root = expr_in_root.clip(min=0)  # set to 0 all the negative values
-#             cA = np.power(expr_in_root, 1.0 / (1 - n))
-#
-#         return A * cA + B * (1 - cA) + y0
-#
-#
-# class AB_mixed12Model(_Model):
-#     """This is the A→B model, mixed 1st and 2nd order kinetics. Differential equations:
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k_1[\mathrm{A}] - k_2[\mathrm{A}]^2`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k_1[\mathrm{A}] + k_2[\mathrm{A}]^2`
-#
-#     initial conditions: :math:`[\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = 0`
-#     """
-#
-#     name = 'A→B (Mixed 1st and 2nd order)'
-#
-#     def init_params(self):
-#         self.params.add('c0', value=1, min=0, max=np.inf, vary=False)
-#         self.params.add('A', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('B', value=0, min=-np.inf, max=np.inf, vary=False)
-#         self.params.add('k1', value=1, min=0, max=np.inf, vary=True)
-#         self.params.add('k2', value=0.5, min=0, max=np.inf, vary=True)
-#         self.params.add('y0', value=0, min=-np.inf, max=np.inf, vary=True)
-#
-#     def initialize_values(self, x_data, y_data):
-#         self.params['A'].value = y_data[0]
-#
-#     @staticmethod
-#     def func(x, c0, A, B, k1, k2, y0):
-#         cA = c0 * k1 / ((c0 * k2 + k1) * np.exp(k1 * x) - c0 * k2)
-#         return A * cA + B * (1 - cA) + y0
-#
-#
-# class ABC1stModel(_Model):
-#     """This is the A→B→C model, 1st order kinetics. Differential equations:
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k_1[\mathrm{A}]`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k_1[\mathrm{A}] - k_2[\mathrm{B}]`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{C}]}{\mathrm{d}t} = +k_2[\mathrm{B}]`
-#
-#     initial conditions: :math:`[\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = [\mathrm C]_0 = 0`
-#     """
-#
-#     name = 'A→B→C (1st order)'
-#
-#     def init_params(self):
-#         self.params.add('A', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('B', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('C', value=0, min=-np.inf, max=np.inf, vary=False)
-#         self.params.add('k1', value=1, min=0, max=np.inf, vary=True)
-#         self.params.add('k2', value=0.5, min=0, max=np.inf, vary=True)
-#         self.params.add('y0', value=0, min=-np.inf, max=np.inf, vary=True)
-#
-#     def initialize_values(self, x_data, y_data):
-#         self.params['A'].value = y_data[0]
-#         self.params['B'].value = y_data[0]
-#
-#     @staticmethod
-#     def func(x, A, B, C, k1, k2, y0):
-#         cA = np.exp(-k1 * x)
-#
-#         # if k1 == k2, the integrated law fow cB has to be changed
-#         if np.abs(k1 - k2) < 1e-10:
-#             cB = k1 * x * np.exp(-k1 * x)
-#         else:  # we would get zero division error for k1 = k2
-#             cB = (k1 / (k2 - k1)) * (np.exp(-k1 * x) - np.exp(-k2 * x))
-#
-#         cC = 1 - cA - cB
-#
-#         return A * cA + B * cB + C * cC + y0
-#
-#
-# class ABCvarOrderModel(_Model):
-#     """This is the A→B→C model, variable order kinetics. Differential equations:
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k_1[\mathrm{A}]^{n_1}`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k_1[\mathrm{A}]^{n_1} - k_2[\mathrm{B}]^{n_2}`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{C}]}{\mathrm{d}t} = +k_2[\mathrm{B}]^{n_2}`
-#
-#     initial conditions: :math:`[\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = [\mathrm C]_0 = 0`
-#
-#     Note, that :math:`n_2` must be :math:`\ge 1`, however, :math:`n_1 \ge 0`.
-#     """
-#
-#     name = 'A→B→C (var order)'
-#
-#     def init_params(self):
-#         self.params.add('c0', value=1, min=0, max=np.inf, vary=False)
-#         self.params.add('A', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('B', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('C', value=0, min=-np.inf, max=np.inf, vary=False)
-#         self.params.add('k1', value=1, min=0, max=np.inf, vary=True)
-#         self.params.add('k2', value=0.5, min=0, max=np.inf, vary=True)
-#         self.params.add('n1', value=1, min=0, max=100, vary=False)
-#         # numerical integration won't work for n < 1, therefore, min=1
-#         self.params.add('n2', value=1, min=1, max=100, vary=False)
-#         self.params.add('y0', value=0, min=-np.inf, max=np.inf, vary=True)
-#
-#     def initialize_values(self, x_data, y_data):
-#         self.params['A'].value = y_data[0]
-#         self.params['B'].value = y_data[0]
-#
-#     @staticmethod
-#     def func(x, c0, A, B, C, k1, k2, n1, n2, y0):
-#         def cA(c0, k, n, x):
-#             if n == 1:
-#                 return c0 * np.exp(-k * x)
-#             else:
-#                 expr_in_root = c0 ** (1 - n) + k * (n - 1) * x
-#                 # we have to set all negative values to 0 (this is important for n < 1),
-#                 # because the root of negative value would cause error
-#                 if type(expr_in_root) is float:
-#                     expr_in_root = 0 if expr_in_root < 0 else expr_in_root
-#                 else:
-#                     expr_in_root = expr_in_root.clip(min=0)
-#                 return np.power(expr_in_root, 1.0 / (1 - n))
-#
-#         # definition of differential equations
-#         def dB_dt(cB, x):
-#             return k1 * cA(c0, k1, n1, x) ** n1 - k2 * cB ** n2
-#
-#         # solve for cB, cA is integrated law, initial conditions, cB(t=0)=0
-#         # but initial point for odeint must be defined for x[0]
-#         # evolve from 0 to x[0] and then take the last point as the initial condition
-#         x0 = np.linspace(0, x[0], num=100)
-#         init_B = odeint(dB_dt, 0, x0).flatten()[-1]
-#         result = odeint(dB_dt, init_B, x)
-#
-#         cA = cA(c0, k1, n1, x)
-#         cB = result.flatten()
-#         cC = c0 - cA - cB
-#
-#         return A * cA + B * cB + C * cC + y0
-#
-#
-# class ABCD1stModel(_Model):
-#     """This is the A→B→C→D model, 1st order kinetics. Differential equations:
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k_1[\mathrm{A}]`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k_1[\mathrm{A}] - k_2[\mathrm{B}]`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{C}]}{\mathrm{d}t} = +k_2[\mathrm{B}] - k_3[\mathrm{C}]`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{D}]}{\mathrm{d}t} = +k_3[\mathrm{C}]`
-#
-#     initial conditions: :math:`[\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = [\mathrm C]_0 = [\mathrm D]_0 = 0`
-#     """
-#     name = 'A→B→C→D (1st order)'
-#
-#     def init_params(self):
-#         self.params.add('A', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('B', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('C', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('D', value=0, min=-np.inf, max=np.inf, vary=False)
-#         self.params.add('k1', value=1, min=0, max=np.inf, vary=True)
-#         self.params.add('k2', value=0.5, min=0, max=np.inf, vary=True)
-#         self.params.add('k3', value=0.5, min=0, max=np.inf, vary=True)
-#         self.params.add('y0', value=0, min=-np.inf, max=np.inf, vary=True)
-#
-#     def initialize_values(self, x_data, y_data):
-#         self.params['A'].value = y_data[0]
-#         self.params['B'].value = y_data[0]
-#         self.params['C'].value = y_data[0]
-#
-#     @staticmethod
-#     def func(x, A, B, C, D, k1, k2, k3, y0):
-#         def concB(k1, k2, x):
-#             # if k1 == k2, the integrated law fow cB has to be changed
-#             if np.abs(k1 - k2) < 1e-10:
-#                 return k1 * x * np.exp(-k1 * x)
-#             else:  # we would get zero division error for k1 = k2
-#                 return (k1 / (k2 - k1)) * (np.exp(-k1 * x) - np.exp(-k2 * x))
-#
-#         def dC_dt(cC, t):
-#             cB = concB(k1, k2, t)
-#             return k2 * cB - k3 * cC  # d[C]/dt = k2[B] - k3[C]
-#
-#         # numerically integrate, initial condition, cC(t=0) = 0
-#         # but initial point for odeint must be defined for x[0]
-#         # evolve from 0 to x[0] and then take the last point as the initial condition
-#         x0 = np.linspace(0, x[0], num=100)
-#         init_C = odeint(dC_dt, 0, x0).flatten()[-1]
-#         result = odeint(dC_dt, init_C, x)
-#
-#         cA = np.exp(-k1 * x)
-#         cB = concB(k1, k2, x)
-#         cC = result.flatten()
-#         cD = 1 - cA - cB - cC
-#
-#         return A * cA + B * cB + C * cC + D * cD + y0
-#
-#
-# class ABCDvarOrderModel(_Model):
-#     """This is the A→B→C→D model, variable order kinetics. Differential equations:
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k_1[\mathrm{A}]^{n_1}`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k_1[\mathrm{A}]^{n_1} - k_2[\mathrm{B}]^{n_2}`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{C}]}{\mathrm{d}t} = +k_2[\mathrm{B}]^{n_2} - k_3[\mathrm{C}]^{n_3}`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{D}]}{\mathrm{d}t} = +k_3[\mathrm{C}]^{n_3}`
-#
-#     initial conditions: :math:`[\mathrm A]_0 = c_0 \qquad [\mathrm B]_0 = [\mathrm C]_0 = [\mathrm D]_0 = 0`
-#
-#     Note, that :math:`n_2,n_3` must be :math:`\ge 1`, however, :math:`n_1 \ge 0`.
-#     """
-#     name = 'A→B→C→D (var order)'
-#
-#     def init_params(self):
-#         self.params.add('c0', value=1, min=0, max=np.inf, vary=False)
-#         self.params.add('A', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('B', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('C', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('D', value=0, min=-np.inf, max=np.inf, vary=False)
-#         self.params.add('k1', value=1, min=0, max=np.inf, vary=True)
-#         self.params.add('k2', value=0.5, min=0, max=np.inf, vary=True)
-#         self.params.add('k3', value=0.5, min=0, max=np.inf, vary=True)
-#         self.params.add('n1', value=1, min=0, max=100, vary=False)
-#         # numerical integration won't work for n < 1, therefore, min=1
-#         self.params.add('n2', value=1, min=1, max=100, vary=False)
-#         self.params.add('n3', value=1, min=1, max=100, vary=False)
-#         self.params.add('y0', value=0, min=-np.inf, max=np.inf, vary=True)
-#
-#     def initialize_values(self, x_data, y_data):
-#         self.params['A'].value = y_data[0]
-#         self.params['B'].value = y_data[0]
-#         self.params['C'].value = y_data[0]
-#
-#     @staticmethod
-#     def func(x, c0, A, B, C, D, k1, k2, k3, n1, n2, n3, y0):
-#         def cA(c0, k, n, x):
-#             if n == 1:
-#                 return c0 * np.exp(-k * x)
-#             else:
-#                 expr_in_root = c0 ** (1 - n) + k * (n - 1) * x
-#                 # we have to set all negative values to 0 (this is important for n < 1),
-#                 # because the root of negative value would cause error
-#                 if type(expr_in_root) is float:
-#                     expr_in_root = 0 if expr_in_root < 0 else expr_in_root
-#                 else:
-#                     expr_in_root = expr_in_root.clip(min=0)
-#                 return np.power(expr_in_root, 1.0 / (1 - n))
-#
-#         # definition of differential equations
-#         def solve(concentrations, x):
-#             cB, cC = concentrations
-#             dB_dt = k1 * cA(c0, k1, n1, x) ** n1 - k2 * cB ** n2
-#             dC_dt = k2 * cB ** n2 - k3 * cC ** n3
-#             return [dB_dt, dC_dt]
-#
-#         # solve for cB and cC, cA is integrated law, initial conditions, cB(t=0)=cC(t=0)=0
-#         # but initial point for odeint must be defined for x[0]
-#         # evolve from 0 to x[0] and then take the last points as the initial condition
-#         x0 = np.linspace(0, x[0], num=100)
-#         init_BC = odeint(solve, [0, 0], x0)[-1, :]  # take the last two points in the result matrix
-#         result = odeint(solve, init_BC, x)
-#
-#         cA = cA(c0, k1, n1, x)
-#         cB = result[:, 0]
-#         cC = result[:, 1]
-#         cD = c0 - cA - cB - cC
-#
-#         return A * cA + B * cB + C * cC + D * cD + y0
-#
-#
-# class ABCD_parModel(_Model):
-#     """This is the A→B, C→D parallel model, 1st order kinetics. Differential equations:
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{A}]}{\mathrm{d}t} = -k_1[\mathrm{A}]`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{B}]}{\mathrm{d}t} = +k_1[\mathrm{A}]`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{C}]}{\mathrm{d}t} = -k_2[\mathrm{C}]`
-#
-#     :math:`\\frac{\mathrm{d}[\mathrm{D}]}{\mathrm{d}t} = +k_2[\mathrm{C}]`
-#
-#     initial conditions are same as in A→B model, since it is a 1st order, :math:`c_0` was not added to
-#     the parameters.
-#     """
-#     name = 'A→B, C→D (1st order)'
-#
-#     def init_params(self):
-#         self.params.add('A', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('B', value=0, min=-np.inf, max=np.inf, vary=False)
-#         self.params.add('C', value=1, min=-np.inf, max=np.inf, vary=True)
-#         self.params.add('D', value=0, min=-np.inf, max=np.inf, vary=False)
-#         self.params.add('k1', value=1, min=0, max=np.inf, vary=True)
-#         self.params.add('k2', value=0.5, min=0, max=np.inf, vary=True)
-#         self.params.add('y0', value=0, min=-np.inf, max=np.inf, vary=True)
-#
-#     def initialize_values(self, x_data, y_data):
-#         self.params['A'].value = y_data[0]
-#         self.params['C'].value = y_data[0]
-#
-#     @staticmethod
-#     def func(x, A, B, C, D, k1, k2, y0):
-#         cA = np.exp(-k1 * x)
-#         cC = np.exp(-k2 * x)
-#
-#         return A * cA + B * (1 - cA) + C * cC + D * (1 - cC) + y0
-#
-#
+
 # class LinearModel(_Model):
 #     """This is the linear model,
 #     :math:`y(x) = ax + y_0`

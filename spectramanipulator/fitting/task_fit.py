@@ -53,5 +53,3 @@ class TaskFit(Task):
         self.fw.btnFit.setText('Fit')
 
 
-
-
