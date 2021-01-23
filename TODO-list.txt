@@ -9,6 +9,16 @@
 
 # TODO list
 
+    oo lstsq intercept
+    oo set range for individual experiements
+    -- equal parameters setup and set range in parameter widget
+    -- range dialogs
+    -- plotting fits, FitResult history
+    -- multithreading in residuals func
+    -- upload package
+    -- documentation
+
+
     oo add recent files, distinguish save and save us project
    !oo* import from Excel XML Spreadsheet object, write parse function
     oo check the build-in items iterator

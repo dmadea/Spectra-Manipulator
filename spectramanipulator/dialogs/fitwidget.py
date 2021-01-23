@@ -18,6 +18,7 @@ from spectramanipulator.dialogs.trust_reg_refl_option_dialog import TrustRegionR
 import spectramanipulator
 from .param_settings_dialog import ParamSettingsDialog
 from .dial_lineedit import DialLineEdit
+from .mylineedit import MyLineEdit
 
 import pyqtgraph as pg
 
@@ -83,7 +84,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             self.node = [node] if len(node.children) == 0 else node.children
 
         self.lr = None  # linear region item
-        self.show_region_checked_changed()
 
         # self.current_model = None  # actual model, it could be general model or predefined model
         self._general_model = None
@@ -104,13 +104,26 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.fits = SpectrumItemGroup(name='Fits')
         self.residuals = SpectrumItemGroup(name='Residuals')
 
+        self.leX0.lb = self.leX0
+        self.leX0.ub = self.leX1
+        self.leX1.lb = self.leX0
+        self.leX1.ub = self.leX1
+
+        self.leX0.srb = self.btnShowRegion
+        self.leX1.srb = self.btnShowRegion
+        self.btnShowRegion.lb = self.leX0
+        self.btnShowRegion.ub = self.leX1
+
+        self.btnShowRegion.toggled.connect(self.show_region_checked_changed)
+        self.btnShowRegion.setChecked(True)
+
         # update region when the focus is lost and when the user presses enter
         self.leX0.returnPressed.connect(self.update_region)
         self.leX1.returnPressed.connect(self.update_region)
         self.leX0.focus_lost.connect(self.update_region)
         self.leX1.focus_lost.connect(self.update_region)
 
-        self.update_region_text_values()
+        self.update_region_text_values(self.leX0, self.leX1)
 
         self.btnFit.clicked.connect(self.fit)
         self.btnSimulateModel.clicked.connect(self.simulate_model)
@@ -125,7 +138,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.sbSpeciesCount.valueChanged.connect(lambda: self.n_spec_changed())
         self.cbShowResiduals.toggled.connect(self._replot)
         self.cbFitBlackColor.toggled.connect(self._replot)
-        self.cbShowRegion.toggled.connect(self.show_region_checked_changed)
         self.tbAlgorithmSettings.clicked.connect(self.tbAlgorithmSettings_clicked)
 
         # predefined kinetic model setup
@@ -179,19 +191,58 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
         self.pred_species_hlayouts = []
         self.pred_model_dep_param_layouts = []
+        self.pred_model_bounds = {'lb': [], 'ub': []}
 
         self.general_species_hlayouts = []
         self.general_model_dep_param_layouts = []
+        self.general_model_bounds = {'lb': [], 'ub': []}
+
 
         if self.node is not None:
             for spectrum in self.node:
-                widget, species_hlayout, params_layout = self.create_tab_widget(self.tab_widget_pred_model)
+                widget, species_hlayout, params_layout, lower_bound, upper_bound, show_region_btn = self.create_tab_widget(self.tab_widget_pred_model)
                 self.pred_species_hlayouts.append(species_hlayout)
                 self.pred_model_dep_param_layouts.append(params_layout)
+                self.pred_model_bounds['lb'].append(lower_bound)
+                self.pred_model_bounds['ub'].append(upper_bound)
 
-                widget_2, species_hlayout_2, params_layout_2 = self.create_tab_widget(self.tab_widget_general_model)
+                lower_bound.lb = lower_bound
+                lower_bound.ub = upper_bound
+                upper_bound.lb = lower_bound
+                upper_bound.ub = upper_bound
+
+                lower_bound.srb = show_region_btn
+                upper_bound.srb = show_region_btn
+
+                lower_bound.returnPressed.connect(self.update_region)
+                upper_bound.returnPressed.connect(self.update_region)
+                lower_bound.focus_lost.connect(self.update_region)
+                upper_bound.focus_lost.connect(self.update_region)
+                show_region_btn.toggled.connect(self.show_region_checked_changed)
+                show_region_btn.lb = lower_bound
+                show_region_btn.ub = upper_bound
+
+                widget_2, species_hlayout_2, params_layout_2, lower_bound_2, upper_bound_2, show_region_btn_2 = self.create_tab_widget(self.tab_widget_general_model)
                 self.general_species_hlayouts.append(species_hlayout_2)
                 self.general_model_dep_param_layouts.append(params_layout_2)
+                self.general_model_bounds['lb'].append(lower_bound_2)
+                self.general_model_bounds['ub'].append(upper_bound_2)
+
+                lower_bound_2.lb = lower_bound_2
+                lower_bound_2.ub = upper_bound_2
+                upper_bound_2.lb = lower_bound_2
+                upper_bound_2.ub = upper_bound_2
+
+                lower_bound_2.srb = show_region_btn_2
+                upper_bound_2.srb = show_region_btn_2
+
+                lower_bound_2.returnPressed.connect(self.update_region)
+                upper_bound_2.returnPressed.connect(self.update_region)
+                lower_bound_2.focus_lost.connect(self.update_region)
+                upper_bound_2.focus_lost.connect(self.update_region)
+                show_region_btn_2.toggled.connect(self.show_region_checked_changed)
+                show_region_btn_2.lb = lower_bound_2
+                show_region_btn_2.ub = upper_bound_2
 
                 self.tab_widget_pred_model.addTab(widget, spectrum.name)
                 self.tab_widget_general_model.addTab(widget_2, spectrum.name)
@@ -379,7 +430,9 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         return super(FitWidget, self).eventFilter(source, event)
 
     def show_region_checked_changed(self):
-        if not self.cbShowRegion.isChecked():
+        sender = self.sender()
+
+        if not sender.isChecked():
             PlotWidget.remove_linear_region()
             self.lr = None
             return
@@ -404,20 +457,29 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
             bounds = (x0, x1)
 
         self.lr = PlotWidget.add_linear_region(bounds=bounds, z_value=1e8)
-        self.update_region()
-        self.lr.sigRegionChanged.connect(self.update_region_text_values)
+        # self.update_region()
+        sender.lb.setText(sender.lb.text())  # calls update_region
+        self.lr.sigRegionChanged.connect(lambda: self.update_region_text_values(sender.lb, sender.ub))
 
-    def update_region_text_values(self):
+    def update_region_text_values(self, lb, ub):
         x0, x1 = self.lr.getRegion()
-        self.leX0.setText("{:.4g}".format(x0))
-        self.leX1.setText("{:.4g}".format(x1))
+        lb.setText("{:.4g}".format(x0))
+        ub.setText("{:.4g}".format(x1))
 
     def update_region(self):
         if self.lr is None:
             return
 
+        sender = self.sender()
+
+        lb = sender.lb
+        ub = sender.ub
+
+        if not sender.srb.isChecked():
+            return
+
         try:
-            x0, x1 = float(self.leX0.text()), float(self.leX1.text())
+            x0, x1 = float(lb.text()), float(ub.text())
             self.lr.setRegion((x0, x1))
         except ValueError:
             pass
@@ -431,13 +493,26 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         # vl.addWidget(QtWidgets.QLabel('Experiment-dependent parameters:'))
         params_layout = self.create_params_layout(widget)
         vl.addLayout(params_layout)
+        hlayout_range = QtWidgets.QHBoxLayout(widget)
+        lower_bound = MyLineEdit(widget)
+        upper_bound = MyLineEdit(widget)
+        show_region_btn = QtWidgets.QPushButton("Show Region", widget)
+        show_region_btn.setCheckable(True)
+        show_region_btn.setChecked(False)
+        vl.addWidget(QtWidgets.QLabel("Fit range:"))
+        hlayout_range.addWidget(QtWidgets.QLabel("from"))
+        hlayout_range.addWidget(lower_bound)
+        hlayout_range.addWidget(QtWidgets.QLabel("to"))
+        hlayout_range.addWidget(upper_bound)
+        hlayout_range.addWidget(show_region_btn)
+        vl.addLayout(hlayout_range)
         vl.addSpacerItem(QtWidgets.QSpacerItem(1, 1,
                          QtWidgets.QSizePolicy.Fixed,
                          QtWidgets.QSizePolicy.Expanding))
 
         widget.setLayout(vl)
 
-        return widget, species_hlayout, params_layout
+        return widget, species_hlayout, params_layout, lower_bound, upper_bound, show_region_btn
 
     def create_params_layout(self, parent=None):
         params_layout_template = QtWidgets.QGridLayout(self if parent is None else parent)
@@ -847,19 +922,39 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         #     Logger.message(e.__str__())
         #     QMessageBox.warning(self, 'Fitting Error', e.__str__(), QMessageBox.Ok)
 
+    def get_fit_range(self):
+        try:
+            x0_global, x1_global = float(self.leX0.text()), float(self.leX1.text())
+        except ValueError:
+            QMessageBox.warning(self, "Range", "Fitting range is not valid!", QMessageBox.Ok)
+            return
+
+        ranges = [[x0_global, x1_global] for _ in range(len(self.node))]
+        model_bounds = self.pred_model_bounds if self.tabWidget.currentIndex() == 0 else self.general_model_bounds
+        for lb, ub, rng in zip(model_bounds['lb'], model_bounds['ub'], ranges):
+            x0_text, x1_text = lb.text(), ub.text()
+            if x0_text.strip() == '' or x1_text.strip() == '':
+                continue
+            try:
+                x0, x1 = float(x0_text), float(x1_text)
+            except ValueError:
+                continue
+            rng[0] = x0
+            rng[1] = x1
+
+        return ranges
+
     def _simulate(self):
         model = self._predefined_model if self.tabWidget.currentIndex() == 0 else self._general_model
 
         if model is None:
             return
 
-        try:
-            x0, x1 = float(self.leX0.text()), float(self.leX1.text())
-        except ValueError:
-            QMessageBox.warning(self, "Range", "Fitting range is not valid!", QMessageBox.Ok)
+        ranges = self.get_fit_range()
+        if ranges is None:
             return
 
-        model.set_ranges((x0, x1))
+        model.set_ranges(ranges)
         model.weight_func = self.res_weights[self.cbResWeighting.currentIndex()]['func']
 
         start_time = time.perf_counter()
@@ -867,7 +962,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         end_time = time.perf_counter()
         Logger.debug((end_time - start_time) * 1e3, 'ms for simulation')
 
-        if model.varpro:
+        if model.varpro or (hasattr(model, 'fit_intercept_varpro') and model.fit_intercept_varpro):
             self.setup_fields()
 
         self.plot_fits(x_vals, fits, residuals)
@@ -884,13 +979,11 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if model is None:
             return
 
-        try:
-            x0, x1 = float(self.leX0.text()), float(self.leX1.text())
-        except ValueError:
-            QMessageBox.warning(self, "Range", "Fitting range is not valid!", QMessageBox.Ok)
+        ranges = self.get_fit_range()
+        if ranges is None:
             return
 
-        model.set_ranges((x0, x1))
+        model.set_ranges(ranges)
         model.weight_func = self.res_weights[self.cbResWeighting.currentIndex()]['func']
         method = self.methods[self.cbMethod.currentIndex()]['abbr']
 

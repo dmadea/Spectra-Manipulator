@@ -410,9 +410,8 @@ class _InterceptVarProModel(Model):
 
         exp_indep_amps = [par for par in self.exp_indep_params if self.is_amp_par(par)]
 
-        i = 0
-        for data, x_range, par_names, visible in zip(self.exps_data, self.ranges, self.param_names_dict,
-                                                     self.spec_visible):
+        for i, (data, x_range, par_names, visible) in enumerate(zip(self.exps_data, self.ranges, self.param_names_dict,
+                                                                    self.spec_visible)):
             x, y = get_xy(data, x0=x_range[0], x1=x_range[1])
             _y = y.copy()  # copy view of y, it may change, otherwise, original data would be changed
             x_vals.append(x)
@@ -444,35 +443,40 @@ class _InterceptVarProModel(Model):
                     fit = self.params[par_names['intercept']].value
                     _y -= fit
 
-                if any(exp_indep_select):
-                    _coefs = np.asarray([p.value for p, indep in zip(amps_params, exp_indep_select) if indep])
-                    exp_indep_traces = traces[:, exp_indep_select].dot(_coefs)  # add calculated traces
+                if any(exp_indep_select):  # calculate traces for independent-exp amplitudes and add to fit
+                    _amps = np.asarray([p.value for p, indep in zip(amps_params, exp_indep_select) if indep])
+                    exp_indep_traces = traces[:, exp_indep_select].dot(_amps)  # add calculated traces
                     fit += exp_indep_traces
                     _y -= exp_indep_traces
 
                 # solve the least squares problem, find the amplitudes of visible compartments based on data
-                coefs = OLS_ridge(A, _y, 0)  # A @ amps = y - A_fixed @ amps_fixes - intercept
+                amps = OLS_ridge(A, _y, 0)  # A @ amps = y - A_fixed @ amps_fixes - intercept
 
-                fit += A.dot(coefs)  # calculate the fit and add it
+                fit += A.dot(amps)  # calculate the fit and add it
 
                 # update amplitudes and intercept
                 if lstsq_intercept:
-                    *coefs, intercept = list(coefs)
+                    *amps, intercept = list(amps)
                     self.params[par_names['intercept']].value = intercept
 
                 amp_names = [amp for amp, selected in zip(amps_params, exp_dep_select) if selected]
-                for par, coef in zip(amp_names, coefs):
+                for par, coef in zip(amp_names, amps):
                     par.value = coef
 
             else:
                 amps = np.asarray([self.params[p].value for p in par_names['amps']])
-                fit = traces.dot(amps) + self.params[
-                    par_names['intercept']].value  # weight the simulated traces with amplitudes and calculate the fit
+                fit = traces.dot(amps)  # weight the simulated traces with amplitudes and calculate the fit
+
+                if lstsq_intercept:
+                    intercept = (y - fit).sum() / fit.shape[0]  # calculate intercept by least squares
+                    fit += intercept
+                    self.params[par_names['intercept']].value = intercept
+                else:
+                    fit += self.params[par_names['intercept']].value  # just add it to fit
 
             res = self.weight_func(fit - y, y)  # residual, use original data
             fits.append(fit)
             residuals.append(res)
-            i += 1
 
         return x_vals, fits, residuals
 

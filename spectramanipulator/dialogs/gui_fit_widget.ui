@@ -94,8 +94,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>402</width>
-              <height>343</height>
+              <width>394</width>
+              <height>291</height>
              </rect>
             </property>
            </widget>
@@ -233,8 +233,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>400</width>
-                <height>212</height>
+                <width>392</width>
+                <height>157</height>
                </rect>
               </property>
              </widget>
@@ -276,12 +276,15 @@
         <widget class="MyLineEdit" name="leX1"/>
        </item>
        <item>
-        <widget class="QCheckBox" name="cbShowRegion">
+        <widget class="QPushButton" name="btnShowRegion">
          <property name="text">
           <string>Show region</string>
          </property>
-         <property name="checked">
+         <property name="checkable">
           <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
          </property>
         </widget>
        </item>
