@@ -197,7 +197,6 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.general_model_dep_param_layouts = []
         self.general_model_bounds = {'lb': [], 'ub': []}
 
-
         if self.node is not None:
             for spectrum in self.node:
                 widget, species_hlayout, params_layout, lower_bound, upper_bound, show_region_btn = self.create_tab_widget(self.tab_widget_pred_model)
@@ -770,9 +769,11 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                     except KeyError as e:
                         print(e.__repr__())
 
+            model.equal_pars = psd.equal_pars  # update equal parameter setup
+            model.update_params()
             self.setup_fields()  # update fields
 
-        psd = ParamSettingsDialog(exp_dep_params, set_result=set_result)
+        psd = ParamSettingsDialog(exp_dep_params, model.equal_pars, set_result=set_result)
         psd.show()
 
     def general_model_setup_dep_params(self):

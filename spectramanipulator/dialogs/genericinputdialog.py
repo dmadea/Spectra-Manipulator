@@ -12,9 +12,9 @@ class GenericInputDialog(Singleton, QtWidgets.QDialog):
     is_opened = False
 
     def __init__(self, widget_list=None, label_text='Some descriptive text...', title='GenericInputDialog',
-                 parent=None, set_result=None):
+                 parent=None, set_result=None, flags=Qt.WindowStaysOnTopHint | Qt.MSWindowsFixedSizeDialogHint):
 
-        super(GenericInputDialog, self).__init__(parent, Qt.WindowStaysOnTopHint | Qt.MSWindowsFixedSizeDialogHint)
+        super(GenericInputDialog, self).__init__(parent, flags)
 
         # # disable resizing of the window,
         # # help from https://stackoverflow.com/questions/16673074/in-qt-c-how-can-i-fully-disable-resizing-a-window-including-the-resize-icon-w
@@ -54,12 +54,15 @@ class GenericInputDialog(Singleton, QtWidgets.QDialog):
             if isinstance(label, str):
                 # self.label_list.append(QLabel(label))
                 label = QLabel(label)
+                label.setWordWrap(True)
             if widget is not None:
                 self.widget_list.append(widget)
-                self.grid_layout.addWidget(widget, i, 1)
+                col_span = 2 if label is None else 1
+                self.grid_layout.addWidget(widget, i, 1, 1, col_span)
 
             if label is not None:
-                self.grid_layout.addWidget(label, i, 0)
+                col_span = 2 if widget is None else 1
+                self.grid_layout.addWidget(label, i, 0, 1, col_span)
 
         self.VLayout.addLayout(self.grid_layout)
         self.VLayout.addWidget(self.button_box)

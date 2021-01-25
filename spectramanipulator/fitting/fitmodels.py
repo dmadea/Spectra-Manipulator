@@ -125,7 +125,7 @@ class Model(object):
 
         self.spec_visible = spec_visible  # dictionary
         self.exp_indep_params = None  # experimental independent parameters, will be set in init_params method
-        self.equal_pars = {}
+        self.equal_pars = {}  # hold a exp_dep_param as a key and list tuple of pairs of equal parameters as a value
 
         if self.spec_visible is None:
             self.spec_visible = [{name: True for name in self.spec_names[:self.n_spec]} for _ in range(len(self.exps_data))]
@@ -185,9 +185,9 @@ class Model(object):
                 self.exp_dep_params = self.default_exp_dep_params()
 
         if len(kwargs) > 0:
-            self._update_params()
+            self.update_params()
 
-    def _update_params(self):
+    def update_params(self):
         """Update the parameters based on new model options."""
 
         old_params = deepcopy(self.params)
@@ -307,29 +307,22 @@ class _InterceptVarProModel(Model):
 
         self.fit_intercept_varpro = fit_intercept_varpro
 
-    def set_equal_param(self, par_name: str = '_Q_0', pairs=None):
-        if pairs is None:
-            return
+    def set_equal_param_each(self, par_name: str = '_Q_0', n: int = 2):
+        """Fills the equal_pars dictionary for a given par_name so that each n subsequent
+        experiments will share the same parameter. Eg. for 6 different experiment and
+        parameter _Q_0 and n=2, the resulting pairs will be
+        equal_pars['_Q_0'] = [(0, 1), (2, 3), (4, 5)] which means that there will be 3
+        different _Q_0 parameters for these 3 experiment pairs. First two experiments
+        will use _Q_0_e01 parameter, another two experiments parameter _Q_0_e23, etc."""
 
-        if par_name not in self.equal_pars:
-            self.equal_pars[par_name] = ['' for _ in range(len(self.exps_data))]
+        n_exps = len(self.exps_data)
+        if n_exps % n != 0:
+            raise ValueError(f"Number of experiments is not divisible by {n}.")
 
-        assert len(self.equal_pars[par_name]) == len(self.exps_data)
-        for pair in pairs:
-            idx_name = ''.join([str(i) for i in pair])
-            for idx in pair:
-                self.equal_pars[par_name][idx] = idx_name
-
-        self._update_params()
-
-    def set_equal_param_first(self, par_name: str = '_Q_0', num: int = 2):
-        n = len(self.exps_data)
-        if n % num != 0:
-            raise ValueError(f"Number of experiments is not divisible by {num}.")
-
-        space = np.arange(0, n).reshape((n // num, num))
+        space = np.arange(0, n_exps).reshape((n_exps // n, n))
         pairs = [tuple(row) for row in space]
-        self.set_equal_param(par_name, pairs)
+        self.equal_pars[par_name] = pairs
+        self.update_params()
 
     def model_options(self):
         opts = super(_InterceptVarProModel, self).model_options()
@@ -377,12 +370,23 @@ class _InterceptVarProModel(Model):
 
         self.param_names_dict = [deepcopy(params_indep) for _ in range(n)]
 
+        # setup equal parameter names
+        equal_pars_dict = {}
+        for par_name, pairs in self.equal_pars.items():
+            equal_pars_dict[par_name] = ['' for _ in range(len(self.exps_data))]
+
+            for pair in pairs:
+                idx_name = ''.join([str(i) for i in pair])
+                for idx in pair:
+                    equal_pars_dict[par_name][idx] = idx_name
+
         # add experiment dependent parameters
         for i in range(n):
             def par_format(name):
-                if name in self.equal_pars:
-                    idx = self.equal_pars[name][i]
-                    return self.format_exp_par(name, idx)
+                if name in equal_pars_dict:
+                    idx = equal_pars_dict[name][i]
+                    if idx != '':
+                        return self.format_exp_par(name, idx)
 
                 return self.format_exp_par(name, i)
 
@@ -623,7 +627,7 @@ class _FixedParametersModel(_InterceptVarProModel):
             self.exp_dep_params = self.default_exp_dep_params()
 
         if len(kwargs) > 0:
-            self._update_params()
+            self.update_params()
 
         # also handles visible changes
         for exp_params, visible in zip(self.param_names_dict, self.spec_visible):

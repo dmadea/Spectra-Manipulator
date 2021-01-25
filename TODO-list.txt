@@ -10,8 +10,8 @@
 # TODO list
 
     oo lstsq intercept
-    oo set range for individual experiements
-    -- equal parameters setup and set range in parameter widget
+    oo set range for individual experiments
+    o- equal parameters setup and set range in parameter widget
     -- range dialogs
     -- plotting fits, FitResult history
     -- multithreading in residuals func
