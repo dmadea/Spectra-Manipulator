@@ -727,11 +727,14 @@ def plot_fits(data_group, fit_group, residuals_group, n_rows=None, n_cols=None, 
         _x_lim = list(x_lim)
         _y_lim = list(y_lim)
 
-        _x_lim[0] = data.data[0, 0] * x_margin if _x_lim[0] is None else _x_lim[0]
-        _x_lim[1] = data.data[-1, 0] * x_margin if _x_lim[1] is None else _x_lim[1]
+        _x_lim[0] = data.data[0, 0] * x_margin * t_mul_factor if _x_lim[0] is None else _x_lim[0]
+        _x_lim[1] = data.data[-1, 0] * x_margin * t_mul_factor if _x_lim[1] is None else _x_lim[1]
 
         _y_lim[0] = data.data[:, 1].min() * y_margin if _y_lim[0] is None else _y_lim[0]
         _y_lim[1] = data.data[:, 1].max() * y_margin if _y_lim[1] is None else _y_lim[1]
+
+        # print(any(np.isnan(data.y)))
+        # print(_y_lim)
 
         _set_main_axis(ax_data, x_label="", y_label=y_label, xlim=_x_lim, ylim=_y_lim, x_major_locator=x_major_locator,
                        y_major_locator=y_major_locator)
@@ -789,6 +792,9 @@ def plot_fit(data_item, fit_item, residuals_item, symlog=False, linscale=1, lint
 
     _x_lim[0] = data_item.data[0, 0] if _x_lim[0] is None else _x_lim[0]
     _x_lim[1] = data_item.data[-1, 0] if _x_lim[1] is None else _x_lim[1]
+
+    _x_lim[0] *= t_mul_factor
+    _x_lim[1] *= t_mul_factor
 
     _y_lim[0] = data_item.data[:, 1].min() if _y_lim[0] is None else _y_lim[0]
     _y_lim[1] = data_item.data[:, 1].max() if _y_lim[1] is None else _y_lim[1]

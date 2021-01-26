@@ -13,7 +13,7 @@ class Settings(object):
     _config_filename = "config.json"
     _inst_default_settings = None  # default settings instance
 
-    debug = True
+    debug = False
 
     # not in Settings dialog
     enable_multiprocessing = True  # enables importing files as separate processes

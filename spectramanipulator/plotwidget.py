@@ -159,11 +159,12 @@ class PlotWidget(pg.PlotWidget):
             return
 
         if region is None:
+            # if no region is setup, sets a region from 13 - 87 % of the current view range
             region = self.getViewBox().viewRange()[0]
-            f = 0.87
+            f = 0.13
             diff = region[1] - region[0]
-            region[0] += (1 - f) * diff
-            region[1] += f * diff
+            region[0] += f * diff
+            region[1] -= f * diff
 
         brush = QtGui.QBrush(QtGui.QColor(0, 255, 0, 20)) if brush is None else brush
 

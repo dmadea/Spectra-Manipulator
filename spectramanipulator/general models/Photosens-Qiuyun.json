@@ -1,0 +1,54 @@
+{
+    "scheme": "PS = GS\n2PS = PS + GS\nPS= T\n2T = T + GS",
+    "initial_conditions": {
+        "PS": 1,
+        "GS": 0,
+        "T": 0
+    },
+    "elementary_reactions": [
+        {
+            "from_comp": [
+                "PS"
+            ],
+            "to_comp": [
+                "GS"
+            ],
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "PS",
+                "PS"
+            ],
+            "to_comp": [
+                "PS",
+                "GS"
+            ],
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "PS"
+            ],
+            "to_comp": [
+                "T"
+            ],
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
+        },
+        {
+            "from_comp": [
+                "T",
+                "T"
+            ],
+            "to_comp": [
+                "T",
+                "GS"
+            ],
+            "forward_rate": 1.0,
+            "backward_rate": 0.0
+        }
+    ]
+}

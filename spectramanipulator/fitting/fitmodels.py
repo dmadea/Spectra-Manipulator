@@ -903,17 +903,6 @@ class GeneralFitModel(_InterceptVarProModel):
         pars += ['intercept']  # intercept
         return pars
 
-    def get_model_indep_params_list(self):
-        return [self.params[name] for name in self.exp_indep_params]
-
-    def get_model_dep_params_list(self):
-        pars_list = []
-
-        for i in range(len(self.exps_data)):
-            pars_list.append([self.params[self.format_exp_par(name, i)] for name in self.exp_dep_params])
-
-        return pars_list
-
     def load_from_file(self, fpath: str):
         self.general_model = GeneralModel.load(fpath)
         self.build()

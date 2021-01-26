@@ -455,9 +455,12 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
             bounds = (x0, x1)
 
-        self.lr = PlotWidget.add_linear_region(bounds=bounds, z_value=1e8)
-        # self.update_region()
-        sender.lb.setText(sender.lb.text())  # calls update_region
+        try:
+            region = float(sender.lb.text()), float(sender.ub.text())
+        except ValueError:
+            region = None
+
+        self.lr = PlotWidget.add_linear_region(bounds=bounds, z_value=1e8, region=region)
         self.lr.sigRegionChanged.connect(lambda: self.update_region_text_values(sender.lb, sender.ub))
 
     def update_region_text_values(self, lb, ub):
