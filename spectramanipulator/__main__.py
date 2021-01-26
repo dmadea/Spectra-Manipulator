@@ -346,9 +346,13 @@ class Main(QMainWindow):
         if len(spectra) == 0:
             return
 
+        max_abs = 3.5
+
         # CONVERT THE VOLTAGE (proportional to transmittance) TO ABSORBANCE
         for sp in spectra:
-            sp.y = -np.log10(-sp.y)
+            # convert nan and pos infinities to value of max_abs = very high absorbance for nano
+            sp.y = np.nan_to_num(-np.log10(-sp.y), nan=max_abs, posinf=max_abs, neginf=0)
+            sp.y[sp.y > max_abs] = max_abs  # floor larger values to max absorbance
 
         self.tree_widget.import_spectra(spectra)
 

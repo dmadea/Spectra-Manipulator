@@ -6,6 +6,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt  # we plot graphs with this library
 from matplotlib import cm
 from matplotlib.ticker import *
+import matplotlib.gridspec as gridspec
 
 from matplotlib import colors as c
 
@@ -697,6 +698,20 @@ def plot_kinetics_no_colorbar(group_item, x_lim=(None, None), y_lim=(None, None)
         plt.show()
 
 
+def plot_fit(data_item, fit_item, residuals_item, symlog=False, linscale=1, linthresh=100,
+              lw_data=0.5, lw_fit=1.5, fig_size_one_graph=(5, 4), y_label='$\\Delta$A', x_label='Time / $\\mu$s',
+              x_lim=(None, None), t_mul_factor=1, y_lim=(None, None), x_margin=1, y_margin=1.05, filepath=None, dpi=500,
+              transparent=False, x_major_formatter=ScalarFormatter(), x_major_locator=None, y_major_locator=None,
+              data_color='red', show_title=True):
+
+    plot_fits([data_item], [fit_item], [residuals_item], n_rows=1, n_cols=1, symlog=symlog, linscale=linscale,
+              linthresh=linthresh, lw_data=lw_data, lw_fit=lw_fit, fig_size_one_graph=fig_size_one_graph,
+              y_label=y_label, x_label=x_label, x_lim=x_lim, t_mul_factor=t_mul_factor, y_lim=y_lim, x_margin=x_margin,
+              y_margin=y_margin, filepath=filepath, dpi=dpi, transparent=transparent,
+              x_major_formatter=x_major_formatter, x_major_locator=x_major_locator, y_major_locator=y_major_locator,
+              data_color=data_color, show_title=show_title)
+
+
 def plot_fits(data_group, fit_group, residuals_group, n_rows=None, n_cols=None, symlog=False, linscale=1, linthresh=100,
               lw_data=0.5, lw_fit=1.5, fig_size_one_graph=(5, 4), y_label='$\\Delta$A', x_label='Time / $\\mu$s',
               x_lim=(None, None), t_mul_factor=1, y_lim=(None, None), x_margin=1, y_margin=1.05, filepath=None, dpi=500,
@@ -706,21 +721,30 @@ def plot_fits(data_group, fit_group, residuals_group, n_rows=None, n_cols=None, 
     n = len(data_group)
     assert n == len(fit_group) == len(residuals_group)
 
-    if n_rows is None and n_cols is None:
+    if n_rows is None and n_cols is None:  # estimate the n_rows and n_cols from the sqrt of number of graphs
         sqrt = n ** 0.5
         n_rows = int(np.ceil(sqrt))
         n_cols = int(sqrt)
-        assert n_rows * n_cols >= n
     elif n_rows is None and n_cols is not None:
         n_rows = int(np.ceil(n / n_cols))
-    else:
+    elif n_rows is not None and n_cols is None:
         n_cols = int(np.ceil(n / n_rows))
 
-    fig, axes = plt.subplots(2 * n_rows, n_cols,
-                             figsize=(fig_size_one_graph[0] * n_cols, fig_size_one_graph[1] * n_rows),
-                             gridspec_kw={'height_ratios': (4, 1) * n_rows})
+    # assert n_rows * n_cols >= n  # not necessary, if the condition is not valid, fewer plots will be plotted
 
-    for ax_data, ax_res, data, fit, res in zip(axes[::2].flatten(), axes[1::2].flatten(), data_group, fit_group, residuals_group):
+    fig = plt.figure(figsize=(fig_size_one_graph[0] * n_cols, fig_size_one_graph[1] * n_rows))
+
+    outer_grid = gridspec.GridSpec(n_rows, n_cols, wspace=0.25, hspace=0.3)
+
+    for og, data, fit, res in zip(outer_grid, data_group, fit_group, residuals_group):
+
+        # nice tutorial about gridspec here https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.gridspec.GridSpecFromSubplotSpec.html
+        # each unit consist of two graphs - data and residuals
+        inner_grid = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=og, wspace=0.1, hspace=0.1,
+                                                      height_ratios=(4, 1))
+
+        ax_data = fig.add_subplot(inner_grid[0])
+        ax_res = fig.add_subplot(inner_grid[1])
 
         t_data = data.data[:, 0] * t_mul_factor
 
@@ -733,9 +757,6 @@ def plot_fits(data_group, fit_group, residuals_group, n_rows=None, n_cols=None, 
         _y_lim[0] = data.data[:, 1].min() * y_margin if _y_lim[0] is None else _y_lim[0]
         _y_lim[1] = data.data[:, 1].max() * y_margin if _y_lim[1] is None else _y_lim[1]
 
-        # print(any(np.isnan(data.y)))
-        # print(_y_lim)
-
         _set_main_axis(ax_data, x_label="", y_label=y_label, xlim=_x_lim, ylim=_y_lim, x_major_locator=x_major_locator,
                        y_major_locator=y_major_locator)
         _set_main_axis(ax_res, x_label=x_label, y_label='res.', xlim=_x_lim, x_minor_locator=None, y_minor_locator=None)
@@ -743,6 +764,8 @@ def plot_fits(data_group, fit_group, residuals_group, n_rows=None, n_cols=None, 
         # plot zero lines
         ax_data.axline((0, 0), slope=0, ls='--', color='black', lw=0.5)
         ax_res.axline((0, 0), slope=0, ls='--', color='black', lw=0.5)
+
+        ax_data.tick_params(labelbottom=False)
 
         if show_title:
             ax_data.set_title(data.name)
@@ -769,74 +792,72 @@ def plot_fits(data_group, fit_group, residuals_group, n_rows=None, n_cols=None, 
             ax_data.xaxis.set_major_formatter(x_major_formatter)
             ax_res.xaxis.set_major_formatter(x_major_formatter)
 
-    plt.tight_layout()
-
     if filepath:
         ext = os.path.splitext(filepath)[1].lower()[1:]
         plt.savefig(fname=filepath, format=ext, transparent=transparent, dpi=dpi)
 
     plt.show()
 
-
-def plot_fit(data_item, fit_item, residuals_item, symlog=False, linscale=1, linthresh=100,
-                  lw_data=0.5, lw_fit=1.5, fig_size=(5, 4), y_label='$\\Delta$A', x_label='Time / $\\mu$s',
-                  x_lim=(None, None), t_mul_factor=1, y_lim=(None, None), filepath=None, dpi=500, transparent=False,
-             x_major_formatter=ScalarFormatter(), x_major_locator=None, y_major_locator=None, data_color='red'):
-
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=fig_size, gridspec_kw={'height_ratios': (4, 1)})
-
-    t_data = data_item.data[:, 0] * t_mul_factor
-
-    _x_lim = list(x_lim)
-    _y_lim = list(y_lim)
-
-    _x_lim[0] = data_item.data[0, 0] if _x_lim[0] is None else _x_lim[0]
-    _x_lim[1] = data_item.data[-1, 0] if _x_lim[1] is None else _x_lim[1]
-
-    _x_lim[0] *= t_mul_factor
-    _x_lim[1] *= t_mul_factor
-
-    _y_lim[0] = data_item.data[:, 1].min() if _y_lim[0] is None else _y_lim[0]
-    _y_lim[1] = data_item.data[:, 1].max() if _y_lim[1] is None else _y_lim[1]
-
-    _set_main_axis(ax1, x_label="", y_label=y_label, xlim=_x_lim, ylim=_y_lim, x_major_locator=x_major_locator,
-                   y_major_locator=y_major_locator)
-    _set_main_axis(ax2, x_label=x_label, y_label='res.', xlim=_x_lim, x_minor_locator=None, y_minor_locator=None)
-
-    # plot zero lines
-    ax1.axline((0, 0), slope=0, ls='--', color='black', lw=0.5)
-    ax2.axline((0, 0), slope=0, ls='--', color='black', lw=0.5)
-
-    ax1.plot(t_data, data_item.data[:, 1], lw=lw_data, color=data_color)
-    ax1.plot(fit_item.data[:, 0] * t_mul_factor, fit_item.data[:, 1], lw=lw_fit, color='black')
-    ax2.plot(residuals_item.data[:, 0] * t_mul_factor, residuals_item.data[:, 1], lw=lw_data, color=data_color)
-
-    ax1.set_axisbelow(False)
-    ax2.set_axisbelow(False)
-
-    ax1.yaxis.set_ticks_position('both')
-    ax1.xaxis.set_ticks_position('both')
-
-    ax2.yaxis.set_ticks_position('both')
-    ax2.xaxis.set_ticks_position('both')
-
-    if symlog:
-        ax1.set_xscale('symlog', subs=[2, 3, 4, 5, 6, 7, 8, 9], linscale=linscale, linthresh=linthresh)
-        ax2.set_xscale('symlog', subs=[2, 3, 4, 5, 6, 7, 8, 9], linscale=linscale, linthresh=linthresh)
-        ax1.xaxis.set_minor_locator(MinorSymLogLocator(linthresh))
-        ax2.xaxis.set_minor_locator(MinorSymLogLocator(linthresh))
-
-    if x_major_formatter:
-        ax1.xaxis.set_major_formatter(x_major_formatter)
-        ax2.xaxis.set_major_formatter(x_major_formatter)
-
-    plt.tight_layout()
-
-    if filepath:
-        ext = os.path.splitext(filepath)[1].lower()[1:]
-        plt.savefig(fname=filepath, format=ext, transparent=transparent, dpi=dpi)
-
-    plt.show()
+#
+# def plot_fit(data_item, fit_item, residuals_item, symlog=False, linscale=1, linthresh=100,
+#                   lw_data=0.5, lw_fit=1.5, fig_size=(5, 4), y_label='$\\Delta$A', x_label='Time / $\\mu$s',
+#                   x_lim=(None, None), t_mul_factor=1, y_lim=(None, None), filepath=None, dpi=500, transparent=False,
+#              x_major_formatter=ScalarFormatter(), x_major_locator=None, y_major_locator=None, data_color='red'):
+#
+#     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=fig_size, gridspec_kw={'height_ratios': (4, 1)})
+#
+#     t_data = data_item.data[:, 0] * t_mul_factor
+#
+#     _x_lim = list(x_lim)
+#     _y_lim = list(y_lim)
+#
+#     _x_lim[0] = data_item.data[0, 0] if _x_lim[0] is None else _x_lim[0]
+#     _x_lim[1] = data_item.data[-1, 0] if _x_lim[1] is None else _x_lim[1]
+#
+#     _x_lim[0] *= t_mul_factor
+#     _x_lim[1] *= t_mul_factor
+#
+#     _y_lim[0] = data_item.data[:, 1].min() if _y_lim[0] is None else _y_lim[0]
+#     _y_lim[1] = data_item.data[:, 1].max() if _y_lim[1] is None else _y_lim[1]
+#
+#     _set_main_axis(ax1, x_label="", y_label=y_label, xlim=_x_lim, ylim=_y_lim, x_major_locator=x_major_locator,
+#                    y_major_locator=y_major_locator)
+#     _set_main_axis(ax2, x_label=x_label, y_label='res.', xlim=_x_lim, x_minor_locator=None, y_minor_locator=None)
+#
+#     # plot zero lines
+#     ax1.axline((0, 0), slope=0, ls='--', color='black', lw=0.5)
+#     ax2.axline((0, 0), slope=0, ls='--', color='black', lw=0.5)
+#
+#     ax1.plot(t_data, data_item.data[:, 1], lw=lw_data, color=data_color)
+#     ax1.plot(fit_item.data[:, 0] * t_mul_factor, fit_item.data[:, 1], lw=lw_fit, color='black')
+#     ax2.plot(residuals_item.data[:, 0] * t_mul_factor, residuals_item.data[:, 1], lw=lw_data, color=data_color)
+#
+#     ax1.set_axisbelow(False)
+#     ax2.set_axisbelow(False)
+#
+#     ax1.yaxis.set_ticks_position('both')
+#     ax1.xaxis.set_ticks_position('both')
+#
+#     ax2.yaxis.set_ticks_position('both')
+#     ax2.xaxis.set_ticks_position('both')
+#
+#     if symlog:
+#         ax1.set_xscale('symlog', subs=[2, 3, 4, 5, 6, 7, 8, 9], linscale=linscale, linthresh=linthresh)
+#         ax2.set_xscale('symlog', subs=[2, 3, 4, 5, 6, 7, 8, 9], linscale=linscale, linthresh=linthresh)
+#         ax1.xaxis.set_minor_locator(MinorSymLogLocator(linthresh))
+#         ax2.xaxis.set_minor_locator(MinorSymLogLocator(linthresh))
+#
+#     if x_major_formatter:
+#         ax1.xaxis.set_major_formatter(x_major_formatter)
+#         ax2.xaxis.set_major_formatter(x_major_formatter)
+#
+#     plt.tight_layout()
+#
+#     if filepath:
+#         ext = os.path.splitext(filepath)[1].lower()[1:]
+#         plt.savefig(fname=filepath, format=ext, transparent=transparent, dpi=dpi)
+#
+#     plt.show()
 
 
 def reaction_QY_relative(sample_items, actinometer_items, QY_act=1, irradiation_spectrum=None,
