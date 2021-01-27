@@ -597,7 +597,7 @@ def main():
     # app.lastWindowClosed.connect(app.quit)
     sys.exit(app.exec_())
 
-    #### cProfile.run('app.exec_()', 'profdata')
+    ### cProfile.run('app.exec_()', 'profdata')
     # cProfile.runctx('app.exec_()', None, locals(), filename='profdata')
     # p = pstats.Stats('profdata')
     # p.sort_stats('cumtime').print_stats(100)

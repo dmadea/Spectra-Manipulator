@@ -11,6 +11,11 @@ from copy import deepcopy
 from scipy.linalg import lstsq
 from ..general_model import GeneralModel
 import numba as nb
+import ray
+import psutil
+
+num_cpus = psutil.cpu_count(logical=False)
+ray.init(num_cpus=num_cpus, ignore_reinit_error=True)
 
 posv = scipy.linalg.get_lapack_funcs(('posv'))
 # gels = scipy.linalg.get_lapack_funcs(('gels'))
@@ -131,6 +136,8 @@ class Model(object):
             self.spec_visible = [{name: True for name in self.spec_names[:self.n_spec]} for _ in range(len(self.exps_data))]
 
         self.param_names_dict = {}
+
+        self.data_ids = [ray.put(data) for data in self.exps_data]
 
     def set_ranges(self, ranges=None):
         if self.exps_data is None:
@@ -397,8 +404,78 @@ class _InterceptVarProModel(Model):
     def get_rate_values(self, exp_num):
         return np.asarray([self.params[p].value for p in self.param_names_dict[exp_num]['rates']])
 
+    @ray.remote
+    def simulate_parallel(self, i, data, x_range, par_names, visible):
+
+        lstsq_intercept = self.fit_intercept_varpro and 'intercept' in self.exp_dep_params
+        exp_indep_amps = [par for par in self.exp_indep_params if self.is_amp_par(par)]
+
+        x, y = get_xy(data, x0=x_range[0], x1=x_range[1])
+        _y = y.copy()  # copy view of y, it may change, otherwise, original data would be changed
+
+        j = np.asarray([self.params[p].value for p in par_names['j']])
+        rates = self.get_rate_values(i)
+
+        traces = self._get_traces(x, rates, j, i)  # simulate
+
+        if self.varpro:
+
+            amps_params = [self.params[p] for p in par_names['amps']]
+
+            # exp indep traces
+            exp_dep_select = []
+            exp_indep_select = []
+            for key, visible in visible.items():
+                is_independent = key in exp_indep_amps
+                exp_indep_select.append(is_independent and visible)
+                exp_dep_select.append(not is_independent and visible)
+
+            A = traces[:, exp_dep_select]  # select only visible species
+            # add intercept as constant function
+
+            fit = 0
+            if lstsq_intercept:
+                A = np.hstack((A, np.ones_like(x)[:, None]))
+            else:
+                fit = self.params[par_names['intercept']].value
+                _y -= fit
+
+            if any(exp_indep_select):  # calculate traces for independent-exp amplitudes and add to fit
+                _amps = np.asarray([p.value for p, indep in zip(amps_params, exp_indep_select) if indep])
+                exp_indep_traces = traces[:, exp_indep_select].dot(_amps)  # add calculated traces
+                fit += exp_indep_traces
+                _y -= exp_indep_traces
+
+            # solve the least squares problem, find the amplitudes of visible compartments based on data
+            amps = OLS_ridge(A, _y, 0)  # A @ amps = y - A_fixed @ amps_fixes - intercept
+
+            fit += A.dot(amps)  # calculate the fit and add it
+
+            # update amplitudes and intercept
+            if lstsq_intercept:
+                *amps, intercept = list(amps)
+                self.params[par_names['intercept']].value = intercept
+
+            amp_names = [amp for amp, selected in zip(amps_params, exp_dep_select) if selected]
+            for par, coef in zip(amp_names, amps):
+                par.value = coef
+
+        else:
+            amps = np.asarray([self.params[p].value for p in par_names['amps']])
+            fit = traces.dot(amps)  # weight the simulated traces with amplitudes and calculate the fit
+
+            if lstsq_intercept:
+                intercept = (y - fit).sum() / fit.shape[0]  # calculate intercept by least squares
+                fit += intercept
+                self.params[par_names['intercept']].value = intercept
+            else:
+                fit += self.params[par_names['intercept']].value  # just add it to fit
+
+        res = self.weight_func(fit - y, y)  # residual, use original data
+
+        return x, fit, res
+
     def simulate(self, params=None):
-        """Simulates the data and returns the list of simulated traces as ndarrays"""
 
         if params is not None:
             self.params = params
@@ -406,83 +483,109 @@ class _InterceptVarProModel(Model):
         if self.exps_data is None or not np.iterable(self.exps_data):
             raise ValueError('No experimental data or data are not iterable')
 
-        x_vals = []
-        fits = []
-        residuals = []
+        ids = []
 
-        lstsq_intercept = self.fit_intercept_varpro and 'intercept' in self.exp_dep_params
+        for i, (x_range, par_names, visible) in enumerate(zip(self.ranges, self.param_names_dict,
+                                                            self.spec_visible)):
 
-        exp_indep_amps = [par for par in self.exp_indep_params if self.is_amp_par(par)]
+            ids.append(self.simulate_parallel.remote(self, i, self.data_ids[i], x_range, par_names, visible))
 
-        for i, (data, x_range, par_names, visible) in enumerate(zip(self.exps_data, self.ranges, self.param_names_dict,
-                                                                    self.spec_visible)):
-            x, y = get_xy(data, x0=x_range[0], x1=x_range[1])
-            _y = y.copy()  # copy view of y, it may change, otherwise, original data would be changed
-            x_vals.append(x)
+        results = ray.get(ids)
 
-            j = np.asarray([self.params[p].value for p in par_names['j']])
-            rates = self.get_rate_values(i)
-
-            traces = self._get_traces(x, rates, j, i)  # simulate
-
-            if self.varpro:
-
-                amps_params = [self.params[p] for p in par_names['amps']]
-
-                # exp indep traces
-                exp_dep_select = []
-                exp_indep_select = []
-                for key, visible in visible.items():
-                    is_independent = key in exp_indep_amps
-                    exp_indep_select.append(is_independent and visible)
-                    exp_dep_select.append(not is_independent and visible)
-
-                A = traces[:, exp_dep_select]  # select only visible species
-                # add intercept as constant function
-
-                fit = 0
-                if lstsq_intercept:
-                    A = np.hstack((A, np.ones_like(x)[:, None]))
-                else:
-                    fit = self.params[par_names['intercept']].value
-                    _y -= fit
-
-                if any(exp_indep_select):  # calculate traces for independent-exp amplitudes and add to fit
-                    _amps = np.asarray([p.value for p, indep in zip(amps_params, exp_indep_select) if indep])
-                    exp_indep_traces = traces[:, exp_indep_select].dot(_amps)  # add calculated traces
-                    fit += exp_indep_traces
-                    _y -= exp_indep_traces
-
-                # solve the least squares problem, find the amplitudes of visible compartments based on data
-                amps = OLS_ridge(A, _y, 0)  # A @ amps = y - A_fixed @ amps_fixes - intercept
-
-                fit += A.dot(amps)  # calculate the fit and add it
-
-                # update amplitudes and intercept
-                if lstsq_intercept:
-                    *amps, intercept = list(amps)
-                    self.params[par_names['intercept']].value = intercept
-
-                amp_names = [amp for amp, selected in zip(amps_params, exp_dep_select) if selected]
-                for par, coef in zip(amp_names, amps):
-                    par.value = coef
-
-            else:
-                amps = np.asarray([self.params[p].value for p in par_names['amps']])
-                fit = traces.dot(amps)  # weight the simulated traces with amplitudes and calculate the fit
-
-                if lstsq_intercept:
-                    intercept = (y - fit).sum() / fit.shape[0]  # calculate intercept by least squares
-                    fit += intercept
-                    self.params[par_names['intercept']].value = intercept
-                else:
-                    fit += self.params[par_names['intercept']].value  # just add it to fit
-
-            res = self.weight_func(fit - y, y)  # residual, use original data
-            fits.append(fit)
-            residuals.append(res)
+        x_vals = list(map(lambda r: r[0], results))
+        fits = list(map(lambda r: r[1], results))
+        residuals = list(map(lambda r: r[2], results))
 
         return x_vals, fits, residuals
+
+
+
+    # def simulate(self, params=None):
+    #     """Simulates the data and returns the list of simulated traces as ndarrays"""
+    #
+    #     if params is not None:
+    #         self.params = params
+    #
+    #     if self.exps_data is None or not np.iterable(self.exps_data):
+    #         raise ValueError('No experimental data or data are not iterable')
+    #
+    #     x_vals = []
+    #     fits = []
+    #     residuals = []
+    #
+    #     lstsq_intercept = self.fit_intercept_varpro and 'intercept' in self.exp_dep_params
+    #
+    #     exp_indep_amps = [par for par in self.exp_indep_params if self.is_amp_par(par)]
+    #
+    #     for i, (data, x_range, par_names, visible) in enumerate(zip(self.exps_data, self.ranges, self.param_names_dict,
+    #                                                                 self.spec_visible)):
+    #         x, y = get_xy(data, x0=x_range[0], x1=x_range[1])
+    #         _y = y.copy()  # copy view of y, it may change, otherwise, original data would be changed
+    #         x_vals.append(x)
+    #
+    #         j = np.asarray([self.params[p].value for p in par_names['j']])
+    #         rates = self.get_rate_values(i)
+    #
+    #         traces = self._get_traces(x, rates, j, i)  # simulate
+    #
+    #         if self.varpro:
+    #
+    #             amps_params = [self.params[p] for p in par_names['amps']]
+    #
+    #             # exp indep traces
+    #             exp_dep_select = []
+    #             exp_indep_select = []
+    #             for key, visible in visible.items():
+    #                 is_independent = key in exp_indep_amps
+    #                 exp_indep_select.append(is_independent and visible)
+    #                 exp_dep_select.append(not is_independent and visible)
+    #
+    #             A = traces[:, exp_dep_select]  # select only visible species
+    #             # add intercept as constant function
+    #
+    #             fit = 0
+    #             if lstsq_intercept:
+    #                 A = np.hstack((A, np.ones_like(x)[:, None]))
+    #             else:
+    #                 fit = self.params[par_names['intercept']].value
+    #                 _y -= fit
+    #
+    #             if any(exp_indep_select):  # calculate traces for independent-exp amplitudes and add to fit
+    #                 _amps = np.asarray([p.value for p, indep in zip(amps_params, exp_indep_select) if indep])
+    #                 exp_indep_traces = traces[:, exp_indep_select].dot(_amps)  # add calculated traces
+    #                 fit += exp_indep_traces
+    #                 _y -= exp_indep_traces
+    #
+    #             # solve the least squares problem, find the amplitudes of visible compartments based on data
+    #             amps = OLS_ridge(A, _y, 0)  # A @ amps = y - A_fixed @ amps_fixes - intercept
+    #
+    #             fit += A.dot(amps)  # calculate the fit and add it
+    #
+    #             # update amplitudes and intercept
+    #             if lstsq_intercept:
+    #                 *amps, intercept = list(amps)
+    #                 self.params[par_names['intercept']].value = intercept
+    #
+    #             amp_names = [amp for amp, selected in zip(amps_params, exp_dep_select) if selected]
+    #             for par, coef in zip(amp_names, amps):
+    #                 par.value = coef
+    #
+    #         else:
+    #             amps = np.asarray([self.params[p].value for p in par_names['amps']])
+    #             fit = traces.dot(amps)  # weight the simulated traces with amplitudes and calculate the fit
+    #
+    #             if lstsq_intercept:
+    #                 intercept = (y - fit).sum() / fit.shape[0]  # calculate intercept by least squares
+    #                 fit += intercept
+    #                 self.params[par_names['intercept']].value = intercept
+    #             else:
+    #                 fit += self.params[par_names['intercept']].value  # just add it to fit
+    #
+    #         res = self.weight_func(fit - y, y)  # residual, use original data
+    #         fits.append(fit)
+    #         residuals.append(res)
+    #
+    #     return x_vals, fits, residuals
 
     def residuals(self, params=None):
         _, _, residuals = self.simulate(params)
