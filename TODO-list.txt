@@ -13,8 +13,9 @@
     oo set range for individual experiments
     o- equal parameters setup and set range in parameter widget
     -- range dialogs
-    -- plotting fits, FitResult history
+    o- plotting fits, FitResult history
     -- multithreading in residuals func
+    -- treeview update view after copy
     -- upload package
     -- documentation
 
