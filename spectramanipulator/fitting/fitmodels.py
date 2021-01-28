@@ -741,7 +741,7 @@ class SeqParModel(_InterceptVarProModel):
                 # update amplitudes and intercept
                 if kwds['lstsq_intercept']:
                     *__amps, icept = list(_amps)
-                    amps[exp_dep_select] = np.asarray(__amps, dtype=np.float64)
+                    amps[exp_dep_select] = __amps
 
             else:
                 fit = traces.dot(amps)  # weight the simulated traces with amplitudes and calculate the fit
