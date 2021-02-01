@@ -15,7 +15,7 @@ import ray
 import psutil
 
 num_cpus = psutil.cpu_count(logical=False)
-ray.init(num_cpus=num_cpus, ignore_reinit_error=True)
+# ray.init(num_cpus=num_cpus, ignore_reinit_error=True)
 
 posv = scipy.linalg.get_lapack_funcs(('posv'))
 # gels = scipy.linalg.get_lapack_funcs(('gels'))
