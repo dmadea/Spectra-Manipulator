@@ -57,6 +57,10 @@ class MenuBar(QMenuBar):
         self.EEM_duetta.triggered.connect(self.parent().import_EEM_Duetta)
         self.import_special_menu.addAction(self.EEM_duetta)
 
+        self.kinetics_duetta = QAction('Kinetics from Duetta Fluorimeter', self)
+        self.kinetics_duetta.triggered.connect(self.parent().import_kinetics_Duetta)
+        self.import_special_menu.addAction(self.kinetics_duetta)
+
         self.export_selected_spectra_as_act = QAction("&Export Selected Items As", self)
         # self.export_selected_spectra_as.setShortcut("Ctrl+E")
         self.export_selected_spectra_as_act.triggered.connect(self.parent().tree_widget.export_selected_items_as)

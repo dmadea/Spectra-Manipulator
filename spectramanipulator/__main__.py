@@ -425,6 +425,78 @@ class Main(QMainWindow):
 
         self.tree_widget.import_spectra(spectra)
 
+    def import_kinetics_Duetta(self):
+        """Used to import emission kinetics from Duetta Fluorimeter.
+        Works only for proper data. Data has to be exported from finished kinetics. If the kinetic
+        measurement was stopped during the measurement, the exported data will have different
+        format and they will not be able to import this way."""
+
+        filepaths = self._open_file_dialog("Import Kinetics from Duetta Fluorimeter",
+                                           Settings.import_EEM_dialog_path,
+                                           _filter="Data Files (*.txt, *.TXT);;All Files (*.*)",
+                                           initial_filter="Data Files (*.txt, *.TXT)",
+                                           choose_multiple=True)
+
+        if filepaths is None:
+            return
+
+        Settings.import_EEM_dialog_path = os.path.dirname(filepaths[0])
+        Settings.save()
+
+        kwargs = dict(delimiter='\t',
+                      decimal_sep='.',
+                      remove_empty_entries=False,
+                      skip_col_num=0,
+                      general_import_spectra_name_from_filename=True,
+                      skip_nan_columns=False,
+                      nan_replacement=0)
+
+        spectra, parsers = parse_files_specific(filepaths, use_CSV_parser=False, **kwargs)
+        if len(spectra) == 0:
+            return
+
+        if not isinstance(spectra[0], SpectrumList):
+            Logger.message(f"{type(spectra[0])} is not type SpectrumList. "
+                           f"Unable to import data. Check the dataparsers.")
+            return
+
+        # eg. 2Z+MB 310:250-650,1.92,  [name] [ex]:[em1]-[em2],[time]
+        # we need 1.92 which is the time at it was measured
+        pattern = re.compile(r'\d+:\d+-\d+,(\d+.\d+)')  # matches the [ex]:[em1]-[em2],[time] pattern and use [time] as group
+
+        try:
+            # extract the times from parsers
+            for sl, parser in zip(spectra, parsers):
+                names_list = parser.names_history[0]  # first line in names history
+                assert len(names_list) == len(sl) + 1
+
+                # extract the excitation wavelengths from the name history
+                new_names = []
+                sl_name = None  # name of the group
+                for name in names_list:
+                    if name == '':
+                        continue
+                    m = pattern.search(name)
+                    if m is None:
+                        continue
+                    new_names.append(m.group(1))
+                    sl_name = name.replace(m.group(0), '').strip()
+
+                # set the main name
+                if sl_name:
+                    sl.name = sl_name
+
+                # remove each 2nd spectrum as it contains useless X values (starting from second spectrum)
+                del sl.children[1::2]
+
+                # setup extracted names = excitation wavelengths
+                sl.set_names(new_names)
+        except Exception as e:
+            Logger.message(f"Unable to import data: {e.__str__()}")
+            return
+
+        self.tree_widget.import_spectra(spectra)
+
     def intLineStyle(self, counter):
         styles = [Qt.SolidLine, Qt.DashLine, Qt.DotLine, Qt.DashDotLine, Qt.DashDotDotLine]
         return styles[counter % len(styles)]
@@ -483,7 +555,6 @@ class Main(QMainWindow):
 
         group_counter = -1
         last_group = None
-
 
         # iterate over all checked items, if iterated item is already plotted, continue
         for item_counter, item in enumerate(self.tree_widget.myModel.iterate_items(ItemIterator.Checked)):
