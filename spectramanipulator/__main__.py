@@ -357,6 +357,14 @@ class Main(QMainWindow):
         self.tree_widget.import_spectra(spectra)
 
     def import_EEM_Duetta(self):
+        """Used to import excitation emission map from Duetta Fluorimeter.
+        Works only for proper data. Data has to be exported from finished kinetics. If the kinetic
+        measurement was stopped during the measurement, the exported data will have different
+        format and they cannot be imported this way.
+
+        It sets extracted excitation wavelengths as the names of the spectra.
+        """
+
         filepaths = self._open_file_dialog("Import Excitation Emission Map from Duetta Fluorimeter",
                                            Settings.import_EEM_dialog_path,
                                            _filter="Data Files (*.txt, *.TXT);;All Files (*.*)",
@@ -386,8 +394,9 @@ class Main(QMainWindow):
                            f"Unable to import data. Check the dataparsers.")
             return
 
-        # eg. MeCN blank 2nm step 448:250-1100, we need 448 which is the excitation wavelength
-        pattern = re.compile(r'(\d+):\d+-\d+')
+        # eg. MeCN blank 2nm step 448:250-1100, [name] [ex]:[em1]-[em2]
+        # we need 448 which is the excitation wavelength
+        pattern = re.compile(r'(\d+):\d+-\d+')  # use regex to extract the ex. wavelength
 
         try:
             # extract the wavelengths from parsers
@@ -429,7 +438,11 @@ class Main(QMainWindow):
         """Used to import emission kinetics from Duetta Fluorimeter.
         Works only for proper data. Data has to be exported from finished kinetics. If the kinetic
         measurement was stopped during the measurement, the exported data will have different
-        format and they will not be able to import this way."""
+        format and they cannot be imported this way.
+
+        It sets extracted times as a names of the spectra. First spectrum will have time=0.
+        In other words, time of first spectrum will be subtracted from all spectra.
+        """
 
         filepaths = self._open_file_dialog("Import Kinetics from Duetta Fluorimeter",
                                            Settings.import_EEM_dialog_path,
@@ -473,13 +486,19 @@ class Main(QMainWindow):
                 # extract the excitation wavelengths from the name history
                 new_names = []
                 sl_name = None  # name of the group
+                first_time = None
                 for name in names_list:
                     if name == '':
                         continue
                     m = pattern.search(name)
                     if m is None:
                         continue
-                    new_names.append(m.group(1))
+
+                    time = float(m.group(1))
+                    if first_time is None:
+                        first_time = time
+
+                    new_names.append(f'{time - first_time:.2f}')  # use 2 digits precision
                     sl_name = name.replace(m.group(0), '').strip()
 
                 # set the main name
