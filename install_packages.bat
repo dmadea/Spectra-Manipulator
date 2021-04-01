@@ -1,7 +1,7 @@
 
 python -m pip install --upgrade pip --user
 pip install --upgrade setuptools --user
-pip install git+https://github.com/pyqtgraph/pyqtgraph@master --user
+pip install pyqtgraph --user
 pip install lmfit --user
 pip install PyQt5 --user
 
