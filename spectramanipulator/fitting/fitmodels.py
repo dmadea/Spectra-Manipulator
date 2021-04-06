@@ -53,6 +53,7 @@ def get_xy_unpacked(data, x0=None, x1=None):
     arr = get_xy(data, x0, x1)
     return arr[:, 0], arr[:, 1]
 
+
 def OLS_ridge(A, B, alpha=0.000):
     """
     Fast least squares solver for X: AX=B by direct solve method with optional Tikhonov regularization.

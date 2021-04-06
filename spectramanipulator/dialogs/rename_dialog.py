@@ -1,5 +1,5 @@
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtWidgets
 
 from PyQt5.QtCore import Qt
 from .gui_rename_dialog import Ui_Dialog
@@ -13,9 +13,12 @@ class RenameDialog(QtWidgets.QDialog, Ui_Dialog):
 
     int32_max = 2147483647
 
-    def __init__(self, expression='', offset=0, last_rename_take_name_from_list=False,  parent=None):
+    def __init__(self, expression='', offset=0, c_mult_facotr=1,
+                 last_rename_take_name_from_list=False,  parent=None):
         super(RenameDialog, self).__init__(parent)
         self.setupUi(self)
+        self.result = (expression, offset, c_mult_facotr)
+        self.list = last_rename_take_name_from_list
 
         #disable resizing of the window,
         # help from https://stackoverflow.com/questions/16673074/in-qt-c-how-can-i-fully-disable-resizing-a-window-including-the-resize-icon-w
@@ -24,6 +27,7 @@ class RenameDialog(QtWidgets.QDialog, Ui_Dialog):
         self.setWindowTitle("Rename Items")
 
         self.leExpression.setText(expression)
+        self.leCounterMulFactor.setText(str(c_mult_facotr))
 
         self.sbOffset.setValue(offset)
         self.sbOffset.setMinimum(0)
@@ -58,7 +62,7 @@ class RenameDialog(QtWidgets.QDialog, Ui_Dialog):
     def set_result(self):
 
         if self.is_renaming_by_expression:
-            self.result = (self.leExpression.text(), self.sbOffset.value())
+            self.result = (self.leExpression.text(), self.sbOffset.value(), self.leCounterMulFactor.text())
         else:
             self.list = self.leList.text()
 

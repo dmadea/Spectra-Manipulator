@@ -18,6 +18,8 @@ class GeneralParser(Parser):
         self.skip_nan_columns = skip_nan_columns
         self.nan_replacement = nan_replacement
 
+        # history of lines that contained text elements,
+        # these are used to extract valuable data (eg. Duetta fluorimeter EEM and kinetics text files)
         self.names_history = []
 
     def line2list_iterator(self):

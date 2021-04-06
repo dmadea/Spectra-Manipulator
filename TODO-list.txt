@@ -12,13 +12,14 @@
     oo lstsq intercept
     oo set range for individual experiments
     o- equal parameters setup and set range in parameter widget
-    -- range dialogs
-    -- fitting ...
+    oo range dialogs
+    oo fitting ...
     o- plotting fits, FitResult history
-    -- multithreading in residuals func
-    -- treeview update view after copy
+    o- multithreading in residuals func
+    oo treeview update view after copy
     -- upload package
     -- documentation
+    -- clear up user_namespace, put plotting function to separate file
 
 
     oo add recent files, distinguish save and save us project
@@ -70,6 +71,9 @@ https://github.com/pyqtgraph/pyqtgraph/pull/641/commits/d09fe6bd478770862dffc315
 uprava pyqtgraph v pyqtgraphmodif
 file pyqtgraph.graphicsItems.PlotItem.PlotItem.py was modified
 added option wheater to draw legend or not, modified two functions, "plot" and "addItem"
+
+
+qtconsole does not work with new pyqt6 yet... Cannot update to new pyqt6
 
 
 

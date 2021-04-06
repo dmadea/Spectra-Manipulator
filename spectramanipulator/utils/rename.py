@@ -1,11 +1,13 @@
+import re
 
 
-def smart_rename(expression, text, counter=0):
+def rename(expression, text, counter=0):
     """
+    TODO -->>> rewrite
     Returns the expression text specially parsed. It can contain two types of expression,
     counter term and slice term. The counter term can only be in python number format,
-    defined here https://pyformat.info/. Eg. {:04d} - counter will be formatted and this term
-    will be replaced by the number formatted in this way, eg. if counter = 25, {:04d} will
+    defined here https://pyformat.info/. Eg. {:4g} - counter will be formatted and this term
+    will be replaced by the number formatted in this way, eg. if counter = 25, {:4g} will
     be replaced by 0025.
 
     Other type is slice expression {start_index:end_index}. This term will be replaced by
@@ -80,15 +82,15 @@ def smart_rename(expression, text, counter=0):
         if len(contents) == 0:
             return expression.replace('\\{', '{').replace('\\}', '}')
 
-        # print the begining
+        # print the beginning
         result = expression[:contents[0][0]]
 
         for i, con in enumerate(contents):
 
             # for different formats for numbers, look https://pyformat.info/
-            if 'd' in con[2] or 'f' in con[2]:
-                content = ("{" + con[2] + "}").format(counter)
-            else: # slicing text
+            if 'd' in con[2] or 'f' in con[2] or 'g' in con[2]:
+                content = ("{" + con[2] + "}").format(int(counter) if 'd' in con[2] else counter)
+            else:  # slicing text
                 content = text[parse_slice(con[2])]
 
             result += content + (expression[con[1]:contents[i + 1][0]] if i < len(contents) - 1 else '')
@@ -105,9 +107,23 @@ def smart_rename(expression, text, counter=0):
 # names = ['4865', '44555', "#4686486", "4adads"]
 #
 # # expression = "\{{:03d}\}: t = {1:} us"
-# expression = "4865"
+# expression = "{1:5}"
 #
+# pattern = re.compile(r'{(\d+)?:(\d+)?:?(\d+)?}')
+# m = pattern.search(expression)
 #
 # for i in range(len(names)):
-#     print(names[i], "     formatted to      ", smart_rename(expression, names[i], i))
 #
+#     print(names[i], "     formatted to      ", sl_text[sl])
+#
+#
+
+
+
+#
+
+
+
+
+
+

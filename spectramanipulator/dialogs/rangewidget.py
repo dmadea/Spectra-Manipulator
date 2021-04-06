@@ -25,15 +25,19 @@ class RangeWidget(GenericInputWidget):
                                           label_text=label_text,
                                           title=title, parent=parent)
 
-        f = 0.87
-        # x0, x1 = x0_value, x1_value
-        x0, x1 = PlotWidget._instance.getViewBox().viewRange()[0]
-        xy_dif = x1 - x0
-        self.lr = pg.LinearRegionItem([x0 + (1 - f) * xy_dif, x0 + f * xy_dif],
-                                      brush=QBrush(QColor(0, 255, 0, 20)))
+        self.lr = PlotWidget.add_linear_region(z_value=1e8)
+        self.lr.sigRegionChanged.connect(lambda: self.update_values())
 
-        self.lr.setZValue(1e6)
-        PlotWidget._instance.addItem(self.lr)
+        #
+        # f = 0.87
+        # # x0, x1 = x0_value, x1_value
+        # x0, x1 = PlotWidget._instance.getViewBox().viewRange()[0]
+        # xy_dif = x1 - x0
+        # self.lr = pg.LinearRegionItem([x0 + (1 - f) * xy_dif, x0 + f * xy_dif],
+        #                               brush=QBrush(QColor(0, 255, 0, 20)))
+        #
+        # self.lr.setZValue(1e6)
+        # PlotWidget._instance.addItem(self.lr)
 
         self.le_x0.focus_lost.connect(self.update_region)
         self.le_x1.focus_lost.connect(self.update_region)
@@ -60,6 +64,11 @@ class RangeWidget(GenericInputWidget):
         self.le_x0.setText("{:.4g}".format(x0))
         self.le_x1.setText("{:.4g}".format(x1))
 
+    # def update_values(self):
+    #     x0, x1 = self.lr.getRegion()
+    #     self.le_x0.setText("{:.4g}".format(x0))
+    #     self.le_x1.setText("{:.4g}".format(x1))
+
     def update_region(self):
         try:
             x0, x1 = float(self.le_x0.text()), float(self.le_x1.text())
@@ -82,16 +91,14 @@ class RangeWidget(GenericInputWidget):
             QMessageBox.warning(self, "Warning", "Invalid format of the range.", QMessageBox.Ok)
             return
 
-        PlotWidget._instance.removeItem(self.lr)
-        # del self.lr
+        PlotWidget.remove_linear_region()
         self.dock_widget.setVisible(False)
         super(RangeWidget, self).accept()
 
         self.accepted_func()
 
     def reject(self):
-        PlotWidget._instance.removeItem(self.lr)
-        # del self.lr
+        PlotWidget.remove_linear_region()
         self.dock_widget.setVisible(False)
         super(RangeWidget, self).reject()
 

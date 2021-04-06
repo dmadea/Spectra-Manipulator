@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QMenuBar, QAction, QMenu
 from spectramanipulator.settings import Settings
 from spectramanipulator.dialogs.fitwidget import FitWidget
+from spectramanipulator import __version__
 
 
 class MenuBar(QMenuBar):
@@ -125,7 +126,7 @@ class MenuBar(QMenuBar):
         about_message = f"""
              
 <h3>Simple Spectra Manipulator</h3>
-<p>Version:&nbsp;<span style="color: #ff00ff;"><strong>{Settings.__version__}</strong></span></p><p>Last release: <strong><span style="color: #ff0000;">{Settings.__last_release__}</span></strong></p>
+<p>Version:&nbsp;<span style="color: #ff00ff;"><strong>{__version__}</strong></span></p>
 <p><span style="color: #000000;">This software is distributed under the <span style="color: #339966;"><strong>MIT open-source licence&nbsp;</strong></span></span></p>
 <p>Copyright (c) 2020 Dominik Madea</p>
 <p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:</p>

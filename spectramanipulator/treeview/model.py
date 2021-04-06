@@ -563,7 +563,8 @@ class TreeView(QTreeView):
         self.expandAll()
 
     def save_state(self):
-        raise NotImplementedError("TODO")
+        self.setup_info()
+
 
     # https://stackoverflow.com/questions/50391050/how-to-remove-row-from-qtreeview-using-qabstractitemmodel
     def delete_selected_items(self):
@@ -889,34 +890,28 @@ class TreeView(QTreeView):
         self.myModel.removeRows(0, self.top_level_items_count(), QModelIndex())
 
     def setup_info(self):
-        """TODO --- rewrite more efficient"""
 
-        for item in self.myModel.iterate_items(ItemIterator.All):
+        for i, item in enumerate(self.myModel.root.children):
 
+            # for all items
             if isinstance(item, SpectrumItemGroup):
-                row = self.myModel.root.rowOfChild(item)
                 it_len = item.__len__()
-                item.info = "[{}] | {} item{}".format(row, it_len, '' if it_len == 1 else 's')
-            else:
+                item.info = "[{}] | {} item{}".format(i, it_len, '' if it_len == 1 else 's')
 
-                # if item is None:
-                #     continue
-                if item.is_top_level():
-                    row = self.myModel.root.rowOfChild(item)
-                    item.info = "[{}] | {}; {} ({:.4g}, {:.4g})".format(row,
-                                                                item.length(),
-                                                                item.spacing(),
-                                                                item.x.min(),
-                                                                item.x.max())
-                else:
-                    parent = item.parent
-                    group_idx = self.myModel.root.rowOfChild(parent)
-                    item_idx = parent.rowOfChild(item)
-                    item.info = "[{}][{}] | {}; {} ({:.4g}, {:.4g})".format(group_idx, item_idx,
+                for j, child in enumerate(item.children):
+                    child.info = "[{}][{}] | {}; {} ({:.4g}, {:.4g})".format(i, j,
+                                                                             child.length(),
+                                                                             child.spacing(),
+                                                                             child.x.min(),
+                                                                             child.x.max())
+
+            else:
+                item.info = "[{}] | {}; {} ({:.4g}, {:.4g})".format(i,
                                                                     item.length(),
                                                                     item.spacing(),
                                                                     item.x.min(),
                                                                     item.x.max())
+
 
     def update_view(self):
         self.myModel.dataChanged.emit(QModelIndex(), QModelIndex())

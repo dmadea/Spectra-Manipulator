@@ -8,7 +8,10 @@ import spectramanipulator
 
 
 # great help from here https://stackoverflow.com/questions/11513132/embedding-ipython-qt-console-in-a-pyqt-application/12375397#12375397
-# just copied :)
+# just copied, works like charm :)
+
+# qtconsole package is not yet compatible with pyqt6
+
 class ConsoleWidget(RichJupyterWidget):
 
     def __init__(self, customBanner=None, *args, **kwargs):

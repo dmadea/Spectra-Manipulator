@@ -75,22 +75,22 @@ class Project:
         instance = SafeUnpickler(open(filepath, 'rb')).load()
         return instance
 
-        try:
-            try:
-                # with open(filepath, 'br') as file:
-                #     instance = pickle.load(file)
-                instance = SafeUnpickler(open(filepath, 'rb')).load()
-            except:  # for maintaining compatibility
-                import bz2
-                with bz2.BZ2File(filepath, 'r', compresslevel=COMPRESS_LEVEL) as file:
-                    instance = pickle.load(file)
-
-            return instance
-        # except pickle.UnpicklingError as err:
-        #     Logger.send_message("Unable to load {}:\n{}\n{}".format(filepath, err.__str__(), err.__traceback__))
-        #     raise
-        except Exception as err:
-            Logger.message("Unable to load {}.\n{}".format(filepath, err.__str__()))
+        # try:
+        #     try:
+        #         # with open(filepath, 'br') as file:
+        #         #     instance = pickle.load(file)
+        #         instance = SafeUnpickler(open(filepath, 'rb')).load()
+        #     except:  # for maintaining compatibility
+        #         import bz2
+        #         with bz2.BZ2File(filepath, 'r', compresslevel=COMPRESS_LEVEL) as file:
+        #             instance = pickle.load(file)
+        #
+        #     return instance
+        # # except pickle.UnpicklingError as err:
+        # #     Logger.send_message("Unable to load {}:\n{}\n{}".format(filepath, err.__str__(), err.__traceback__))
+        # #     raise
+        # except Exception as err:
+        #     Logger.message("Unable to load {}.\n{}".format(filepath, err.__str__()))
 
 
 

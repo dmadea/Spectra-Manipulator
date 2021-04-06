@@ -16,7 +16,7 @@ from spectramanipulator.dialogs.export_spectra_as import ExportSpectraAsDialog
 
 from spectramanipulator.settings import Settings
 from spectramanipulator.logger import Logger
-from spectramanipulator.utils.smart_rename import smart_rename
+from spectramanipulator.utils.rename import rename
 
 from spectramanipulator.treeview.item import SpectrumItemGroup, SpectrumItem, GenericItem
 from spectramanipulator.treeview.model import TreeView, ItemIterator
@@ -29,6 +29,7 @@ from spectramanipulator.exporter import list_to_string, list_to_files
 # from spectramanipulator.plotwidget import PlotWidget
 
 
+# TODO-->> rewrite
 def get_hierarchic_list(items_iterator):
     """ get a hierarchic structure of selected items
     spectra in groups are appended in list of spectrum objects
@@ -117,7 +118,7 @@ class TreeWidget(TreeView):
         self.redraw_spectra.emit()
 
     def save_state(self):
-
+        super(TreeWidget, self).save_state()
         self.state_changed.emit()
 
         # if self.top_level_items_count() == 0:
@@ -176,10 +177,10 @@ class TreeWidget(TreeView):
         try:
 
             output = list_to_string(sp_list, include_group_name=Settings.clip_exp_include_group_name,
-                                             include_header=Settings.clip_exp_include_header,
-                                             delimiter=Settings.clip_exp_delimiter,
-                                             decimal_sep=Settings.clip_exp_decimal_sep,
-                                             x_data_name=Settings.bottom_axis_label)
+                                    include_header=Settings.clip_exp_include_header,
+                                    delimiter=Settings.clip_exp_delimiter,
+                                    decimal_sep=Settings.clip_exp_decimal_sep,
+                                    x_data_name=Settings.bottom_axis_label)
             cb = QApplication.clipboard()
             cb.clear(mode=cb.Clipboard)
             cb.setText(output, mode=cb.Clipboard)
@@ -282,7 +283,7 @@ class TreeWidget(TreeView):
                 items = []
                 for item in self.myModel.iterate_selected_items(skip_groups=True,
                                                                 skip_childs_in_selected_groups=False):
-                    item.extend_by_zeros_no_update(x0, x1)
+                    item.extend_by_value_no_update(x0, x1)
                     items.append(item)
 
                 self.data_modified(items)
@@ -513,7 +514,7 @@ class TreeWidget(TreeView):
             RenameDialog.get_instance().setFocus()
             return
 
-        expression, offset = Settings.last_rename_expression, 0
+        expression, offset, c_mult_factor = Settings.last_rename_expression, 0, 1
 
         rename_dialog = RenameDialog(expression, offset,
                                      last_rename_take_name_from_list=Settings.last_rename_take_name_from_list)
@@ -521,7 +522,7 @@ class TreeWidget(TreeView):
             return
 
         if rename_dialog.is_renaming_by_expression:
-            expression, offset = rename_dialog.result
+            expression, offset, c_mult_factor = rename_dialog.result
         else:
             import csv
             splitted_list = csv.reader([rename_dialog.list], doublequote=True, skipinitialspace=True,
@@ -536,7 +537,7 @@ class TreeWidget(TreeView):
                                                             skip_childs_in_selected_groups=False):
                 name = item.name
                 if rename_dialog.is_renaming_by_expression:
-                    name = smart_rename(expression, name, offset)
+                    name = rename(expression, name, float(offset) * float(c_mult_factor))
                     offset += 1
                 else:
                     try:

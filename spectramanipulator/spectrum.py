@@ -1,6 +1,7 @@
 
 import numpy as np
 # import math
+from abc import abstractmethod
 
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
@@ -119,9 +120,9 @@ def operation(operator=lambda a, b: a + b, operator_str='+', switch_names=False)
     return decorator
 
 
-class OperationBase:
+class IOperationBase:
     """
-    Abstract base class that defines the operations for Spectrum and SpectrumList objects.
+    Interface that defines the operations for Spectrum and SpectrumList objects.
     It allows for ... TODO...
     """
 
@@ -134,6 +135,7 @@ class OperationBase:
     def _update_view(self):
         pass
 
+    @abstractmethod
     def _arithmetic_operation(self, other, operator):
         """TODO--->>"""
         pass
@@ -190,7 +192,7 @@ class OperationBase:
         return NotImplementedError
 
 
-class SpectrumList(OperationBase):
+class SpectrumList(IOperationBase):
 
     def __init__(self, children=None, name=''):
         """
@@ -437,7 +439,7 @@ def add_op_func():
     return decorator
 
 
-class Spectrum(OperationBase):
+class Spectrum(IOperationBase):
 
     def __init__(self, data=None, name='', filepath=None, assume_sorted=False, **kwargs):
         """
