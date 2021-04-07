@@ -19,13 +19,11 @@ class MyQListWidget(QListWidget):
 
     def keyPressEvent(self, e: QtGui.QKeyEvent) -> None:
         if e.key() == 16777223:  # del pressed
-            si = self.selectedItems()
-            for item in si:
+            for item in self.selectedItems():
                 index = self.item_names.index(item.text())
                 del self.item_names[index]
                 del self.paths[index]
                 self.takeItem(self.row(item))
-                del item
 
     def addItem(self, aitem, path) -> None:
         super(MyQListWidget, self).addItem(aitem)
