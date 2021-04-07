@@ -71,11 +71,13 @@ class RenameDialog(QtWidgets.QDialog, Ui_Dialog):
             self.sbOffset.setEnabled(False)
             self.leExpression.setEnabled(False)
             self.leList.setEnabled(True)
+            self.leCounterMulFactor.setEnabled(False)
             self.is_renaming_by_expression = False
         else:
             self.sbOffset.setEnabled(True)
             self.leExpression.setEnabled(True)
             self.leList.setEnabled(False)
+            self.leCounterMulFactor.setEnabled(True)
             self.is_renaming_by_expression = True
 
     def accept(self):

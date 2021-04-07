@@ -203,6 +203,7 @@ class Main(QMainWindow):
 
         f = QFileDialog.getOpenFileNames if choose_multiple else QFileDialog.getOpenFileName
 
+
         filepaths = f(caption=caption,
                       directory=initial_dir,
                       filter=_filter,

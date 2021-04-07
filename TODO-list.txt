@@ -20,6 +20,7 @@
     -- upload package
     -- documentation
     -- clear up user_namespace, put plotting function to separate file
+    -- finish calculations of quantum yields
 
 
     oo add recent files, distinguish save and save us project

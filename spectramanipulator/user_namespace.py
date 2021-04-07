@@ -190,19 +190,34 @@ def T2A_LFP(item):
     y_transformed = -log10(-y)."""
     pass
 
+#
+# def add_to_list(spectra):
+#     """
+#     Copies all spectra and imports them to the Tree Widget.
+#
+#     Parameters
+#     ----------
+#     spectra : {:class:`Spectrum`, :class:`SpectrumList`, list, list of lists, SpectrumItemGroup, SpectrumItem}
+#         The input spectra to be added into Tree Widget.
+#     """
+#
+#     if UserNamespace.instance is not None:
+#         UserNamespace.instance.tw.add_to_list(spectra)
 
-def add_to_list(spectra):
-    """
-    Copies all spectra and imports them to the Tree Widget.
 
-    Parameters
-    ----------
-    spectra : {:class:`Spectrum`, :class:`SpectrumList`, list, list of lists, SpectrumItemGroup, SpectrumItem}
-        The input spectra to be added into Tree Widget.
-    """
+# def load_kinetics(spectra):
+#     """
+#     Copies all spectra and imports them to the Tree Widget.
+#
+#     Parameters
+#     ----------
+#     spectra : {:class:`Spectrum`, :class:`SpectrumList`, list, list of lists, SpectrumItemGroup, SpectrumItem}
+#         The input spectra to be added into Tree Widget.
+#     """
+#
+#     if UserNamespace.instance is not None:
+#         UserNamespace.instance.tw.add_to_list(spectra)
 
-    if UserNamespace.instance is not None:
-        UserNamespace.instance.add_items_to_list(spectra)
 
 
 def import_files(filepaths):
@@ -404,127 +419,127 @@ def rename_times(group, decimal_places=1):
     group.set_names(parsed_times)
 
 
-def load_kinetics(dir_name, spectra_dir_name='spectra', times_fname='times.txt', blank_spectrum='blank.dx', dt=None,
-                  b_corr=None, cut=None, corr_to_zero_time=True):
-    """Given a directory name that contains folders of individual experiments, it loads all kinetics.
-       each experiment folder must contain folder spectra (or defined in spectra_dir_name arg.)
-        if blank is given, it will be subtracted from all spectra, times.txt will contain
-        times for all spectra, optional baseline correction and cut can be done.
-
-    Folder structure:
-        [dir_name]
-            [exp1_dir]
-                [spectra]
-                    01.dx (or .csv or .txt)
-                    02.dx
-                    ...
-                times.txt (optional)
-                blank.dx (optional)
-            [exp2_dir]
-                ...
-            ...
-    """
-
-    if UserNamespace.instance is None:
-        return
-
-    if not os.path.isdir(dir_name):
-        raise ValueError(f'{dir_name}  does not exist!')
-
-    for item in os.listdir(dir_name):
-        path = os.path.join(dir_name, item)
-        if not os.path.isdir(path):
-            continue
-
-        load_kinetic(path, spectra_dir_name=spectra_dir_name, times_fname=times_fname, blank_spectrum=blank_spectrum,
-                     dt=dt, b_corr=b_corr, cut=cut, corr_to_zero_time=corr_to_zero_time)
-
-
-def load_kinetic(dir_name, spectra_dir_name='spectra', times_fname='times.txt', blank_spectrum='blank.dx', dt=None,
-                  b_corr=None, cut=None, corr_to_zero_time=True):
-    """Given a directory name, it loads all spectra in dir named "spectra" - func. arg.,
-    if blank is given, it will be subtracted from all spectra, times.txt will contain
-    times for all spectra, optional baseline correction and cut can be done.
-
-    Folder structure:
-        [dir_name]
-            [spectra]
-                01.dx
-                02.dx
-                ...
-            times.txt (optional)
-            blank.dx (optional)
-    """
-
-    if UserNamespace.instance is None:
-        return
-
-    tw = UserNamespace.instance.main.tree_widget
-    root = tw.myModel.root  # item in IPython console
-
-    if not os.path.isdir(dir_name):
-        raise ValueError(f'{dir_name}  does not exist!')
-    
-    spectra_path = os.path.join(dir_name, spectra_dir_name)
-    
-    if not os.path.isdir(spectra_path):
-        raise ValueError(f'{spectra_dir_name}  does not exist in {dir_name}!')
-
-    spectras = [os.path.join(spectra_path, filename) for filename in os.listdir(spectra_path)]
-
-    n_items_before = root.__len__()
-    tw.import_files(spectras)
-    n_spectra = root.__len__() - n_items_before
-
-    tw.add_items_to_group(root[n_items_before:], edit=False)  # add loaded spectra to group
-    root[n_items_before].name = f'raw [{os.path.split(dir_name)[1]}]'  # set name of a group
-
-    times = np.asarray([dt * i for i in range(n_spectra)]) if dt is not None else None
-    # idx_add = 0
-    group_idx = n_items_before
-    blank_used = False
-
-    # load explicit times
-    times_fpath = os.path.join(dir_name, times_fname)
-    if os.path.isfile(times_fpath):
-        tw.import_files(times_fpath)
-        # idx_add += 1
-        if times is None:
-            times = root[-1].data[:, 0].copy()
-            if corr_to_zero_time:
-                times -= times[0]
-
-        # push times variable to the console
-        UserNamespace.instance.main.console.push_variables(
-            {
-                'times': times
-            }
-        )
-
-    if times is not None:
-        root[group_idx].set_names(times)
-
-    # load blank spectrum if available
-    blank_fpath = os.path.join(dir_name, blank_spectrum)
-    if os.path.isfile(blank_fpath):
-        last_idx = root.__len__() - 1
-        tw.import_files(blank_fpath)
-        add_to_list(root[group_idx] - root[last_idx + 1])
-        if times is not None:
-            root[-1].set_names(times)
-        blank_used = True
-
-    corr_idx = -1 if blank_used else group_idx
-
-    if b_corr is not None:
-        root[corr_idx].baseline_correct(*b_corr)
-        root[corr_idx].name += 'bcorr'
-    if cut is not None:
-        root[corr_idx].cut(*cut)
-        root[corr_idx].name += 'cut'
-
-    # return times
-
+# def load_kinetics(dir_name, spectra_dir_name='spectra', times_fname='times.txt', blank_spectrum='blank.dx', dt=None,
+#                   b_corr=None, cut=None, corr_to_zero_time=True):
+#     """Given a directory name that contains folders of individual experiments, it loads all kinetics.
+#        each experiment folder must contain folder spectra (or defined in spectra_dir_name arg.)
+#         if blank is given, it will be subtracted from all spectra, times.txt will contain
+#         times for all spectra, optional baseline correction and cut can be done.
+#
+#     Folder structure:
+#         [dir_name]
+#             [exp1_dir]
+#                 [spectra]
+#                     01.dx (or .csv or .txt)
+#                     02.dx
+#                     ...
+#                 times.txt (optional)
+#                 blank.dx (optional)
+#             [exp2_dir]
+#                 ...
+#             ...
+#     """
+#
+#     if UserNamespace.instance is None:
+#         return
+#
+#     if not os.path.isdir(dir_name):
+#         raise ValueError(f'{dir_name}  does not exist!')
+#
+#     for item in os.listdir(dir_name):
+#         path = os.path.join(dir_name, item)
+#         if not os.path.isdir(path):
+#             continue
+#
+#         load_kinetic(path, spectra_dir_name=spectra_dir_name, times_fname=times_fname, blank_spectrum=blank_spectrum,
+#                      dt=dt, b_corr=b_corr, cut=cut, corr_to_zero_time=corr_to_zero_time)
+#
+#
+# def load_kinetic(dir_name, spectra_dir_name='spectra', times_fname='times.txt', blank_spectrum='blank.dx', dt=None,
+#                   b_corr=None, cut=None, corr_to_zero_time=True):
+#     """Given a directory name, it loads all spectra in dir named "spectra" - func. arg.,
+#     if blank is given, it will be subtracted from all spectra, times.txt will contain
+#     times for all spectra, optional baseline correction and cut can be done.
+#
+#     Folder structure:
+#         [dir_name]
+#             [spectra]
+#                 01.dx
+#                 02.dx
+#                 ...
+#             times.txt (optional)
+#             blank.dx (optional)
+#     """
+#
+#     if UserNamespace.instance is None:
+#         return
+#
+#     tw = UserNamespace.instance.main.tree_widget
+#     root = tw.myModel.root  # item in IPython console
+#
+#     if not os.path.isdir(dir_name):
+#         raise ValueError(f'{dir_name}  does not exist!')
+#
+#     spectra_path = os.path.join(dir_name, spectra_dir_name)
+#
+#     if not os.path.isdir(spectra_path):
+#         raise ValueError(f'{spectra_dir_name}  does not exist in {dir_name}!')
+#
+#     spectras = [os.path.join(spectra_path, filename) for filename in os.listdir(spectra_path)]
+#
+#     n_items_before = root.__len__()
+#     tw.import_files(spectras)
+#     n_spectra = root.__len__() - n_items_before
+#
+#     tw.add_items_to_group(root[n_items_before:], edit=False)  # add loaded spectra to group
+#     root[n_items_before].name = f'raw [{os.path.split(dir_name)[1]}]'  # set name of a group
+#
+#     times = np.asarray([dt * i for i in range(n_spectra)]) if dt is not None else None
+#     # idx_add = 0
+#     group_idx = n_items_before
+#     blank_used = False
+#
+#     # load explicit times
+#     times_fpath = os.path.join(dir_name, times_fname)
+#     if os.path.isfile(times_fpath):
+#         tw.import_files(times_fpath)
+#         # idx_add += 1
+#         if times is None:
+#             times = root[-1].data[:, 0].copy()
+#             if corr_to_zero_time:
+#                 times -= times[0]
+#
+#         # push times variable to the console
+#         UserNamespace.instance.main.console.push_variables(
+#             {
+#                 'times': times
+#             }
+#         )
+#
+#     if times is not None:
+#         root[group_idx].set_names(times)
+#
+#     # load blank spectrum if available
+#     blank_fpath = os.path.join(dir_name, blank_spectrum)
+#     if os.path.isfile(blank_fpath):
+#         last_idx = root.__len__() - 1
+#         tw.import_files(blank_fpath)
+#         add_to_list(root[group_idx] - root[last_idx + 1])
+#         if times is not None:
+#             root[-1].set_names(times)
+#         blank_used = True
+#
+#     corr_idx = -1 if blank_used else group_idx
+#
+#     if b_corr is not None:
+#         root[corr_idx].baseline_correct(*b_corr)
+#         root[corr_idx].name += 'bcorr'
+#     if cut is not None:
+#         root[corr_idx].cut(*cut)
+#         root[corr_idx].name += 'cut'
+#
+#     # return times
+#
 
 def _setup_wavenumber_axis(ax, x_label=WN_LABEL,
                           x_major_locator=None, x_minor_locator=AutoMinorLocator(5), factor=1e3):
@@ -1108,9 +1123,6 @@ def reaction_QY_relative(sample_items, actinometer_items, QY_act=1, irradiation_
 
 
 
-
-
-
 def bcorr_1D(item, first_der_tresh=1e-4, second_der_tresh=0.1):
     """Gradient based baseline correction"""
 
@@ -1142,11 +1154,25 @@ class UserNamespace:
 
         self.main = main
         UserNamespace.instance = self
+        self.tw = self.main.tree_widget
 
         # execute first commands
         self.main.console.execute_command(
-            "import numpy as np\nfrom spectramanipulator.user_namespace import *\nfrom spectramanipulator.spectrum import *\n"
-            "import matplotlib.pyplot as plt\n%matplotlib inline")
+            """
+            import numpy as np
+            from spectramanipulator.user_namespace import *
+            # from spectramanipulator.spectrum import fi, group2mat
+            import matplotlib.pyplot as plt
+            %matplotlib inline
+            
+            # setup important methods
+            add_to_list = UserNamespace.instance.tw.add_to_list
+            load_kinetic = UserNamespace.instance.tw.load_kinetic
+            load_kinetics = UserNamespace.instance.tw.load_kinetics
+            import_files = UserNamespace.instance.tw.import_files
+            
+            """
+        )
 
         # from IPython.display import display, Math, Latex\n
 
@@ -1158,32 +1184,32 @@ class UserNamespace:
             }
         )
 
-    def add_items_to_list(self, spectra):
-        """
-        Copies all spectra and import them to the treewidget
-        :param spectra: input parameter can be single spectrum object, or hierarchic list of spectra
-        """
-
-        # self.main.tree_widget.get
-
-        if spectra.__class__ == Spectrum:
-            self.main.tree_widget.import_spectra([spectra])
-            return
-
-        if spectra.__class__.__name__ == 'SpectrumItem':
-            self.main.tree_widget.import_spectra([spectra.__copy__()])
-            return
-
-        if isinstance(spectra, list):
-            self.main.tree_widget.import_spectra(spectra)
-            return
-
-        if spectra.__class__.__name__ == 'SpectrumItemGroup' or spectra.__class__.__name__ == 'SpectrumList':
-            l = []
-            for sp in spectra:
-                new_sp = sp.__copy__()
-                new_sp.group_name = spectra.name
-                l.append(new_sp)
-
-            self.main.tree_widget.import_spectra([l])
-            return
+    # def add_items_to_list(self, spectra):
+    #     """
+    #     Copies all spectra and import them to the treewidget
+    #     :param spectra: input parameter can be single spectrum object, or hierarchic list of spectra
+    #     """
+    #
+    #     # self.main.tree_widget.get
+    #
+    #     if spectra.__class__ == Spectrum:
+    #         self.main.tree_widget.import_spectra([spectra])
+    #         return
+    #
+    #     if spectra.__class__.__name__ == 'SpectrumItem':
+    #         self.main.tree_widget.import_spectra([spectra.__copy__()])
+    #         return
+    #
+    #     if isinstance(spectra, list):
+    #         self.main.tree_widget.import_spectra(spectra)
+    #         return
+    #
+    #     if spectra.__class__.__name__ == 'SpectrumItemGroup' or spectra.__class__.__name__ == 'SpectrumList':
+    #         l = []
+    #         for sp in spectra:
+    #             new_sp = sp.__copy__()
+    #             new_sp.group_name = spectra.name
+    #             l.append(new_sp)
+    #
+    #         self.main.tree_widget.import_spectra([l])
+    #         return
