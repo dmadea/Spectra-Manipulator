@@ -125,7 +125,7 @@ class LoadKineticsDialog(QtWidgets.QDialog, Ui_Dialog):
             float(self.leBCorr0.text())
             float(self.leBCorr1.text())
         except ValueError:
-            QMessageBox.critical(self, 'Error', "Please check the input fields.")
+            QMessageBox.critical(self, 'Error', "Invalid input, please check the fields.")
             return
 
         self.accepted = True
