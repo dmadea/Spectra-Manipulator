@@ -62,6 +62,10 @@ class MenuBar(QMenuBar):
         self.kinetics_duetta.triggered.connect(self.parent().import_kinetics_Duetta)
         self.import_special_menu.addAction(self.kinetics_duetta)
 
+        self.batch_load_kin = QAction('Batch Load UV-VIS kinetics', self)
+        self.batch_load_kin.triggered.connect(self.parent().batch_load_kinetics)
+        self.import_special_menu.addAction(self.batch_load_kin)
+
         self.export_selected_spectra_as_act = QAction("&Export Selected Items As", self)
         # self.export_selected_spectra_as.setShortcut("Ctrl+E")
         self.export_selected_spectra_as_act.triggered.connect(self.parent().tree_widget.export_selected_items_as)

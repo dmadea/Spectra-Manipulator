@@ -28,6 +28,7 @@ from .treeview.item import SpectrumItemGroup
 from .dataloader import parse_files_specific
 from .spectrum import SpectrumList
 from .dialogs.fitwidget import FitWidget
+from .dialogs.load_kinetics_dialog import LoadKineticsDialog
 import re
 
 import numpy as np
@@ -196,6 +197,39 @@ class Main(QMainWindow):
 
         self.grpView.update_settings()
         self.redraw_all_spectra()
+
+    def batch_load_kinetics(self):
+        """Opens a Batch Load Kinetics dialog and then call the function from treewidget"""
+        if LoadKineticsDialog.is_opened:
+            LoadKineticsDialog.get_instance().activateWindow()
+            LoadKineticsDialog.get_instance().setFocus()
+            return
+
+        load_kin_dialog = LoadKineticsDialog()
+
+        if not load_kin_dialog.accepted:
+            return
+
+        paths = load_kin_dialog.lwFolders.paths
+        if len(paths) == 0:
+            return
+
+        try:
+            spectra_dir_name = load_kin_dialog.leSpectra.text()
+            times_name = load_kin_dialog.leTimes.text()
+            blank_name = load_kin_dialog.leBlank.text()
+            dt = float(load_kin_dialog.leTimeUnit.text()) if load_kin_dialog.cbKineticsMeasuredByEach.isChecked() else None
+            bcorr_range = (float(load_kin_dialog.leBCorr0.text()), float(load_kin_dialog.leBCorr1.text())) \
+                if load_kin_dialog.cbBCorr.isChecked() else None
+
+            cut_range = (float(load_kin_dialog.leCut0.text()), float(load_kin_dialog.leCut1.text())) \
+                if load_kin_dialog.cbCut.isChecked() else None
+
+            for path in paths:
+                self.tree_widget.load_kinetic(path, spectra_dir_name, times_name, blank_name,
+                                              dt=dt, b_corr=bcorr_range, cut=cut_range)
+        except Exception as ex:
+            Logger.message(f"Unable to load kinetics: {ex.__str__()}")
 
     @staticmethod
     def _open_file_dialog(caption='Open ...', initial_dir='...', _filter='All Files (*.*)',

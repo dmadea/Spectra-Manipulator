@@ -1,10 +1,11 @@
 
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QFileDialog, QListView, QAbstractItemView, QTreeView, QListWidget
+from PyQt5.QtWidgets import QFileDialog, QListView, QAbstractItemView, QTreeView, QListWidget, QMessageBox
 
 from PyQt5.QtCore import Qt
 from PyQt5 import QtGui
 from spectramanipulator.dialogs.gui_load_kinetics import Ui_Dialog
+from spectramanipulator.settings import Settings
 import os
 
 
@@ -37,8 +38,6 @@ class LoadKineticsDialog(QtWidgets.QDialog, Ui_Dialog):
     is_opened = False
     _instance = None
 
-    int32_max = 2147483647
-
     def __init__(self, parent=None):
         super(LoadKineticsDialog, self).__init__(parent)
         self.setupUi(self)
@@ -70,9 +69,6 @@ class LoadKineticsDialog(QtWidgets.QDialog, Ui_Dialog):
         self.show()
         self.exec()
 
-    def lwFolders_keyPressEvent(self, e):
-        print(e)
-
     @staticmethod
     def get_instance():
         return LoadKineticsDialog._instance
@@ -81,15 +77,13 @@ class LoadKineticsDialog(QtWidgets.QDialog, Ui_Dialog):
     def check_state(checked):
         return Qt.Checked if checked else 0
 
-    def keyPressEvent(self, e: QtGui.QKeyEvent) -> None:
-        print(e)
-
     def btnChooseDirs_clicked(self):
         # https://stackoverflow.com/questions/38252419/how-to-get-qfiledialog-to-select-and-return-multiple-folders
         # just copied :)
         file_dialog = QFileDialog()
         file_dialog.setFileMode(QFileDialog.DirectoryOnly)
         file_dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+        file_dialog.setDirectory(Settings.load_kinetics_last_path)
         file_view = file_dialog.findChild(QListView, 'listView')
 
         # to make it possible to select multiple directories:
@@ -104,6 +98,7 @@ class LoadKineticsDialog(QtWidgets.QDialog, Ui_Dialog):
                 head, tail = os.path.split(path)
                 head2, tail2 = os.path.split(head)
                 name = os.path.join(tail2, tail)
+                Settings.load_kinetics_last_path = head
                 if name not in self.lwFolders.item_names:
                     self.lwFolders.addItem(name, path)
 
@@ -122,33 +117,21 @@ class LoadKineticsDialog(QtWidgets.QDialog, Ui_Dialog):
         self.leTimeUnit.setEnabled(checked)
         self.leTimes.setEnabled(not checked)
 
-    def set_result(self):
-        pass
-
-        # if self.is_renaming_by_expression:
-        #     self.result = (self.leExpression.text(), self.sbOffset.value(), self.leCounterMulFactor.text())
-        # else:
-        #     self.list = self.leList.text()
-
-    # def cbTakeNamesFromList_check_changed(self):
-        # if self.cbTakeNamesFromList.checkState() == Qt.Checked:
-        #     self.sbOffset.setEnabled(False)
-        #     self.leExpression.setEnabled(False)
-        #     self.leList.setEnabled(True)
-        #     self.leCounterMulFactor.setEnabled(False)
-        #     self.is_renaming_by_expression = False
-        # else:
-        #     self.sbOffset.setEnabled(True)
-        #     self.leExpression.setEnabled(True)
-        #     self.leList.setEnabled(False)
-        #     self.leCounterMulFactor.setEnabled(True)
-        #     self.is_renaming_by_expression = True
-
     def accept(self):
-        self.set_result()
+        try:
+            float(self.leTimeUnit.text())
+            float(self.leCut0.text())
+            float(self.leCut1.text())
+            float(self.leBCorr0.text())
+            float(self.leBCorr1.text())
+        except ValueError:
+            QMessageBox.critical(self, 'Error', "Please check the input fields.")
+            return
+
         self.accepted = True
         LoadKineticsDialog.is_opened = False
         LoadKineticsDialog._instance = None
+        Settings.save()
         super(LoadKineticsDialog, self).accept()
 
     def reject(self):

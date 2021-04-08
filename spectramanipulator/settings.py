@@ -132,6 +132,8 @@ class Settings(object):
     export_spectra_as_dialog_delimiter = '\t'
     export_spectra_as_dialog_decimal_sep = '.'
 
+    load_kinetics_last_path = ""
+
     # recent projects filepaths
 
     recent_project_filepaths = []

@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
-        Dialog.resize(439, 434)
+        Dialog.resize(475, 493)
         self.gridLayout_2 = QtWidgets.QGridLayout(Dialog)
         self.gridLayout_2.setObjectName("gridLayout_2")
         self.verticalLayout = QtWidgets.QVBoxLayout()
@@ -114,7 +114,7 @@ class Ui_Dialog(object):
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Load kinetics....</p>\n"
+"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Loads UV-Vis kinetics. The spectra can be in various formats (dx, csv or txt). If blank spectrum is provided, it will be subtracted from each of the spectra. Time corresponding to each spectrum will be set as name for that spectrum. Times can be provided by differerence time (in case kinetics was measured reguraly) or from filename. Postprocessing (baseline correction and/or cut of spectra) can be performed.</p>\n"
 "<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Required folder structure for one kinetics:</p>\n"
 "<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">[kinetics folder]<span style=\" font-family:\'JetBrains Mono,monospace\'; color:#629755;\"><br />    </span><span style=\" font-family:\'JetBrains Mono,monospace\'; color:#000000;\">[spectra folder]<br />         01.dx<br />         02.dx<br />         ...<br />    times.txt (optional)<br />    blank.dx (optional)</span></p></body></html>"))
         self.label_4.setText(_translate("Dialog", "Folders to load:"))

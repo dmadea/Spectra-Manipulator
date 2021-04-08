@@ -943,20 +943,12 @@ class TreeWidget(TreeView):
 
         # load explicit times
         times_fpath = os.path.join(dir_name, times_fname)
-        if os.path.isfile(times_fpath):
+        if times is None and os.path.isfile(times_fpath):
             self.import_files(times_fpath)
             # idx_add += 1
-            if times is None:
-                times = root[-1].data[:, 0].copy()
-                if corr_to_zero_time:
-                    times -= times[0]
-
-            # # push times variable to the console
-            # UserNamespace.instance.main.console.push_variables(
-            #     {
-            #         'times': times
-            #     }
-            # )
+            times = root[-1].data[:, 0].copy()
+            if corr_to_zero_time:
+                times -= times[0]
 
         if times is not None:
             root[group_idx].set_names(times)
