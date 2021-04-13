@@ -921,6 +921,93 @@ class VarOrderModel(_FixedParametersModel):
 
         return np.nan_to_num(np.heaviside(t[:, None], 1) * C)
 
+class SingletOxygenRate(_FixedParametersModel):
+
+    name = 'Singlet Oxygen Rate Constant'
+
+    def __init__(self, *args, **kwargs):
+        exps_data = args[0]  # exps_data must be first
+        spec_names = ['A', 'B']
+        spec_visible = [{'A': True, 'B': False} for _ in range(len(exps_data))]
+        kwargs.update(n_spec=2, spec_names=spec_names, spec_visible=spec_visible)
+        super(SingletOxygenRate, self).__init__(*args, **kwargs)
+
+    def get_all_param_names(self):
+        pars = {f'_{name}_0': f'Initial concentration of {name}' for name in self.spec_names}
+        pars.update({name: f'Amplitude of {name}' for name in self.spec_names})  # amplitudes
+        pars.update({'k': "The rate constant of singlet oxygen bimolecular reaction = kr"})
+        pars.update({'rkd': "Singlet oxygen decay rate constant"})
+        pars.update({'intercept': 'Intercept'})  # intercept
+        return pars
+
+    def default_exp_dep_params(self):
+        pars = self.spec_names[:]  # amplitudes  # make a copy!!!
+        pars += ['intercept']  # intercepts
+        return pars
+
+    def get_param_dicts(self):
+        rates_dict = {'k': 0}
+        amps_dict = {name: i for i, name in enumerate(self.spec_names)}
+        j_dict = {f'_{name}_0': i for i, name in enumerate(self.spec_names)}
+
+        return dict(rates_dict=rates_dict, amps_dict=amps_dict, j_dict=j_dict)
+
+    def add_params(self, param_set: list = None, dict_params: dict = None, j_dict: dict = None, rates_dict: dict = None,
+                   amps_dict: dict = None, species_visible: [dict] = None, par_format=lambda name: name, **kwargs):
+
+        for par in param_set:
+            f_par_name = par_format(par)
+
+            vary = True
+            value = 1
+            min = -np.inf
+            max = np.inf
+            if self.is_j_par(par):
+                dict_params['j'][j_dict[par]] = f_par_name
+                vary = False
+                if par == '_A_0':
+                    value = 1
+                else:
+                    value = 0
+            elif par.startswith('k'):
+                dict_params['rates'][rates_dict[par]] = f_par_name
+                min = 0
+            elif self.is_amp_par(par):
+                dict_params['amps'][amps_dict[par]] = f_par_name
+                vary = not self.varpro
+            elif self.is_intercept(par):
+                dict_params['intercept'] = f_par_name
+                vary = self.fit_intercept_varpro and not self.varpro
+                value = 0
+            elif par.startswith('rkd'):
+                value = 1e6
+                vary = False
+                min = 0
+                max = np.inf
+            else:
+                value = 0
+
+            dict_params['all'].append(f_par_name)
+            if f_par_name not in self.params:
+                self.params.add(f_par_name, min=min, max=max, value=value, vary=vary)
+                # add an enabled attribute for each parameter
+                self.params[f_par_name].enabled = True
+
+    def _get_traces(self, t, ks, j, i):
+
+        j_A, j_B = j
+        k = ks[0]
+
+        n_par = list(filter(lambda name: name.startswith('rkd'), self.param_names_dict[i]['all']))[0]
+        kd = self.params[n_par].value
+
+        C = np.empty((t.shape[0], 2), dtype=np.float64)
+
+        C[:, 0] = odeint(lambda c, _: -k * c / (kd + k * c), j_A, t).squeeze()
+        C[:, 1] = j_B + j_A - C[:, 0]
+
+        return np.nan_to_num(np.heaviside(t[:, None], 1) * C)
+
 
 class Photosensitization(_FixedParametersModel):
 
