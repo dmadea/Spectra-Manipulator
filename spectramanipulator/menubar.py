@@ -93,15 +93,15 @@ class MenuBar(QMenuBar):
 
         # ---Export Plot----
 
-        self.export_plot_menu = self.addMenu("&Export Plot")
-
-        self.copy_as_image_act = QAction("&Copy As Image", self)
-        self.copy_as_image_act.triggered.connect(self.parent().grpView.save_plot_to_clipboard_as_png)
-        self.export_plot_menu.addAction(self.copy_as_image_act)
-
-        self.copy_as_svg = QAction("&Copy As SVG", self)
-        self.copy_as_svg.triggered.connect(self.parent().grpView.save_plot_to_clipboard_as_svg)
-        self.export_plot_menu.addAction(self.copy_as_svg)
+        # self.export_plot_menu = self.addMenu("&Export Plot")
+        #
+        # self.copy_as_image_act = QAction("&Copy As Image", self)
+        # self.copy_as_image_act.triggered.connect(self.parent().grpView.save_plot_to_clipboard_as_png)
+        # self.export_plot_menu.addAction(self.copy_as_image_act)
+        #
+        # self.copy_as_svg = QAction("&Copy As SVG", self)
+        # self.copy_as_svg.triggered.connect(self.parent().grpView.save_plot_to_clipboard_as_svg)
+        # self.export_plot_menu.addAction(self.copy_as_svg)
 
         # ---About Menu---
 
@@ -112,11 +112,13 @@ class MenuBar(QMenuBar):
         self.about_menu.addAction(self.about_act)
 
     def open_function_plotter(self):
-        def accepted():
-            self.parent().tree_widget.import_spectra(fit_widget.plotted_function_spectra)
-            self.parent().tree_widget.state_changed.emit()
-
-        fit_widget = FitWidget(self.parent().var_widget, accepted, None, parent=self)
+        # TODO
+        return
+        # def accepted():
+        #     self.parent().tree_widget.import_spectra(fit_widget.plotted_function_spectra)
+        #     self.parent().tree_widget.state_changed.emit()
+        #
+        # fit_widget = FitWidget(self.parent().var_widget, accepted, None, parent=self)
 
     def open_recent_file(self):
         if self.sender():

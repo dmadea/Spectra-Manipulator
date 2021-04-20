@@ -59,6 +59,9 @@ target/
 # files from pycharm
 .idea/
 
+# tutorial powerpoints
+*.pptx
+
 
 
 
