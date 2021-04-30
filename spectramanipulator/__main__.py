@@ -1,6 +1,8 @@
 import sys
 import os
 from PyQt5 import QtCore
+from spectramanipulator import windows
+
 # from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QCoreApplication
 from PyQt5.QtWidgets import QMessageBox, QMainWindow, QFileDialog, QWidget, QPushButton, QStatusBar, QLabel, \
@@ -8,6 +10,8 @@ from PyQt5.QtWidgets import QMessageBox, QMainWindow, QFileDialog, QWidget, QPus
 
 from PyQt5.QtGui import QColor, QFont
 from PyQt5 import QtWidgets
+import argparse
+from spectramanipulator import __version__
 
 import pyqtgraph as pg
 
@@ -33,6 +37,8 @@ import re
 
 import numpy as np
 
+
+debug = False
 
 import cProfile
 import pstats
@@ -701,26 +707,42 @@ def my_exception_hook(exctype, value, traceback):
 
 
 def main():
+    global debug
     # Back up the reference to the exceptionhook
     sys._excepthook = sys.excepthook
 
     # Set the exception hook to our wrapping function
     sys.excepthook = my_exception_hook
 
-    app = QApplication(sys.argv)
+    parser = argparse.ArgumentParser('spectra-manipulator')
+    parser.add_argument("--debug", action="store_true",
+                        help="detailed debugging messages")
+    parser.add_argument("--version", action="version",
+                        version="%(prog)s {}".format(__version__))
 
-    QCoreApplication.setOrganizationName("Spectra Manipulator")
-    QCoreApplication.setOrganizationDomain("FreeTimeCoding")
-    QCoreApplication.setApplicationName("Spectra Manipulator")
+    args, unparsed_args = parser.parse_known_args()
+    debug = args.debug
 
-    # app.setStyle('Windows')
-    form = Main()
-    form.show()
+    try:
+        if sys.platform == 'win32' and not debug:
+            windows.set_attached_console_visible(False)
 
-    # form.interact()
+        app = QApplication(sys.argv)
 
-    # app.lastWindowClosed.connect(app.quit)
-    sys.exit(app.exec_())
+        QCoreApplication.setOrganizationName("Spectra Manipulator")
+        QCoreApplication.setOrganizationDomain("FreeTimeCoding")
+        QCoreApplication.setApplicationName("Spectra Manipulator")
+
+        # app.setStyle('Windows')
+        form = Main()
+        form.show()
+
+        # form.interact()
+        # app.lastWindowClosed.connect(app.quit)
+        sys.exit(app.exec_())
+    finally:
+        if sys.platform == 'win32' and not debug:
+            windows.set_attached_console_visible(True)
 
     ### cProfile.run('app.exec_()', 'profdata')
     # cProfile.runctx('app.exec_()', None, locals(), filename='profdata')
