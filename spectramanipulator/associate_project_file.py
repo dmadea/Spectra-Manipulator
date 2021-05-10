@@ -1,11 +1,11 @@
 
 import sys
-import os
+# import os
 from spectramanipulator.settings import Settings
 
 ROOT_PATH = r"Software\Classes"
 REG_PATH_EXT = f"{ROOT_PATH}\\{Settings.PROJECT_EXTENSION}"  # \.smpj
-
+HKEY_CURRENT_USER_text = "HKEY_CURRENT_USER"
 
 def associate_project_file():
     if sys.platform != 'win32':
@@ -29,25 +29,26 @@ def associate_project_file():
         reg.SetValue(registry_key_ext, '', reg.REG_SZ, Settings.REG_PROGRAM_NAME)
         reg.CloseKey(registry_key_ext)
 
-        print(f"Added {REG_PATH_EXT}")
+        print(f"Added {HKEY_CURRENT_USER_text}\\{REG_PATH_EXT}")
 
-        curr_dirr = os.path.dirname(os.path.realpath(__file__))
-        prog_path = os.path.join(curr_dirr, "spectramanipulator.pyw")
-        # prog_path = "spectramanipulator"
+        # curr_dirr = os.path.dirname(os.path.realpath(__file__))
+        # prog_path = os.path.join(curr_dirr, "spectramanipulator.pyw")
+        prog_path = "spectramanipulator"
 
-        py_exec = sys.executable  # find python executable and change it to python without console if possible
-        if py_exec.endswith('python.exe'):
-            py_exec = os.path.join(os.path.dirname(sys.executable), 'pythonw.exe')  # use pythonw.exe
+        py_exec = sys.executable  # find python executable
+        # if py_exec.endswith('python.exe'):
+        #     py_exec = os.path.join(os.path.dirname(sys.executable), 'pythonw.exe')  # use pythonw.exe
 
         # executable = f"\"{py_exec}\" \"{prog_path}\" \"%1\""  # path is "[pythonw.exe]" -m "[ssm.pyw]" "[path-to-file-arg]"
-        executable = f"\"{py_exec}\" \"{prog_path}\" \"%1\""  # path is "[pythonw.exe]" -m "[ssm.pyw]" "[path-to-file-arg]"
+        executable = f"\"{py_exec}\" -m {prog_path} \"%1\""  # path is "[python.exe]" -m spectramanipulator "[path-to-file-arg]"
+        # print(executable)
 
         reg.CreateKey(reg.HKEY_CURRENT_USER, REG_PATH_PROGRAM)
         registry_key_prog = reg.OpenKey(reg.HKEY_CURRENT_USER, REG_PATH_PROGRAM, 0, reg.KEY_WRITE)
         reg.SetValue(registry_key_prog, '', reg.REG_SZ, executable)
         reg.CloseKey(registry_key_prog)
 
-        print(f"Added {REG_PATH_PROGRAM}")
+        print(f"Added {HKEY_CURRENT_USER_text}\\{REG_PATH_PROGRAM}")
 
     except Exception as ex:
         print(ex.__str__())
@@ -74,7 +75,7 @@ def _delete_subkey(key0: int, key1: str, key2=""):
         subkey = reg.EnumKey(open_key, 0)
         try:
             reg.DeleteKey(open_key, subkey)
-            print(f"Removed {currentkey}\\{subkey}")
+            print(f"Removed {HKEY_CURRENT_USER_text}\\{currentkey}\\{subkey}")
         except:
             _delete_subkey(key0, currentkey, subkey)
             # no extra delete here since each call
@@ -82,7 +83,7 @@ def _delete_subkey(key0: int, key1: str, key2=""):
 
     reg.DeleteKey(open_key, "")
     open_key.Close()
-    print(f"Removed {currentkey}")
+    print(f"Removed {HKEY_CURRENT_USER_text}\\{currentkey}")
 
 
 def remove_project_file_association():
@@ -109,6 +110,15 @@ if __name__ == '__main__':
     else:
         associate_project_file()
         print(f"\nProject file {Settings.PROJECT_EXTENSION} association was added to win registry.")
+
+
+
+
+
+
+
+
+
 
 
 

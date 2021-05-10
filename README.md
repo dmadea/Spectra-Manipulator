@@ -1,12 +1,26 @@
-# Simple Spectra Manipulator
+# Spectra Manipulator
 
+TODO
 
-How to install:
+Installation Methods
+--------------------
 
-1. Read the documentation in docs/build/html/index.html
-2. Install Python ver. >= 3.8
-3. Install packages
-4. Launch SSM/simple_spectra_manipulator.pyw
-5. Enjoy
+* From PyPI:
+   * `pip install spectramanipulator`
+    
 
-Added change
+### Used packages
+
+* pyqtgraph
+* Lmfit
+* matplotlib
+* PyQt5
+* qtconsole
+* numba
+
+First Launch
+--------------------
+
+* Run with `python -m spectramanipulator`
+* (*optional*) Associate project files (works only for Windows) `python -m spectramanipulator --associate_files`
+* (*optional*) Remove association `python -m spectramanipulator --remove_association`

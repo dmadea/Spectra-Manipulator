@@ -36,8 +36,8 @@ class Logger(object):
 
     @staticmethod
     def debug(*values):
-        from .settings import Settings
-        if Settings.debug:
+        from spectramanipulator.__main__ import debug
+        if debug:
             print(*values)
 
 

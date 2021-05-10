@@ -11,10 +11,10 @@ from copy import deepcopy
 from scipy.linalg import lstsq
 from ..general_model import GeneralModel
 import numba as nb
-import ray
-import psutil
+# import ray
+# import psutil
 
-num_cpus = psutil.cpu_count(logical=False)
+# num_cpus = psutil.cpu_count(logical=False)
 # ray.init(num_cpus=num_cpus, ignore_reinit_error=True)
 
 posv = scipy.linalg.get_lapack_funcs(('posv'))
@@ -146,8 +146,8 @@ class Model(object):
         self.param_names_dict = {}
 
         self.data_ids = None
-        if ray.is_initialized():
-            self.data_ids = [ray.put(data) for data in self.exps_data]
+        # if ray.is_initialized():
+        #     self.data_ids = [ray.put(data) for data in self.exps_data]
 
     def set_ranges(self, ranges=None):
         if self.exps_data is None:
@@ -419,16 +419,16 @@ class _InterceptVarProModel(Model):
     def get_rate_values(self, exp_num):
         return np.asarray([self.params[p].value for p in self.param_names_dict[exp_num]['rates']])
 
-    @staticmethod
-    @ray.remote
-    def _get_results_remote(*ts, rates=None, amps=None, visibles=None, js=None, batch=None, **kwds):
-        pass
+    # @staticmethod
+    # @ray.remote
+    # def _get_results_remote(*ts, rates=None, amps=None, visibles=None, js=None, batch=None, **kwds):
+    #     pass
 
-    def put_data_to_shared_memory(self):
-        for i, (data, x_range, par_names) in enumerate(zip(self.exps_data, self.ranges, self.param_names_dict)):
-            d_view = get_xy(data, x0=x_range[0], x1=x_range[1])
-            self.data_views[i] = d_view
-            self.data_ids[i] = ray.put(d_view)  # put view to shared memory
+    # def put_data_to_shared_memory(self):
+    #     for i, (data, x_range, par_names) in enumerate(zip(self.exps_data, self.ranges, self.param_names_dict)):
+    #         d_view = get_xy(data, x0=x_range[0], x1=x_range[1])
+    #         self.data_views[i] = d_view
+    #         self.data_ids[i] = ray.put(d_view)  # put view to shared memory
 
     # def simulate(self, params=None):
     #     """Simulates the data and returns the list of simulated traces as ndarrays
@@ -690,81 +690,81 @@ class SeqParModel(_InterceptVarProModel):
                 # add an enabled attribute for each parameter
                 self.params[f_par_name].enabled = True
 
-    @staticmethod
-    @ray.remote
-    def _get_results_remote(*views, rates=None, amps=None, js=None, intercepts=None, batch=None, visibles=None, **kwds):
-        # view to data arrays has to be passed as individual arguments, list of argument will fail to use in numpy ops
-
-        results = []
-
-        for view, ks, j, vis, amps, icept, i in zip(views, rates, js, visibles, amps, intercepts, batch):
-            amps = np.asarray(amps.copy(), dtype=np.float64)  # copy amps and change the dtype to float64
-            n = ks.shape[0]
-
-            t = view[:, 0]
-            y = view[:, 1]
-
-            if kwds['sequential']:
-                # build the transfer matrix for sequential model
-                K = np.zeros((n, n))
-                for idx in range(n):
-                    K[idx, idx] = -ks[idx]
-                    if idx < n - 1:
-                        K[idx + 1, idx] = ks[idx]
-                # calculate and return the target model simulation
-                traces = target_1st_order(t, K, j)
-
-            else:  # parallel model
-                traces = parallel_model(j[None, :], t[:, None], ks[None, :])
-
-            _y = y.copy()
-
-            if kwds['varpro']:
-
-                # exp indep traces
-                exp_dep_select = []
-                exp_indep_select = []
-                for key, visible in vis.items():
-                    is_independent = key in kwds['exp_indep_amps']
-                    exp_indep_select.append(is_independent and visible)
-                    exp_dep_select.append(not is_independent and visible)
-
-                A = traces[:, exp_dep_select]  # select only visible species
-                # add intercept as constant function
-
-                fit = 0
-                if kwds['lstsq_intercept']:
-                    A = np.hstack((A, np.ones_like(t)[:, None]))
-                else:
-                    fit = icept
-                    _y -= fit
-
-                if any(exp_indep_select):  # calculate traces for independent-exp amplitudes and add to fit
-                    exp_indep_traces = traces[:, exp_indep_select].dot(amps[exp_indep_select])  # add calculated traces
-                    fit += exp_indep_traces
-                    _y -= exp_indep_traces
-
-                # solve the least squares problem, find the amplitudes of visible compartments based on data
-                _amps = OLS_ridge(A, _y, 0)  # A @ amps = y - A_fixed @ amps_fixes - intercept
-
-                fit += A.dot(_amps)  # calculate the fit and add it
-
-                # update amplitudes and intercept
-                if kwds['lstsq_intercept']:
-                    *__amps, icept = list(_amps)
-                    amps[exp_dep_select] = __amps
-
-            else:
-                fit = traces.dot(amps)  # weight the simulated traces with amplitudes and calculate the fit
-
-                if kwds['lstsq_intercept']:
-                    icept = (y - fit).sum() / fit.shape[0]  # calculate intercept by least squares
-
-                fit += icept  # just add it to fit
-
-            results.append([i, fit, amps, icept])
-
-        return results
+    # @staticmethod
+    # @ray.remote
+    # def _get_results_remote(*views, rates=None, amps=None, js=None, intercepts=None, batch=None, visibles=None, **kwds):
+    #     # view to data arrays has to be passed as individual arguments, list of argument will fail to use in numpy ops
+    #
+    #     results = []
+    #
+    #     for view, ks, j, vis, amps, icept, i in zip(views, rates, js, visibles, amps, intercepts, batch):
+    #         amps = np.asarray(amps.copy(), dtype=np.float64)  # copy amps and change the dtype to float64
+    #         n = ks.shape[0]
+    #
+    #         t = view[:, 0]
+    #         y = view[:, 1]
+    #
+    #         if kwds['sequential']:
+    #             # build the transfer matrix for sequential model
+    #             K = np.zeros((n, n))
+    #             for idx in range(n):
+    #                 K[idx, idx] = -ks[idx]
+    #                 if idx < n - 1:
+    #                     K[idx + 1, idx] = ks[idx]
+    #             # calculate and return the target model simulation
+    #             traces = target_1st_order(t, K, j)
+    #
+    #         else:  # parallel model
+    #             traces = parallel_model(j[None, :], t[:, None], ks[None, :])
+    #
+    #         _y = y.copy()
+    #
+    #         if kwds['varpro']:
+    #
+    #             # exp indep traces
+    #             exp_dep_select = []
+    #             exp_indep_select = []
+    #             for key, visible in vis.items():
+    #                 is_independent = key in kwds['exp_indep_amps']
+    #                 exp_indep_select.append(is_independent and visible)
+    #                 exp_dep_select.append(not is_independent and visible)
+    #
+    #             A = traces[:, exp_dep_select]  # select only visible species
+    #             # add intercept as constant function
+    #
+    #             fit = 0
+    #             if kwds['lstsq_intercept']:
+    #                 A = np.hstack((A, np.ones_like(t)[:, None]))
+    #             else:
+    #                 fit = icept
+    #                 _y -= fit
+    #
+    #             if any(exp_indep_select):  # calculate traces for independent-exp amplitudes and add to fit
+    #                 exp_indep_traces = traces[:, exp_indep_select].dot(amps[exp_indep_select])  # add calculated traces
+    #                 fit += exp_indep_traces
+    #                 _y -= exp_indep_traces
+    #
+    #             # solve the least squares problem, find the amplitudes of visible compartments based on data
+    #             _amps = OLS_ridge(A, _y, 0)  # A @ amps = y - A_fixed @ amps_fixes - intercept
+    #
+    #             fit += A.dot(_amps)  # calculate the fit and add it
+    #
+    #             # update amplitudes and intercept
+    #             if kwds['lstsq_intercept']:
+    #                 *__amps, icept = list(_amps)
+    #                 amps[exp_dep_select] = __amps
+    #
+    #         else:
+    #             fit = traces.dot(amps)  # weight the simulated traces with amplitudes and calculate the fit
+    #
+    #             if kwds['lstsq_intercept']:
+    #                 icept = (y - fit).sum() / fit.shape[0]  # calculate intercept by least squares
+    #
+    #             fit += icept  # just add it to fit
+    #
+    #         results.append([i, fit, amps, icept])
+    #
+    #     return results
 
     def _get_traces(self, t, ks, j, i):
 

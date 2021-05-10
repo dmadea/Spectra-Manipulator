@@ -35,6 +35,8 @@ from .dialogs.fitwidget import FitWidget
 from .dialogs.load_kinetics_dialog import LoadKineticsDialog
 import re
 
+from .associate_project_file import associate_project_file, remove_project_file_association
+
 import numpy as np
 
 
@@ -47,7 +49,7 @@ import pstats
 class Main(QMainWindow):
     current_file = None
 
-    def __init__(self, parent=None):
+    def __init__(self, filepath=None, parent=None):
         super(Main, self).__init__(parent)
 
         self.setWindowTitle("Untitled - Simple Spectra Manipulator")
@@ -115,8 +117,8 @@ class Main(QMainWindow):
         self.update_recent_files()
 
         # open project or file if opened with an argument
-        if len(sys.argv) > 1:
-            self.open_project(filepath=sys.argv[1], open_dialog=False)
+        if filepath is not None:
+            self.open_project(filepath=filepath, open_dialog=False)
 
     def add_star(self):
         if not self.windowTitle().startswith('*'):
@@ -716,12 +718,24 @@ def main():
 
     parser = argparse.ArgumentParser('spectra-manipulator')
     parser.add_argument("--debug", action="store_true",
-                        help="detailed debugging messages")
+                        help="runs in debug mode (keeps the console visible)")
     parser.add_argument("--version", action="version",
                         version="%(prog)s {}".format(__version__))
+    parser.add_argument("--associate_files", action="store_true",
+                        help="associates project files for windows and exits")
+    parser.add_argument("--remove_association", action="store_true",
+                        help="removes project files association from windows registry and exits")
 
     args, unparsed_args = parser.parse_known_args()
     debug = args.debug
+
+    if args.associate_files:
+        associate_project_file()
+        return
+
+    if args.remove_association:
+        remove_project_file_association()
+        return
 
     try:
         if sys.platform == 'win32' and not debug:
@@ -734,7 +748,8 @@ def main():
         QCoreApplication.setApplicationName("Spectra Manipulator")
 
         # app.setStyle('Windows')
-        form = Main()
+        # pass the filename if provided
+        form = Main(unparsed_args[0] if len(unparsed_args) > 0 else None)
         form.show()
 
         # form.interact()
