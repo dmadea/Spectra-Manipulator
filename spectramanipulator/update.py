@@ -2,10 +2,11 @@
 import requests
 from distutils.version import StrictVersion
 from distutils.version import LooseVersion
-from spectramanipulator import __version__
 import sys
 import os
 import subprocess
+from . import __version__
+from . import windows
 from .qt_task import Task
 
 from PyQt5.QtWidgets import QMessageBox
@@ -65,6 +66,9 @@ class TaskUpdate(Task):
         if reply == QMessageBox.No:
             return False
 
+        if sys.platform == 'win32':
+            windows.set_attached_console_visible(True)
+
         return True
 
     def run(self):
@@ -74,6 +78,8 @@ class TaskUpdate(Task):
         subprocess.run(f"{pip_path} install spectramanipulator=={self.latest_version}")
 
     def postRun(self):
+        if sys.platform == 'win32':
+            windows.set_attached_console_visible(False)
         QMessageBox.information(self.parent, 'Update',
                                 "The program was updated. Please restart your application (all instances have to be closed).")
 
