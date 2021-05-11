@@ -105,11 +105,15 @@ class MenuBar(QMenuBar):
 
         # ---About Menu---
 
-        self.about_menu = self.addMenu("&About")
+        self.about_menu = self.addMenu("&Help")
 
         self.about_act = QAction("&About", self)
         self.about_act.triggered.connect(self.show_about_window)
         self.about_menu.addAction(self.about_act)
+
+        self.update_act = QAction("&Check for updates...", self)
+        self.update_act.triggered.connect(self.parent().check_for_updates)
+        self.about_menu.addAction(self.update_act)
 
     def open_function_plotter(self):
         # TODO

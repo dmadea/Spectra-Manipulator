@@ -9,7 +9,7 @@ setup(
     author="Dominik Madea",
     author_email="dominik.madea@gmail.com",
     url="https://github.com/dmadea/Spectra-Manipulator",
-    download_url="https://github.com/dmadea/Spectra-Manipulator/archive/refs/tags/v0.1.1.tar.gz",
+    download_url=f"https://github.com/dmadea/Spectra-Manipulator/archive/refs/tags/v{__version__}.tar.gz",
     description=DESCRIPTION,
     long_description=open('README.md').read(),
     packages=find_packages(),
@@ -22,6 +22,7 @@ setup(
         'pyqt5',
         'qtconsole>=5.1.0',
         'numba',
+        'requests'
     ],
 
     keywords=['python', 'spectra manipulator'],

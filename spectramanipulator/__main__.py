@@ -12,6 +12,7 @@ from PyQt5.QtGui import QColor, QFont
 from PyQt5 import QtWidgets
 import argparse
 from spectramanipulator import __version__
+from .update import TaskUpdate
 
 import pyqtgraph as pg
 
@@ -258,6 +259,11 @@ class Main(QMainWindow):
             return None
 
         return filepaths[0]
+
+    def check_for_updates(self):
+        ta = TaskUpdate(self)
+        if ta.can_update_program():
+            ta.start()
 
     def open_project(self, filepath=None, open_dialog=True):
 
