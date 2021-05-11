@@ -81,5 +81,5 @@ class TaskUpdate(Task):
         if sys.platform == 'win32':
             windows.set_attached_console_visible(False)
         QMessageBox.information(self.parent, 'Update',
-                                "The program was updated. Please restart your application (all instances have to be closed).")
+                                "The program was updated. Please restart your application.")
 
