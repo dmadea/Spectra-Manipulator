@@ -13,8 +13,9 @@ setup(
     description=DESCRIPTION,
     long_description=open('README.md').read(),
     packages=find_packages(),
+    python_requires='>3.7.1',
     install_requires=[
-        'lmfit',  # instals numpy and scipy
+        'lmfit',  # installs numpy and scipy
         'numpy',
         'scipy',
         'pyqtgraph>=0.12.1',
@@ -22,7 +23,8 @@ setup(
         'pyqt5',
         'qtconsole>=5.1.0',
         'numba',
-        'requests'
+        'requests',
+        'winshell'
     ],
 
     keywords=['python', 'spectra manipulator'],

@@ -36,8 +36,6 @@ from .dialogs.fitwidget import FitWidget
 from .dialogs.load_kinetics_dialog import LoadKineticsDialog
 import re
 
-from .associate_project_file import associate_project_file, remove_project_file_association
-
 import numpy as np
 
 
@@ -262,7 +260,7 @@ class Main(QMainWindow):
 
     def check_for_updates(self):
         ta = TaskUpdate(self)
-        if ta.can_update_program():
+        if ta.can_update():
             ta.start()
 
     def open_project(self, filepath=None, open_dialog=True):
@@ -731,16 +729,22 @@ def main():
                         help="associates project files for windows and exits")
     parser.add_argument("--remove_association", action="store_true",
                         help="removes project files association from windows registry and exits")
+    parser.add_argument("--create_desktop_shortcut", action="store_true",
+                        help="creates a shortcut for a program on users desktop")
 
     args, unparsed_args = parser.parse_known_args()
     debug = args.debug
 
     if args.associate_files:
-        associate_project_file()
+        windows.associate_project_file()
         return
 
     if args.remove_association:
-        remove_project_file_association()
+        windows.remove_project_file_association()
+        return
+
+    if args.create_desktop_shortcut:
+        windows.create_desktop_shortcut()
         return
 
     try:

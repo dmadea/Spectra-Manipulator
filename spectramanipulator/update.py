@@ -47,11 +47,11 @@ class TaskUpdate(Task):
         self.parent = parent
         self.latest_version = __version__
 
-    def can_update_program(self):
+    def can_update(self):
         try:
             self.latest_version = get_latest_version()
         except requests.exceptions.RequestException as e:
-            QMessageBox.critical(self.parent, 'Update', f"Connection error. {str(e)}")
+            QMessageBox.critical(self.parent, 'Update', f"Connection error.\n{str(e)}")
             return False
 
         if is_latest_version(self.latest_version):
