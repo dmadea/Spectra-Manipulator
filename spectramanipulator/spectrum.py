@@ -291,7 +291,6 @@ class SpectrumList(IOperationBase):
 
         return Spectrum.from_xy_values(x, matrix.mean(axis=1), name=f'{self.name}-avrg')
 
-
     def get_transpose(self, max_items=1000):
         """
         Transposes group, names of spectra in group will be taken as x values for transposed data, so these values
