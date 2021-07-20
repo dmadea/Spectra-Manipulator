@@ -12,6 +12,7 @@ import functools
 
 
 ## from https://github.com/Tillsten/skultrafast/blob/master/skultrafast/dv.py
+# TODO simlify, benchmark
 def fi(array, values):
     """
     Finds index of nearest `value` in `array`. If value >  max(array), the last index of array
@@ -267,6 +268,29 @@ class SpectrumList(IOperationBase):
             ret_list.append(sp.data[idx, 1])
 
         return np.asarray(ret_list, dtype=np.float64)
+
+    def get_sum(self):
+        if len(self) < 2:
+            raise ValueError("At least 2 items have to be in the group in order to perform transposition.")
+
+        if not isinstance(self[0], Spectrum):
+            raise ValueError("Objects in list have to be type of Spectrum.")
+
+        x, y, matrix = group2mat(self.__iter__())
+
+        return Spectrum.from_xy_values(x, matrix.sum(axis=1), name=f'{self.name}-sum')
+
+    def get_average(self):
+        if len(self) < 2:
+            raise ValueError("At least 2 items have to be in the group in order to perform transposition.")
+
+        if not isinstance(self[0], Spectrum):
+            raise ValueError("Objects in list have to be type of Spectrum.")
+
+        x, y, matrix = group2mat(self.__iter__())
+
+        return Spectrum.from_xy_values(x, matrix.mean(axis=1), name=f'{self.name}-avrg')
+
 
     def get_transpose(self, max_items=1000):
         """
