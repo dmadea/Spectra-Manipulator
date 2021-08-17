@@ -7,8 +7,17 @@ from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 from scipy.fftpack import fft, fftfreq
 from scipy.integrate import cumtrapz, simps
+from scipy.fftpack import dct, idct
 
 import functools
+
+# from https://stackoverflow.com/questions/40104377/issiue-with-implementation-of-2d-discrete-cosine-transform-in-python
+def dct2(block):
+    return dct(dct(block.T, norm='ortho').T, norm='ortho')
+
+
+def idct2(block):
+    return idct(idct(block.T, norm='ortho').T, norm='ortho')
 
 
 ## from https://github.com/Tillsten/skultrafast/blob/master/skultrafast/dv.py
@@ -591,6 +600,29 @@ class Spectrum(IOperationBase):
         output = np.vstack((freq[filter], vals[filter])).T
 
         self.data = output
+
+        return self
+
+    @add_modif_func(True, False)
+    def whittaker(self, lam: float = 1e3):
+        """
+        Applies Whittaker smoother to a spectrum. Based on 10.1016/j.csda.2009.09.020, utilizes discrete cosine
+        transform to efficiently perform the calculation.
+
+        Correctly smooths only evenly spaced data!!
+
+        Parameters
+        ----------
+        lam : float
+            Lambda - parametrizes the roughness of the smoothed curve.
+        """
+
+        N = self.data.shape[0]
+
+        Lambda = -2 + 2 * np.cos(np.arange(N) * np.pi / N)  # eigenvalues of 2nd order difference matrix
+
+        gamma = 1 / (1 + lam * Lambda * Lambda)
+        self.data[:, 1] = idct(gamma * dct(self.data[:, 1], norm='ortho'), norm='ortho')
 
         return self
 

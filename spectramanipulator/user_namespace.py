@@ -378,23 +378,23 @@ def _get_C(group):
             raise ValueError("Names of spectra cannot be parsed to float.")
     return np.asarray(x_vals_temp, dtype=np.float64)
 
-def _get_D(group):
-    D = group[0].data[:, 1]
-    for i in range(1, len(group)):
-        D = np.vstack((D, group[i].data[:, 1]))
-    return D
+# def _get_D(group):
+#     D = group[0].data[:, 1]
+#     for i in range(1, len(group)):
+#         D = np.vstack((D, group[i].data[:, 1]))
+#     return D
 
-#
-# def calc_Eps(group):
-#     C = _get_C(group)
-#     D = _get_D(group)
-#     wls = group[0].data[:, 0]
-#
-#     # C needs to be changed to column vector
-#     ST = lstsq(C.reshape(-1, 1), D)[0]
-#
-#     # add a spectrum to list
-#     Spectrum.from_xy_values(wls, ST.flatten(), name=group.name + '-epsilon').add_to_list()
+
+def calc_Eps(group):
+
+    wls, c, D = group2mat(group)
+
+    # C needs to be changed to column vector
+    ST = lstsq(c[:, None], D.T)[0]
+
+
+    # add a spectrum to list
+    return Spectrum.from_xy_values(wls, ST.flatten(), name=group.name + '-epsilon')
 
 
 def rename_times(group, decimal_places=1):
