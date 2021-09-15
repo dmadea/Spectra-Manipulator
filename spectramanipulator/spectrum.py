@@ -9,6 +9,9 @@ from scipy.fftpack import fft, fftfreq
 from scipy.integrate import cumtrapz, simps
 from scipy.fftpack import dct, idct
 
+from typing import Union, Iterable, List
+
+
 import functools
 
 # from https://stackoverflow.com/questions/40104377/issiue-with-implementation-of-2d-discrete-cosine-transform-in-python
@@ -22,7 +25,7 @@ def idct2(block):
 
 ## from https://github.com/Tillsten/skultrafast/blob/master/skultrafast/dv.py
 # TODO simlify, benchmark
-def fi(array, values):
+def fi(array: np.ndarray, values: Union[int, float, Iterable]) -> Union[int, List[int]]:
     """
     Finds index of nearest `value` in `array`. If value >  max(array), the last index of array
     is returned, if value < min(array), 0 is returned. Array must be sorted. Also works for value
@@ -40,10 +43,9 @@ def fi(array, values):
     out : int, np.ndarray
         Found nearest index/es to value/s.
     """
-    try:
-        len(values)
-    except TypeError:
+    if not np.iterable(values):
         values = [values]
+
     ret_idx = [np.argmin(np.abs(array - i)) for i in values]
 
     return ret_idx[0] if len(ret_idx) == 1 else ret_idx
