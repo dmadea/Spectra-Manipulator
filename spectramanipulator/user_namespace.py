@@ -928,6 +928,19 @@ def plot_fits(data_group, fit_group, residuals_group, n_rows=None, n_cols=None, 
     plt.show()
 
 
+def save_group(group_item, fname='', delimiter='\t', encoding='utf8'):
+    """Data will be saved x-axis explicit"""
+
+    x, y, mat = group2mat(group_item)
+
+    mat = np.vstack((x, mat.T))
+    buffer = delimiter + delimiter.join(f"{num}" for num in y) + '\n'
+    buffer += '\n'.join(delimiter.join(f"{num}" for num in row) for row in mat.T)
+
+    with open(fname, 'w', encoding=encoding) as f:
+        f.write(buffer)
+
+
 def reaction_QY_relative(sample_items, actinometer_items, QY_act=1, irradiation_spectrum=None,
                          irradiation_wavelength=None, integration_range=(None, None), V_solution=1,
                          conc_calc_range=(None, None), samples_times=None, actinometers_times=None,
