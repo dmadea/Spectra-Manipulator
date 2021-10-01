@@ -585,72 +585,208 @@ def _set_main_axis(ax, x_label=WL_LABEL, y_label="Absorbance", xlim=(None, None)
     ax.tick_params(axis='both', which='minor', direction=direction)
 
 
-def plot_kinetics(group_item, n_spectra=50, linscale=1, linthresh=100, cmap='jet_r',
-                  major_ticks_labels=(100, 1000), emph_t=(0, 200, 1000), inset_loc=(0.75, 0.1, 0.03, 0.8),
-                  colorbar_label='Time / s', lw=0.5, alpha=0.5, fig_size=(5, 4), y_label='Absorbance', x_label=WL_LABEL,
-                  x_lim=(230, 600), filepath=None, dpi=500, transparent=True):
+def setup_twin_x_axis(ax, y_label="$I_{0,\\mathrm{m}}$ / $10^{-10}$ einstein s$^{-1}$ nm$^{-1}$",
+                      x_label=None, ylim=(None, None), y_major_locator=None, y_minor_locator=None,
+                      keep_zero_aligned=True):
+    ax2 = ax.twinx()
 
-    t = np.asarray(group_item.get_names(), dtype=np.float64)
-    w = group_item[0].data[:, 0]
+    ax2.tick_params(which='major', direction='in')
+    ax2.tick_params(which='minor', direction='in')
 
-    fig, ax1 = plt.subplots(1, 1, figsize=fig_size)
+    if y_major_locator:
+        ax2.yaxis.set_major_locator(y_major_locator)
 
-    _set_main_axis(ax1, x_label=x_label, y_label=y_label, xlim=x_lim, x_minor_locator=None, y_minor_locator=None)
-    _ = _setup_wavenumber_axis(ax1)
+    if y_minor_locator:
+        ax2.yaxis.set_minor_locator(y_minor_locator)
 
-    cmap = cm.get_cmap(cmap)
-    norm = mpl.colors.SymLogNorm(vmin=t[0], vmax=t[-1], linscale=linscale, linthresh=linthresh, base=10, clip=True)
+    ax2.set_ylabel(y_label)
 
-    tsb_idxs = fi(t, emph_t)
-    ts_real = np.round(t[tsb_idxs])
+    if keep_zero_aligned and ylim[0] is None and ylim[1] is not None:
+        # a = bx/(x-1)
+        ax1_ylim = ax.get_ylim()
+        x = -ax1_ylim[0] / (ax1_ylim[1] - ax1_ylim[0])  # position of zero in ax1, from 0, to 1
+        a = ylim[1] * x / (x - 1)  # calculates the ylim[0] so that zero position is the same for both axes
+        ax2.set_ylim(a, ylim[1])
 
-    x_space = np.linspace(0, 1, n_spectra, endpoint=True, dtype=np.float64)
+    elif ylim[0] is not None:
+        ax2.set_ylim(ylim)
 
-    t_idx_space = fi(t, norm.inverse(x_space))
-    t_idx_space = np.sort(np.asarray(list(set(t_idx_space).union(set(tsb_idxs)))))
+    return ax2
 
-    for i in t_idx_space:
-        x_real = norm(t[i])
-        x_real = 0 if np.ma.is_masked(x_real) else x_real
-        ax1.plot(w, group_item[i].data[:, 1], color=cmap(x_real),
-                 lw=1.5 if i in tsb_idxs else lw,
-                 alpha=1 if i in tsb_idxs else alpha,
-                 zorder=1 if i in tsb_idxs else 0)
 
-    cbaxes = ax1.inset_axes(inset_loc)
+def plot_kinetics(kin_group_items: list, n_rows: int = None, n_cols: int = None, n_spectra=50, linscale=1,
+                 linthresh=100, cmap='jet_r', major_ticks_labels=(100, 1000), emph_t=(0, 200, 1000),
+                 inset_loc=(0.75, 0.1, 0.03, 0.8), colorbar_label='Time / s', lw=0.5, alpha=0.5,
+                 fig_size_one_graph=(5, 4), y_label='Absorbance', x_label=WL_LABEL, x_lim=(230, 600), filepath=None,
+                 dpi=500, transparent=True, LED_sources: list = None):
 
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    cbar = plt.colorbar(sm, cax=cbaxes, orientation='vertical',
-                        format=mpl.ticker.ScalarFormatter(),
-                        label=colorbar_label)
+    kin_group_items = kin_group_items if isinstance(kin_group_items, list) else [kin_group_items]
+    n = len(kin_group_items)  # number of EEMs to plot
 
-    cbaxes.invert_yaxis()
+    if LED_sources is not None:
+        LED_sources = LED_sources if isinstance(LED_sources, list) else [LED_sources]
+        if len(LED_sources) == 1 and n > 1:
+            LED_sources = LED_sources * n
 
-    minor_ticks = [10, 20, 30, 40, 50, 60, 70, 80, 90, 200, 300, 400, 500, 600, 700, 800, 900] + list(
-        np.arange(2e3, t[-1], 1e3))
-    cbaxes.yaxis.set_ticks(cbar._locate(minor_ticks), minor=True)
+        assert len(LED_sources) == n,  "Number of provided LEDs must be the same as spectra"
+    else:
+        LED_sources = [None] * n
 
-    major_ticks = np.sort(np.hstack((np.asarray([100, 1000]), ts_real)))
-    major_ticks_labels = np.sort(np.hstack((np.asarray(major_ticks_labels), ts_real)))
+    if n_rows is None and n_cols is None:  # estimate the n_rows and n_cols from the sqrt of number of graphs
+        sqrt = n ** 0.5
+        n_rows = int(np.ceil(sqrt))
+        n_cols = int(sqrt)
+    elif n_rows is None and n_cols is not None:
+        n_rows = int(np.ceil(n / n_cols))
+    elif n_rows is not None and n_cols is None:
+        n_cols = int(np.ceil(n / n_rows))
 
-    cbaxes.yaxis.set_ticks(cbar._locate(major_ticks), minor=False)
-    cbaxes.set_yticklabels([(f'{num:0.0f}' if num in major_ticks_labels else "") for num in major_ticks])
+    # assert n_rows * n_cols >= n  # not necessary, if the condition is not valid, fewer plots will be plotted
 
-    for ytick, ytick_label, _t in zip(cbaxes.yaxis.get_major_ticks(), cbaxes.get_yticklabels(), major_ticks):
-        if _t in ts_real:
-            color = cmap(norm(_t))
-            ytick_label.set_color(color)
-            ytick_label.set_fontweight('bold')
-            ytick.tick2line.set_color(color)
-            ytick.tick2line.set_markersize(5)
-            # ytick.tick2line.set_markeredgewidth(2)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(fig_size_one_graph[0] * n_cols, fig_size_one_graph[1] * n_rows))
 
+    axes = axes.flatten() if np.iterable(axes) else [axes]
+
+    for ax, group, LED_source in zip(axes, kin_group_items, LED_sources):
+
+        t = np.asarray(group.get_names(), dtype=np.float64)
+        w = group[0].data[:, 0]
+
+        _set_main_axis(ax, x_label=x_label, y_label=y_label, xlim=x_lim, x_minor_locator=None, y_minor_locator=None)
+        _ = _setup_wavenumber_axis(ax)
+
+        cmap = cm.get_cmap(cmap)
+        norm = mpl.colors.SymLogNorm(vmin=t[0], vmax=t[-1], linscale=linscale, linthresh=linthresh, base=10, clip=True)
+
+        tsb_idxs = fi(t, emph_t)
+        ts_real = np.round(t[tsb_idxs])
+
+        x_space = np.linspace(0, 1, n_spectra, endpoint=True, dtype=np.float64)
+
+        t_idx_space = fi(t, norm.inverse(x_space))
+        t_idx_space = np.sort(np.asarray(list(set(t_idx_space).union(set(tsb_idxs)))))
+
+        for i in t_idx_space:
+            x_real = norm(t[i])
+            x_real = 0 if np.ma.is_masked(x_real) else x_real
+            ax.plot(w, group[i].data[:, 1], color=cmap(x_real),
+                     lw=1.5 if i in tsb_idxs else lw,
+                     alpha=1 if i in tsb_idxs else alpha,
+                     zorder=1 if i in tsb_idxs else 0)
+
+        cbaxes = ax.inset_axes(inset_loc)
+
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        cbar = plt.colorbar(sm, cax=cbaxes, orientation='vertical',
+                            format=mpl.ticker.ScalarFormatter(),
+                            label=colorbar_label)
+
+        cbaxes.invert_yaxis()
+
+        minor_ticks = [10, 20, 30, 40, 50, 60, 70, 80, 90, 200, 300, 400, 500, 600, 700, 800, 900] + list(
+            np.arange(2e3, t[-1], 1e3))
+        cbaxes.yaxis.set_ticks(cbar._locate(minor_ticks), minor=True)
+
+        major_ticks = np.sort(np.hstack((np.asarray([100, 1000]), ts_real)))
+        major_ticks_labels = np.sort(np.hstack((np.asarray(major_ticks_labels), ts_real)))
+
+        cbaxes.yaxis.set_ticks(cbar._locate(major_ticks), minor=False)
+        cbaxes.set_yticklabels([(f'{num:0.0f}' if num in major_ticks_labels else "") for num in major_ticks])
+
+        for ytick, ytick_label, _t in zip(cbaxes.yaxis.get_major_ticks(), cbaxes.get_yticklabels(), major_ticks):
+            if _t in ts_real:
+                color = cmap(norm(_t))
+                ytick_label.set_color(color)
+                ytick_label.set_fontweight('bold')
+                ytick.tick2line.set_color(color)
+                ytick.tick2line.set_markersize(5)
+                # ytick.tick2line.set_markeredgewidth(2)
+
+        if LED_source is not None:
+            ax_sec = setup_twin_x_axis(ax, ylim=(None, LED_source.y.max() * 3), y_label="", y_major_locator=FixedLocator([]))
+            ax_sec.fill(LED_source.x, LED_source.y, facecolor='gray', alpha=0.5)
+            ax_sec.plot(LED_source.x, LED_source.y, color='black', ls='dotted', lw=1)
+
+    plt.tight_layout()
     if filepath:
-        ext = os.path.splitext(filepath)[1].lower()[1:]
-        plt.savefig(fname=filepath, format=ext, transparent=transparent, dpi=dpi)
+        plt.savefig(fname=filepath, transparent=transparent, dpi=dpi)
 
     plt.show()
+
+#
+# def plot_kinetic_ax(group_item, n_spectra=50, linscale=1, linthresh=100, cmap='jet_r',
+#                   major_ticks_labels=(100, 1000), emph_t=(0, 200, 1000), inset_loc=(0.75, 0.1, 0.03, 0.8),
+#                   colorbar_label='Time / s', lw=0.5, alpha=0.5, fig_size=(5, 4), y_label='Absorbance', x_label=WL_LABEL,
+#                   x_lim=(230, 600), filepath=None, dpi=500, transparent=True, LED_source_xy=(None, None)):
+#
+#     t = np.asarray(group_item.get_names(), dtype=np.float64)
+#     w = group_item[0].data[:, 0]
+#
+#     fig, ax1 = plt.subplots(1, 1, figsize=fig_size)
+#
+#     _set_main_axis(ax1, x_label=x_label, y_label=y_label, xlim=x_lim, x_minor_locator=None, y_minor_locator=None)
+#     _ = _setup_wavenumber_axis(ax1)
+#
+#     cmap = cm.get_cmap(cmap)
+#     norm = mpl.colors.SymLogNorm(vmin=t[0], vmax=t[-1], linscale=linscale, linthresh=linthresh, base=10, clip=True)
+#
+#     tsb_idxs = fi(t, emph_t)
+#     ts_real = np.round(t[tsb_idxs])
+#
+#     x_space = np.linspace(0, 1, n_spectra, endpoint=True, dtype=np.float64)
+#
+#     t_idx_space = fi(t, norm.inverse(x_space))
+#     t_idx_space = np.sort(np.asarray(list(set(t_idx_space).union(set(tsb_idxs)))))
+#
+#     for i in t_idx_space:
+#         x_real = norm(t[i])
+#         x_real = 0 if np.ma.is_masked(x_real) else x_real
+#         ax1.plot(w, group_item[i].data[:, 1], color=cmap(x_real),
+#                  lw=1.5 if i in tsb_idxs else lw,
+#                  alpha=1 if i in tsb_idxs else alpha,
+#                  zorder=1 if i in tsb_idxs else 0)
+#
+#     cbaxes = ax1.inset_axes(inset_loc)
+#
+#     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+#     sm.set_array([])
+#     cbar = plt.colorbar(sm, cax=cbaxes, orientation='vertical',
+#                         format=mpl.ticker.ScalarFormatter(),
+#                         label=colorbar_label)
+#
+#     cbaxes.invert_yaxis()
+#
+#     minor_ticks = [10, 20, 30, 40, 50, 60, 70, 80, 90, 200, 300, 400, 500, 600, 700, 800, 900] + list(
+#         np.arange(2e3, t[-1], 1e3))
+#     cbaxes.yaxis.set_ticks(cbar._locate(minor_ticks), minor=True)
+#
+#     major_ticks = np.sort(np.hstack((np.asarray([100, 1000]), ts_real)))
+#     major_ticks_labels = np.sort(np.hstack((np.asarray(major_ticks_labels), ts_real)))
+#
+#     cbaxes.yaxis.set_ticks(cbar._locate(major_ticks), minor=False)
+#     cbaxes.set_yticklabels([(f'{num:0.0f}' if num in major_ticks_labels else "") for num in major_ticks])
+#
+#     for ytick, ytick_label, _t in zip(cbaxes.yaxis.get_major_ticks(), cbaxes.get_yticklabels(), major_ticks):
+#         if _t in ts_real:
+#             color = cmap(norm(_t))
+#             ytick_label.set_color(color)
+#             ytick_label.set_fontweight('bold')
+#             ytick.tick2line.set_color(color)
+#             ytick.tick2line.set_markersize(5)
+#             # ytick.tick2line.set_markeredgewidth(2)
+#
+#     if LED_source_xy[0] is not None and LED_source_xy[1] is not None:
+#         x_LED, y_LED = LED_source_xy
+#         ax_sec = setup_twin_x_axis(ax, ylim=(None, y_LED.max() * 3), y_label="", y_major_locator=FixedLocator([]))
+#         ax_sec.fill(x_LED, y_LED, facecolor='gray', alpha=0.5)
+#         ax_sec.plot(x_LED, y_LED, color='black', ls='dotted', lw=1)
+#
+#     if filepath:
+#         ext = os.path.splitext(filepath)[1].lower()[1:]
+#         plt.savefig(fname=filepath, format=ext, transparent=transparent, dpi=dpi)
+#
+#     plt.show()
 
 
 def plot_kinetics_no_colorbar(group_item, x_lim=(None, None), y_lim=(None, None), slice_to_plot=slice(0, -1, 5),
