@@ -357,7 +357,7 @@ class Model(QAbstractItemModel):
 
         return True
 
-    def index(self, row, column, parent):
+    def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
         node = self.node_from_index(parent)
         return self.createIndex(row, column, node.childAtRow(row))
 
@@ -406,14 +406,14 @@ class Model(QAbstractItemModel):
         else:
             return QVariant()
 
-    def columnCount(self, parent):
+    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return self.columns
 
-    def rowCount(self, parent):
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         node = self.node_from_index(parent)
         if node is None:
             return 0
-        return len(node)
+    #     return len(node)
 
     def parent(self, index=None):
         if not index.isValid():
