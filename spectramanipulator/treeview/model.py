@@ -17,7 +17,7 @@ import pstats
 
 import numpy as np
 
-# possible workaround - https://stackoverflow.com/questions/34419072/how-to-improve-selection-performance-with-pyside-qtcore-qabstractitemmodel-and-q
+# possible workaround - https://stackoverflow.com/questions/34419072/how-to-improve-selection-performance-with-pyside-qtcore-qabstractitemmodel-anq
 
 # this was tough to get together, I could not use the TreeWidget with StandardItemModel,
 # because iteration over items sometime gave not my item (SpectrumItem or SpectrumItemGroup) with my data,
@@ -82,9 +82,9 @@ class Model(QAbstractItemModel):
         # itemC = SpectrumItemGroup('itemC', 'this is item C', self.root)
         # itemC1 = SpectrumItem(None, 'itemC1', 'this is item C1', self.root)
 
-    def iterate_items(self, what_items):
+    def iterate_items(self, what_items: ItemIterator):
         """
-        Iterate specified items of TreeView.
+        Generator. Iterates specified items of TreeView.
 
         :param what_items: ItemIterator
         """
@@ -178,7 +178,7 @@ class Model(QAbstractItemModel):
         else:
             return Qt.ItemIsDropEnabled | defaultFlags
 
-    def headerData(self, section, orientation, role):
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return QVariant(self.headers[section])
         return QVariant()
@@ -330,20 +330,20 @@ class Model(QAbstractItemModel):
         item.setParent(parent_item, row)
         self.insertRow(row if row is not None else len(parent_item.children), self.index_from_node(parent_item))
 
-    def insertRow(self, row, parentIndex):
-        return self.insertRows(row, 1, parentIndex)
+    def insertRow(self, row: int, parent: QModelIndex = ...) -> bool:
+        return self.insertRows(row, 1, parent)
 
-    def insertRows(self, row, count, parentIndex):
-        self.beginInsertRows(parentIndex, row, (row + count - 1))
+    def insertRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
+        self.beginInsertRows(parent, row, (row + count - 1))
         self.endInsertRows()
         return True
 
-    def removeRow(self, row, parentIndex):
-        return self.removeRows(row, 1, parentIndex)
+    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
+        return self.removeRows(row, 1, parent)
 
-    def removeRows(self, row, count, parentIndex, update_tristate=True):
-        self.beginRemoveRows(parentIndex, row, (row + (count - 1)))
-        node = self.node_from_index(parentIndex)
+    def removeRows(self,  row: int, count: int, parent: QModelIndex = ..., update_tristate=True) -> bool:
+        self.beginRemoveRows(parent, row, (row + (count - 1)))
+        node = self.node_from_index(parent)
         # print(count)
         del node.children[row:row + count]
 
@@ -413,7 +413,7 @@ class Model(QAbstractItemModel):
         node = self.node_from_index(parent)
         if node is None:
             return 0
-    #     return len(node)
+        return len(node)
 
     def parent(self, index=None):
         if not index.isValid():
@@ -641,6 +641,7 @@ class TreeView(QTreeView):
         self.items_deleted_signal.emit(item_was_checked)
         self.save_state()
 
+    # TODO -> fix copy items to new group
     def add_items_to_group(self, items, group=None, row_to_place=None, edit=True, copy_items=False):
         """edit - if place cursor in a new group item to edit the name"""
 
