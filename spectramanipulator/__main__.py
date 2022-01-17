@@ -48,8 +48,10 @@ import pstats
 class Main(QMainWindow):
     current_file = None
 
-    def __init__(self, filepath=None, parent=None):
+    def __init__(self, app, filepath=None, parent=None):
         super(Main, self).__init__(parent)
+
+        self.app = app
 
         self.setWindowTitle("Untitled - Simple Spectra Manipulator")
 
@@ -63,7 +65,7 @@ class Main(QMainWindow):
         # print(w, h)
         self.resize(w, h)
 
-        self.console = Console(self)
+        self.console = Console(self.app, self)
         sys.stdout = Transcript()
 
         self.dockTreeWidget = QDockWidget(self)
@@ -759,7 +761,7 @@ def main():
 
         # app.setStyle('Windows')
         # pass the filename if provided
-        form = Main(unparsed_args[0] if len(unparsed_args) > 0 else None)
+        form = Main(app, filepath=unparsed_args[0] if len(unparsed_args) > 0 else None)
         form.show()
 
         # form.interact()

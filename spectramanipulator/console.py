@@ -11,11 +11,14 @@ import spectramanipulator
 # just copied, works like charm :)
 
 # qtconsole package is not yet compatible with pyqt6
+# https://github.com/jupyter/qtconsole/issues/504
+# in future, it will be available
 
 class ConsoleWidget(RichJupyterWidget):
 
-    def __init__(self, customBanner=None, *args, **kwargs):
+    def __init__(self, app, customBanner=None,  *args, **kwargs):
         super(ConsoleWidget, self).__init__(*args, **kwargs)
+        self.app = app
 
         if customBanner is not None:
             self.banner = customBanner
@@ -30,7 +33,7 @@ class ConsoleWidget(RichJupyterWidget):
         def stop():
             kernel_client.stop_channels()
             kernel_manager.shutdown_kernel()
-            guisupport.get_app_qt().exit()
+            self.app.exit()
 
         self.exit_requested.connect(stop)
 
@@ -78,7 +81,7 @@ class Console(QDockWidget):
 
     _instance = None
 
-    def __init__(self, parentWindow):
+    def __init__(self, app, parentWindow):
         QDockWidget.__init__(self, parentWindow)
         self.setTitleBarWidget(QWidget())
         self.setAllowedAreas(QtCore.Qt.BottomDockWidgetArea)
@@ -96,7 +99,7 @@ Enjoy.
         Console._instance = self
 
         # Add console window
-        self.console_widget = ConsoleWidget(banner)
+        self.console_widget = ConsoleWidget(app, banner)
         self.setWidget(self.console_widget)
 
     def setVisible(self, visible):
