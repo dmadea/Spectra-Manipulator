@@ -1,4 +1,4 @@
-#!python3
+#!python3.8
 #
 # from PyQt5.QtWidgets import QApplication
 # from PyQt5.QtCore import QCoreApplication
