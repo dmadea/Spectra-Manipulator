@@ -557,7 +557,6 @@ class AbstractCtiEditor(QtWidgets.QWidget):
         return super(AbstractCtiEditor, self).eventFilter(watchedObject, event)
 
 
-    # @QtSlot(BaseTreeItem)
     def modelItemChanged(self, cti):
         """ Called when the an Config Tree Item (CTI) in the model has changed.
 
@@ -576,7 +575,6 @@ class AbstractCtiEditor(QtWidgets.QWidget):
             logger.debug("Cti of this editor has changed: {}".format(cti))
 
 
-    # @QtSlot()
     def commitAndClose(self):
         """ Commits the data of the sub editor and instructs the delegate to close this ctiEditor.
 
@@ -596,7 +594,6 @@ class AbstractCtiEditor(QtWidgets.QWidget):
             logger.debug("AbstractCtiEditor.commitAndClose: editor already closed (ignored).")
 
 
-    # @QtSlot(bool)
     def resetEditorValue(self, checked=False):
         """ Resets the editor to the default value. Also resets the children.
         """

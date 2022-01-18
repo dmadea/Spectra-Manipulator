@@ -1,6 +1,25 @@
 
 from PyQt5 import QtCore, QtWidgets
 
+
+class NotSpecified(object):
+    """ Class for NOT_SPECIFIED constant.
+        Is used so that a parameter can have a default value other than None.
+
+        Evaluate to False when converted to boolean.
+    """
+    def __nonzero__(self):
+        """ Always returns False. Called when to converting to bool in Python 2.
+        """
+        return False
+
+    def __bool__(self):
+        """ Always returns False. Called when to converting to bool in Python 3.
+        """
+        return False
+
+NOT_SPECIFIED = NotSpecified()
+
 def getWidgetState(qWindow):
     """ Gets the QWindow or QWidget state as a QByteArray.
 

@@ -94,15 +94,15 @@ class MainGroupCti(GroupCti):
         To be used as a high level group (e.g. the inspector group)
         Is the same as a groupCti but drawn as light text on a dark grey back ground
     """
-    _backgroundBrush = QtGui.QBrush(QtGui.QColor("#606060")) # create only once
-    _foregroundBrush = QtGui.QBrush(QtGui.QColor(Qt.white)) # create only once
+    _backgroundBrush = QtGui.QBrush(QtGui.QColor("#606060"))  # create only once
+    _foregroundBrush = QtGui.QBrush(QtGui.QColor(Qt.white))  # create only once
     _font = QtGui.QFont()
     _font.setWeight(QtGui.QFont.Bold)
 
     def __init__(self, nodeName, defaultData=None):
         """ Constructor. For the parameters see the AbstractCti constructor documentation.
         """
-        super(MainGroupCti, self).__init__(nodeName, defaultData, expanded=True) # always expand
+        super(MainGroupCti, self).__init__(nodeName, defaultData, expanded=True)  # always expand
 
 
     @property
