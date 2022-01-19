@@ -69,6 +69,7 @@ spectramanipulator/fit_script.py
 # ui_convert.py
 spectramanipulator/config.json
 spectramanipulator/test_docstring.py
+spectramanipulator.pyw
 
 # user defined script
 spectramanipulator/script.py

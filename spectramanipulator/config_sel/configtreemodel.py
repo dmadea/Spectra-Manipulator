@@ -105,6 +105,7 @@ class ConfigTreeModel(BaseTreeModel):
                 raise ValueError("Invalid column: {}".format(column))
 
         elif role == Qt.ToolTipRole:
+            # TODO change for description
             if column == self.COL_NODE_NAME or column == self.COL_NODE_PATH:
                 return treeItem.nodePath
             elif column == self.COL_VALUE:

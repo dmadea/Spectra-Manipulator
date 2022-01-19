@@ -29,7 +29,7 @@ class StringCti(AbstractCti):
     """ Config Tree Item to store a string. It can be edited with a QLineEdit.
         The string can have an optional maximum length.
     """
-    def __init__(self, nodeName, defaultData='', maxLength=None):
+    def __init__(self, nodeName, defaultData='', maxLength=None, **kwargs):
         """ For the (other) parameters see the AbstractCti constructor documentation.
 
             :param maxLength: maximum length of the string

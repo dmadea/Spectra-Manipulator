@@ -34,7 +34,7 @@ from PyQt5.QtCore import Qt
 class GroupCti(AbstractCti):
     """ Read only config Tree Item that only stores None. It can be used to group CTIs
     """
-    def __init__(self, nodeName, defaultData=None, expanded=True):
+    def __init__(self, nodeName, defaultData=None, expanded=True, **kwargs):
         """ Constructor. For the parameters see the AbstractCti constructor documentation.
         """
         super(GroupCti, self).__init__(nodeName, defaultData, expanded=expanded)

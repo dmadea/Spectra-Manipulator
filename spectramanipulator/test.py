@@ -9,178 +9,207 @@ from config_sel.intcti import IntCti
 from config_sel.floatcti import FloatCti
 from config_sel.stringcti import StringCti
 from config_sel.boolcti import BoolCti, BoolGroupCti
+from config_sel.abstractcti import AbstractCti
 
 from config_sel.qtctis import ColorCti, FontCti, PenCti
 
+from singleton import Singleton
+from typing import Union
+
 from PyQt5.QtGui import QPen
 
+# node_structure = {
+#     'type': class type,
+#     'name': 'plotting',
+#     'value': None,
+#     'default_value': None,
+#     'description': 'Long description of this setting...',
+#     'items': [
+#               {
+#               ... same
+#                },
+#     ]
+#     ...: ... and additional attributes for that CTI
+# }
+
+default_pen = pg.mkPen(color='red', width=1, style=1)
 
 
-class Settings(object):
+class Settings(Singleton):
 
-    # TODO ->  rewrite settings, redefine getter and setter and getitem, search and write by xpath
+    settings = {
+        'items': [
+            {
+                'type': GroupCti,
+                'name': 'Plotting',
+                'value': None,
+                'default_value': None,
+                'description': 'Long description of this setting...',
+                'items': [
+                    {
+                        'type': IntCti,
+                        'name': 'Abc int',
+                        'value': None,
+                        'default_value': 5,
+                        'minValue': 0,
+                        'maxValue': 100,
+                        'stepSize': 1,
+                        'description': 'Long description of this setting...',
+                    },
+                    {
+                        'type': StringCti,
+                        'name': 'Random string',
+                        'value': None,
+                        'default_value': 'default',
+                        'description': 'Long description of this setting...',
+                    },
+                    {
+                        'type': ColorCti,
+                        'name': 'Line color',
+                        'value': None,
+                        'default_value': 'blue',
+                        'description': 'Long description of this setting...',
+                    },
+                    {
+                        'type': PenCti,
+                        'name': 'Pen',
+                        'value': None,
+                        'default_value': True,
+                        'resetTo': default_pen,
+                        'description': 'Long description of this setting...',
+                    },
+                    {
+                        'type': GroupCti,
+                        'name': 'X axis',
+                        'value': None,
+                        'default_value': None,
+                        'description': 'Long description of this setting...',
+                        'items': [
+                            {
+                                'type': StringCti,
+                                'name': 'Label',
+                                'value': 'some val',
+                                'default_value': 'Wavelength / nm',
+                                'description': 'Setting...',
+                            },
+                            {
+                                'type': IntCti,
+                                'name': 'Font size',
+                                'value': None,
+                                'default_value': 10,
+                                'minValue': 0,
+                                'maxValue': 100,
+                                'stepSize': 1,
+                                'description': 'Long description of this setting...',
+                            },
+                        ]
+                    },
+                ]
+            },
 
-    plotting = {
-        'type': 'group',
-        'default_value': None,
-        'str': 'string'
+        ]
     }
 
     def __init__(self):
         pass
 
+    def iterate_settings(self, node=None, xpath=''):
+        """
+        Recursive generator to iterate all the settings. Returns tuple of xpath and actual node.
+        """
+        node = self.settings if node is None else node
+
+        if 'items' not in node or len(node['items']) == 0:
+            return
+
+        for item in node['items']:
+            new_xpath = f"{xpath}.{item['name']}"
+            yield new_xpath, item
+            yield from self.iterate_settings(item, xpath=new_xpath)
+
+    def _find_node_by_xpath(self, path):
+        # split path by . and find return the value
+        splitted = filter(None, path.split('.'))  # remove empty entries
+
+        current_node = self.settings
+
+        for name in splitted:
+            sel_nodes = list(filter(lambda node: node['name'] == name, current_node['items']))
+            if len(sel_nodes) == 0:
+                raise ValueError(f"Setting '{path} could not be found.")
+            current_node = sel_nodes[0]
+
+        return current_node
+
+    def __getitem__(self, key: str):
+        node = self._find_node_by_xpath(key)
+        return node['value']
+
+    def __setitem__(self, key, value):
+        node = self._find_node_by_xpath(key)
+        node['value'] = value
 
 
-
-class TestCti(MainGroupCti):
+class RootCti(MainGroupCti):
     """ Configuration tree item for a PgImagePlot2dCti inspector
     """
-    def __init__(self, nodeName):
+    def __init__(self, nodeName='root'):
         """ Constructor
 
             Maintains a link to the target pgImagePlot2d inspector, so that changes in the
             configuration can be applied to the target by simply calling the apply method.
             Vice versa, it can connect signals to the target.
         """
-        super(TestCti, self).__init__(nodeName)
+        super(RootCti, self).__init__(nodeName)
 
-        self.insertChild(IntCti('title', 0, minValue=0, maxValue=100))
+        def _insert_child(node: dict, parent_item: AbstractCti):
+            kwargs = {key: value for key, value in node.items() if
+                      key not in ['name', 'type', 'items', 'value', 'default_value']}
 
-        test_group = GroupCti('test group')
+            # nodeName, defaultData
+            cls = node['type']
+            cti: AbstractCti = cls(node['name'], node['default_value'], **kwargs)
+            if node['value'] is not None:
+                cti.data = node['value']
+            parent_item.insertChild(cti)
+            return cti
 
-        test_group.insertChild(IntCti('int1', 0, minValue=0, maxValue=100))
-        test_group.insertChild(IntCti('int2', 5, minValue=0, maxValue=100))
-        test_group.insertChild(IntCti('int3', 10, minValue=0, maxValue=100))
+        def _insert_items(node_dict: Union[None, dict], parent_item: AbstractCti):
+            """Recursively inserts all items from settings"""
+            if 'items' not in node_dict or len(node_dict['items']) == 0:
+                return
 
-        self.insertChild(test_group)
+            for dict_item in node_dict['items']:
+                group_item = _insert_child(dict_item, parent_item)
+                _insert_items(dict_item, group_item)
 
-        test_group2 = GroupCti('plotting')
-        test_group2.insertChild(FloatCti('float1', 0.259, minValue=-1e5, maxValue=1e5))
-        test_group2.insertChild(StringCti('string 2', "string"))
-        test_group2.insertChild(BoolCti('bool test', True))
-
-        self.insertChild(test_group2)
-
-        x_axis = BoolGroupCti('x axis', True)
-        x_axis.insertChild(StringCti('name', "Wavelength / nm"))
-        x_axis.insertChild(BoolCti('show', True))
-        x_axis.insertChild(BoolCti('show2', False))
-
-        self.insertChild(x_axis)
-
-        default_pen = pg.mkPen(color='blue', width=1, style=1)
-
-        qt_group = GroupCti('qt_group')
-        qt_group.insertChild(ColorCti('color', "blue"))
-        qt_group.insertChild(FontCti('font', 'font'))
-        qt_group.insertChild(PenCti('pen', False, resetTo=default_pen))
-
-        self.insertChild(qt_group)
-
-
-        # #### Axes ####
-        #
-        # self.aspectLockedCti = self.insertChild(PgAspectRatioCti(viewBox))
-        #
-        # self.xAxisCti = self.insertChild(PgAxisCti('x-axis'))
-        # self.xAxisCti.insertChild(
-        #     PgAxisLabelCti(imagePlotItem, 'bottom', self.pgImagePlot2d.collector,
-        #                    defaultData=1,
-        #                    configValues=[NO_LABEL_STR, "{x-dim} [index]"]))
-        # self.xFlippedCti = self.xAxisCti.insertChild(PgAxisFlipCti(viewBox, X_AXIS))
-        # self.xAxisRangeCti = self.xAxisCti.insertChild(PgAxisRangeCti(viewBox, X_AXIS))
-
-        # self.yAxisCti = self.insertChild(PgAxisCti('y-axis'))
-        # self.yAxisCti.insertChild(
-        #     PgAxisLabelCti(imagePlotItem, 'left', self.pgImagePlot2d.collector,
-        #                    defaultData=1,
-        #                    configValues=[NO_LABEL_STR, "{y-dim} [index]"]))
-        # self.yFlippedCti = self.yAxisCti.insertChild(
-        #     PgAxisFlipCti(viewBox, Y_AXIS, defaultData=True))
-        # self.yAxisRangeCti = self.yAxisCti.insertChild(PgAxisRangeCti(viewBox, Y_AXIS))
-        #
-        # #### Color scale ####
-        #
-        # self.colorCti = self.insertChild(PgAxisCti('color scale'))
-        #
-        # self.colorCti.insertChild(PgColorLegendLabelCti(
-        #     pgImagePlot2d.colorLegendItem, self.pgImagePlot2d.collector, defaultData=1,
-        #     configValues=[NO_LABEL_STR, "{name} {unit}", "{path} {unit}",
-        #                   "{name}", "{path}", "{raw-unit}"]))
-        #
-        # self.colorCti.insertChild(PgColorMapCti(self.pgImagePlot2d.colorLegendItem))
-        #
-        # self.showHistCti = self.colorCti.insertChild(
-        #     PgShowHistCti(pgImagePlot2d.colorLegendItem))
-        # self.showDragLinesCti = self.colorCti.insertChild(
-        #     PgShowDragLinesCti(pgImagePlot2d.colorLegendItem))
-        #
-        # colorAutoRangeFunctions = defaultAutoRangeMethods(self.pgImagePlot2d)
-        # self.colorLegendCti = self.colorCti.insertChild(
-        #     PgColorLegendCti(pgImagePlot2d.colorLegendItem, colorAutoRangeFunctions,
-        #                      nodeName="range"))
-        #
-        # # If True, the image is automatically downsampled to match the screen resolution. This
-        # # improves performance for large images and reduces aliasing. If autoDownsample is not
-        # # specified, then ImageItem will choose whether to downsample the image based on its size.
-        # self.autoDownSampleCti = self.insertChild(BoolCti('auto down sample', True))
-        # self.zoomModeCti = self.insertChild(BoolCti('rectangle zoom mode', False))
-        #
-        # ### Probe and cross-hair plots ###
-        #
-        # self.probeCti = self.insertChild(BoolCti('show probe', True))
-        # self.crossPlotGroupCti = self.insertChild(BoolGroupCti('cross-hair', expanded=False))
-        # self.crossPenCti = self.crossPlotGroupCti.insertChild(PgPlotDataItemCti(expanded=False))
-        #
-        # self.horCrossPlotCti = self.crossPlotGroupCti.insertChild(
-        #     BoolCti('horizontal', False, expanded=False))
-        #
-        # self.horCrossPlotCti.insertChild(PgGridCti(pgImagePlot2d.horCrossPlotItem))
-        # self.horCrossPlotRangeCti = self.horCrossPlotCti.insertChild(
-        #     PgAxisRangeCti(
-        #         self.pgImagePlot2d.horCrossPlotItem.getViewBox(), Y_AXIS, nodeName="data range",
-        #         autoRangeFunctions=crossPlotAutoRangeMethods(self.pgImagePlot2d, "horizontal")))
-        #
-        # self.verCrossPlotCti = self.crossPlotGroupCti.insertChild(
-        #     BoolCti('vertical', False, expanded=False))
-        # self.verCrossPlotCti.insertChild(PgGridCti(pgImagePlot2d.verCrossPlotItem))
-        # self.verCrossPlotRangeCti = self.verCrossPlotCti.insertChild(
-        #     PgAxisRangeCti(
-        #         self.pgImagePlot2d.verCrossPlotItem.getViewBox(), X_AXIS, nodeName="data range",
-        #         autoRangeFunctions=crossPlotAutoRangeMethods(self.pgImagePlot2d, "vertical")))
-
-        # Connect signals.
-
-        # Use a queued connect to schedule the reset after current events have been processed.
-        # self.pgImagePlot2d.colorLegendItem.sigResetColorScale.connect(
-        #     self.colorLegendCti.setAutoRangeOn, type=Qt.QueuedConnection)
-        # self.pgImagePlot2d.imagePlotItem.sigResetAxis.connect(
-        #     self.setImagePlotAutoRangeOn, type=Qt.QueuedConnection)
-        # self.pgImagePlot2d.horCrossPlotItem.sigResetAxis.connect(
-        #     self.setHorCrossPlotAutoRangeOn, type=Qt.QueuedConnection)
-        # self.pgImagePlot2d.verCrossPlotItem.sigResetAxis.connect(
-        #     self.setVerCrossPlotAutoRangeOn, type=Qt.QueuedConnection)
-        #
-        # # Also update axis auto range tree items when linked axes are resized
-        # horCrossViewBox = self.pgImagePlot2d.horCrossPlotItem.getViewBox()
-        # horCrossViewBox.sigRangeChangedManually.connect(self.xAxisRangeCti.setAutoRangeOff)
-        # verCrossViewBox = self.pgImagePlot2d.verCrossPlotItem.getViewBox()
-        # verCrossViewBox.sigRangeChangedManually.connect(self.yAxisRangeCti.setAutoRangeOff)
-
+        _insert_items(Settings().settings, self)
 
 
 if __name__ == '__main__':
+
+    s = Settings()  # singleton settings
+
+    # for xpath, item in s.iterate_settings():
+    #     print(xpath)
+
+    # print(s['.plotting.abc int'])
+    # print(s['x axis.label'])
+    # s['.x axis..label'] = 'some different label'
+    # print(s['x axis.label'])
+    #
+    #
+    #
+    # a = 1
 
     app = QtWidgets.QApplication(sys.argv)
 
     tm = ConfigTreeModel()
     tv = ConfigTreeView(tm)
 
-    mg_cti = TestCti('main')
+    mg_cti = RootCti('main')
     tm.setInvisibleRootItem(mg_cti)
     tv.expandBranch()
-
-
 
     tv.show()
     sys.exit(app.exec())

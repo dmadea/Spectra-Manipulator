@@ -100,7 +100,7 @@ def fontWeightIndex(qFont, weights):
 class ColorCti(AbstractCti):
     """ Config Tree Item to store a color.
     """
-    def __init__(self, nodeName, defaultData=''):
+    def __init__(self, nodeName, defaultData='', **kwargs):
         """ Constructor.
             For the (other) parameters see the AbstractCti constructor documentation.
         """
@@ -545,7 +545,7 @@ class PenCti(BoolCti):
         for the brush.
     """
     def __init__(self, nodeName, defaultData, resetTo=None, expanded=True,
-                 includeNoneStyle=False, includeZeroWidth=False):
+                 includeNoneStyle=False, includeZeroWidth=False, **kwargs):
         """ Sets the children's default value using the resetTo value.
 
             The resetTo value must be a QPen or value that can be converted to QPen. It is used

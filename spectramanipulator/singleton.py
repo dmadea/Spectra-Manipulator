@@ -1,5 +1,4 @@
 
-
 class Singleton(object):
     _instance = None
 
@@ -7,6 +6,7 @@ class Singleton(object):
         if not isinstance(cls._instance, cls):
             cls._instance = super().__new__(cls, *args, **kwargs)
         return cls._instance
+
 
 # as meta class
 # class Singleton(type):

@@ -32,7 +32,7 @@ class IntCti(AbstractCti):
     """
     def __init__(self, nodeName, defaultData=0,
                  minValue = None, maxValue = None, stepSize = 1,
-                 prefix='', suffix='', specialValueText=None):
+                 prefix='', suffix='', specialValueText=None, **kwargs):
         """ Constructor.
 
             :param minValue: minimum data allowed when editing (use None for no minimum)
