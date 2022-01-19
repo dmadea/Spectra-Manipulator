@@ -489,7 +489,6 @@ class AbstractCtiEditor(QtWidgets.QWidget):
         self.delegate = None
 
 
-    # @QtSlot()
     def prepareCommit(self):
         """ Called just before the data is committed.
             Can be used to take action before the client (e.g. the inspector) is updated.
@@ -573,6 +572,9 @@ class AbstractCtiEditor(QtWidgets.QWidget):
             self.delegate.closeEditor.emit(self, QtWidgets.QAbstractItemDelegate.NoHint) # CLOSES SELF!
         else:
             logger.debug("Cti of this editor has changed: {}".format(cti))
+
+        # print('modelItemChanged called', self.cti)
+
 
 
     def commitAndClose(self):

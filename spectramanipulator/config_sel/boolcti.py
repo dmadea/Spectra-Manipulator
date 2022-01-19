@@ -31,7 +31,7 @@ class  BoolCti(AbstractCti):
     """ Config Tree Item to store an boolean. It can be edited using a check box
     """
     def __init__(self, nodeName, defaultData, expanded=True,
-                 childrenDisabledValue=False):
+                 childrenDisabledValue=False, **kwargs):
         """ Constructor. For the parameters see the AbstractCti constructor documentation.
 
             If the data is equal to childrenDisabledValue, the node's children will be

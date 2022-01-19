@@ -40,7 +40,7 @@ class ChoiceCti(AbstractCti):
     """
     def __init__(self, nodeName, defaultData=0, configValues=None, displayValues=None,
                  editable=False, insertPolicy=QtWidgets.QComboBox.InsertAtBottom,
-                 completer=NOT_SPECIFIED):
+                 completer=NOT_SPECIFIED, **kwargs):
         """ Constructor.
 
             The defaultData is an integers that is used to store the currentIndex.

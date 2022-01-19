@@ -161,7 +161,6 @@ class BaseTreeItem(object):
         """
         return self.childItems[row]
 
-
     def childByNodeName(self, nodeName):
         """ Gets first (direct) child that has the nodeName.
         """
@@ -171,7 +170,6 @@ class BaseTreeItem(object):
                 return child
 
         raise IndexError("No child item found having nodeName: {}".format(nodeName))
-
 
     def findByNodePath(self, nodePath):
         """ Recursively searches for the child having the nodePath. Starts at self.
@@ -201,7 +199,6 @@ class BaseTreeItem(object):
 
         return _auxGetByPath(nodePath.split('/'), self)
 
-
     def childNumber(self):
         """ Gets the index (nr) of this node in its parent's list of children.
         """
@@ -209,7 +206,6 @@ class BaseTreeItem(object):
         if self.parentItem is not None:
             return self.parentItem.childItems.index(self)
         return 0
-
 
     def insertChild(self, childItem, position=None):
         """ Inserts a child item to the current item.
