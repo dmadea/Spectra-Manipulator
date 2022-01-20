@@ -1,16 +1,15 @@
 
 import logging
 
-from .treeitems import BaseTreeItem
+from spectramanipulator.config_sel.treeitems import BaseTreeItem
 # from argos.info import DEBUGGING
-from PyQt5 import QtCore #, QtSignal, QtSlot
-from PyQt5.QtCore import Qt
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt, pyqtSignal
 # from argos.utils.cls import check_is_a_string, check_class
-from .constants import TREE_CELL_SIZE_HINT
+from spectramanipulator.config_sel.constants import TREE_CELL_SIZE_HINT
 
 logger = logging.getLogger(__name__)
 
-QtSignal = QtCore.pyqtSignal
 
 INVISIBLE_ROOT_NAME = '<invisible-root>'
 
@@ -34,10 +33,13 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
     # update the tree model.
     # Inspired by the QStandardItemModel itemChanged signal but named sigItemChanged so that users
     # will see this is argos specific and thus find this definition more easily.
-    sigItemChanged = QtSignal(BaseTreeItem)
+    sigItemChanged = pyqtSignal(BaseTreeItem)
+
+    # when actual value of item changes
+    value_changed = pyqtSignal(BaseTreeItem)
 
     # Emitted in removeAllChildrenAtIndex.
-    sigAllChildrenRemovedAtIndex = QtSignal(QtCore.QModelIndex)
+    sigAllChildrenRemovedAtIndex = pyqtSignal(QtCore.QModelIndex)
 
     def __init__(self, parent=None):
 
@@ -278,10 +280,13 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
 
                 # Emit sigItemChanged to update other widgets.
                 self.sigItemChanged.emit(treeItem)
+                treeItem.setDataCalled()  # to handle value_changing
+
             return result
 
         except Exception as ex:
             # When does this still happen? Can we remove it?
+            # when there is a relative import of BaseTreeItem, it crashes for no reason
             logger.warning("Unable to set data: {}".format(ex))
             # if DEBUGGING:
             #     raise

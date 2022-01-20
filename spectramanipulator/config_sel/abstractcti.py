@@ -22,7 +22,7 @@ import logging, os
 
 # from argos.info import DEBUGGING, icons_directory
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from .treeitems import BaseTreeItem
 
 
@@ -71,6 +71,7 @@ class AbstractCti(BaseTreeItem):
         The purpose of the defaultData is to reset a config data to its initial value when the
         user clicks on the reset button during editing.
     """
+
     def __init__(self, nodeName, defaultData, enabled=True, expanded=True):
         """ Constructor
             :param nodeName: name of this node (used to construct the node path).
@@ -85,6 +86,7 @@ class AbstractCti(BaseTreeItem):
         self._enabled = enabled
         self._expanded = expanded
         self._blockRefresh = False
+        self._last_data = self._data
 
 
     def finalize(self):
@@ -234,6 +236,7 @@ class AbstractCti(BaseTreeItem):
         """ Resets the data to the default data. By default the children will be reset as well
         """
         self.data = self.defaultData
+        self.setDataCalled()  # to capture the data change
         if resetChildren:
             for child in self.childItems:
                 child.resetToDefault(resetChildren=True)
@@ -308,6 +311,10 @@ class AbstractCti(BaseTreeItem):
         for childItems in self.childItems:
             childItems.logBranch(indent + 1, level=level)
 
+    def setDataCalled(self):
+        if self._last_data != self._data:
+            self._last_data = self._data
+            self.model.value_changed.emit(self)
 
     #################
     # serialization #
