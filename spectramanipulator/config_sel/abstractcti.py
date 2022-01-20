@@ -492,7 +492,7 @@ class AbstractCtiEditor(QtWidgets.QWidget):
 
         self.cti.model.sigItemChanged.disconnect(self.modelItemChanged)
         self.resetButton.clicked.disconnect(self.resetEditorValue)
-        self.cti = None # just to make sure it's not used again.
+        self.cti = None  # just to make sure it's not used again.
         self.delegate = None
 
 
