@@ -104,7 +104,7 @@ class ColorCti(AbstractCti):
         """ Constructor.
             For the (other) parameters see the AbstractCti constructor documentation.
         """
-        super(ColorCti, self).__init__(nodeName, defaultData)
+        super(ColorCti, self).__init__(nodeName, defaultData, **kwargs)
 
     def _enforceDataType(self, data):
         """ Converts to str so that this CTI always stores that type.

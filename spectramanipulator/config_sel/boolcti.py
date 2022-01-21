@@ -26,12 +26,10 @@ from PyQt5.QtCore import Qt
 logger = logging.getLogger(__name__)
 
 
-
 class  BoolCti(AbstractCti):
     """ Config Tree Item to store an boolean. It can be edited using a check box
     """
-    def __init__(self, nodeName, defaultData, expanded=True,
-                 childrenDisabledValue=False, **kwargs):
+    def __init__(self, *args, childrenDisabledValue=False, **kwargs):
         """ Constructor. For the parameters see the AbstractCti constructor documentation.
 
             If the data is equal to childrenDisabledValue, the node's children will be
@@ -40,7 +38,7 @@ class  BoolCti(AbstractCti):
             (The data will always be a bool so if childrenDisabledValue == None,
             the children will never be disabled.)
         """
-        super(BoolCti, self).__init__(nodeName, defaultData, expanded=expanded)
+        super(BoolCti, self).__init__(*args, **kwargs)
         self.childrenDisabledValue = childrenDisabledValue
 
 

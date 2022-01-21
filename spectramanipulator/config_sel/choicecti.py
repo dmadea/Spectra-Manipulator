@@ -38,7 +38,7 @@ class ChoiceCti(AbstractCti):
 
         A QCombobox will pop-up if the user clicks on the cell to edit it.
     """
-    def __init__(self, nodeName, defaultData=0, configValues=None, displayValues=None,
+    def __init__(self, *args, configValues=None, displayValues=None,
                  editable=False, insertPolicy=QtWidgets.QComboBox.InsertAtBottom,
                  completer=NOT_SPECIFIED, **kwargs):
         """ Constructor.
@@ -87,7 +87,7 @@ class ChoiceCti(AbstractCti):
         self._defaultConfigValues = copy.copy(self._configValues)
 
         # Set after self._displayValues are defined. The parent constructor call _enforceDataType
-        super(ChoiceCti, self).__init__(nodeName, defaultData)
+        super(ChoiceCti, self).__init__(*args, **kwargs)
 
 
     def _enforceDataType(self, data):

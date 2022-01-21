@@ -47,7 +47,7 @@ class FloatCti(AbstractCti):
 
             For the (other) parameters see the AbstractCti constructor documentation.
         """
-        super(FloatCti, self).__init__(nodeName, defaultData)
+        super(FloatCti, self).__init__(nodeName, defaultData, **kwargs)
 
         self.decimals = decimals
         self.minValue = minValue
@@ -185,7 +185,7 @@ class SnFloatCti(AbstractCti):
 
             For the (other) parameters see the AbstractCti constructor documentation.
         """
-        super(SnFloatCti, self).__init__(nodeName, defaultData)
+        super(SnFloatCti, self).__init__(nodeName, defaultData, **kwargs)
 
         self._precision = precision
         self.minValue = minValue

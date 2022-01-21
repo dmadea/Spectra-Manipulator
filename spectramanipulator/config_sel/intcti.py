@@ -45,7 +45,7 @@ class IntCti(AbstractCti):
 
             For the (other) parameters see the AbstractCti constructor documentation.
         """
-        super(IntCti, self).__init__(nodeName, defaultData)
+        super(IntCti, self).__init__(nodeName, defaultData, **kwargs)
 
         self.minValue = minValue
         self.maxValue = maxValue

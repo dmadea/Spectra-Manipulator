@@ -107,7 +107,7 @@ class ConfigTreeModel(BaseTreeModel):
         elif role == Qt.ToolTipRole:
             # TODO change for description
             if column == self.COL_NODE_NAME or column == self.COL_NODE_PATH:
-                return treeItem.nodePath
+                return treeItem.description
             elif column == self.COL_VALUE:
                 # Give Access to exact values. In particular in scientific-notation spin boxes
                 return repr(treeItem.configValue)

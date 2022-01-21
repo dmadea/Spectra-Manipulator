@@ -45,7 +45,7 @@ DEFAULT_RESET_MODE = ResetMode.Ranges
 class AbstractCti(BaseTreeItem):
     """ TreeItem for use in a ConfigTreeModel. (CTI = Config Tree Item)
 
-        Abstract class. You must implement the _enforceDataType method that ensures the the data
+        Abstract class. You must implement the _enforceDataType method that ensures the data
         is stored internally in the correct type. Also, implement the createEditor method if you
         want you CTI to be editable (which is usually the case). If your CTI is not editable, make
         sure that valueColumnItemFlags does not return Qt.ItemIsEditable to prevent createEditor
@@ -56,7 +56,7 @@ class AbstractCti(BaseTreeItem):
         path may be '/scale/x', the nodeName in that case is 'x'.
 
         CTIs are used to store a certain configuration value. It can be queried by the configValue
-        property. The type of this value differs between descendants of AbstractCti, but a sub class
+        property. The type of this value differs between descendants of AbstractCti, but a subclass
         should always return the same type. For example, the ColorCti.value always returns a
         QColor object. The displayValue returns the string representation for use in the tables;
         by default this returns: str(self.value)
@@ -72,7 +72,7 @@ class AbstractCti(BaseTreeItem):
         user clicks on the reset button during editing.
     """
 
-    def __init__(self, nodeName, defaultData, enabled=True, expanded=True):
+    def __init__(self, nodeName, defaultData, enabled=True, expanded=True, description=''):
         """ Constructor
             :param nodeName: name of this node (used to construct the node path).
             :param defaultData: default data to which the data can be reset by the reset button.
@@ -87,7 +87,7 @@ class AbstractCti(BaseTreeItem):
         self._expanded = expanded
         self._blockRefresh = False
         self._last_data = self._data
-
+        self._description = description
 
     def finalize(self):
         """ Can be used to cleanup resources. Should be called explicitly.
@@ -102,7 +102,6 @@ class AbstractCti(BaseTreeItem):
         # sense.
         self._closeResources()
 
-
     def _closeResources(self):
         """ Can be overridden to close the underlying resources or disconnect signals.
             The default implementation does nothing.
@@ -111,13 +110,11 @@ class AbstractCti(BaseTreeItem):
         """
         pass
 
-
     @property
     def debugInfo(self):
         """ Returns the string with debugging information
         """
         return ""
-
 
     def _dataToString(self, data):
         """ Conversion function used to convert the (default)data to the display value.
@@ -157,6 +154,19 @@ class AbstractCti(BaseTreeItem):
         """
         # Descendants should convert the data to the desired type here
         self._data = self._enforceDataType(data)
+
+    @property
+    def description(self):
+        """ Returns the description of this item.
+        """
+        return self._description
+
+    @description.setter
+    def description(self, description):
+        """ Sets the description of this item.
+        """
+        # Descendants should convert the data to the desired type here
+        self._description = description
 
     @property
     def defaultData(self):

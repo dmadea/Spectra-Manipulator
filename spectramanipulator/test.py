@@ -4,15 +4,12 @@ import pyqtgraph as pg
 from PyQt5 import QtWidgets
 from spectramanipulator.config_sel.configtreemodel import ConfigTreeModel
 from spectramanipulator.config_sel.configtreeview import ConfigTreeView
-from spectramanipulator.config_sel.groupcti import MainGroupCti
 from spectramanipulator.config_sel.abstractcti import AbstractCti
 from spectramanipulator.settings.structure import settings
 
 from spectramanipulator.singleton import Singleton
-from typing import Union
 
 from PyQt5.QtGui import QPen
-
 
 class Settings(Singleton):
 
@@ -55,38 +52,6 @@ class Settings(Singleton):
     def __setitem__(self, key, value):
         node = self._find_node_by_xpath(key)
         node['value'] = value
-
-
-# class RootCti(MainGroupCti):
-#     """ Configuration tree item for a main settings.
-#     """
-#     def __init__(self, nodeName='root'):
-#         super(RootCti, self).__init__(nodeName)
-#
-#         def _insert_child(node: dict, parent_item: AbstractCti):
-#             kwargs = {key: value for key, value in node.items() if
-#                       key not in ['name', 'type', 'items', 'value', 'default_value']}
-#
-#             # nodeName, defaultData
-#             cls = node['type']
-#             value = node['value'] if 'value' in node else None
-#             default_value = node['default_value'] if 'default_value' in node else None
-#             cti: AbstractCti = cls(node['name'], default_value, **kwargs)
-#             if value is not None:
-#                 cti.data = node['value']
-#             parent_item.insertChild(cti)
-#             return cti
-#
-#         def _insert_items(node_dict: Union[None, dict], parent_item: AbstractCti):
-#             """Recursively inserts all items from settings"""
-#             if 'items' not in node_dict or len(node_dict['items']) == 0:
-#                 return
-#
-#             for dict_item in node_dict['items']:
-#                 group_item = _insert_child(dict_item, parent_item)
-#                 _insert_items(dict_item, group_item)
-#
-#         _insert_items(Settings().settings, self)
 
 
 if __name__ == '__main__':

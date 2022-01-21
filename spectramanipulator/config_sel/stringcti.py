@@ -34,7 +34,7 @@ class StringCti(AbstractCti):
 
             :param maxLength: maximum length of the string
         """
-        super(StringCti, self).__init__(nodeName, defaultData)
+        super(StringCti, self).__init__(nodeName, defaultData, **kwargs)
 
         # We could define a mask here as well but since that very likely will be rarely used,
         # we don't want to store it for each cti. You can make a subclass if you need it.
