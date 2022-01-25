@@ -1,7 +1,6 @@
 
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtGui import QCloseEvent
-from PyQt5.QtCore import pyqtSignal
 
 
 class Singleton(object):
@@ -38,9 +37,4 @@ class PersistentDialog(Singleton, QDialog):
         # logging.info('Settings closeEvent.')
         self._is_opened = False
         super(PersistentDialog, self).closeEvent(a0)
-
-    # def accept(self):
-    #     self.accepted_signal.emit()
-    #     super(PersistentDialog, self).accept()
-
 
