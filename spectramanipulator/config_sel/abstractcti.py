@@ -72,14 +72,14 @@ class AbstractCti(BaseTreeItem):
         user clicks on the reset button during editing.
     """
 
-    def __init__(self, nodeName, defaultData, enabled=True, expanded=True, description=''):
+    def __init__(self, nodeName, defaultData, enabled=True, expanded=True, description='', **kwargs):
         """ Constructor
             :param nodeName: name of this node (used to construct the node path).
             :param defaultData: default data to which the data can be reset by the reset button.
             :param enabled: True if the item is enabled
             :param expanded: True if the item is expanded
         """
-        super(AbstractCti, self).__init__(nodeName=nodeName)
+        super(AbstractCti, self).__init__(nodeName=nodeName, **kwargs)
 
         self._defaultData = self._enforceDataType(defaultData)
         self._data = self.defaultData
@@ -421,7 +421,6 @@ class AbstractCti(BaseTreeItem):
         """
         return Qt.ItemIsEditable
 
-
     def createEditor(self, delegate, parent, option):
         """ Creates an editor (QWidget) for editing.
             It's parent will be set by the ConfigItemDelegate class that calls this method.
@@ -434,7 +433,6 @@ class AbstractCti(BaseTreeItem):
             :type  option: QStyleOptionViewItem
         """
         raise NotImplementedError("createEditor not implemented while Qt.ItemIsEditable is set")
-
 
 
 class AbstractCtiEditor(QtWidgets.QWidget):
@@ -490,7 +488,6 @@ class AbstractCtiEditor(QtWidgets.QWidget):
         for subEditor in (subEditors if subEditors is not None else []):
             self.addSubEditor(subEditor)
 
-
     def finalize(self):
         """ Called at clean up, when the editor is closed. Can be used to disconnect signals.
             This is often called after the client (e.g. the inspector) is updated. If you want to
@@ -505,13 +502,11 @@ class AbstractCtiEditor(QtWidgets.QWidget):
         self.cti = None  # just to make sure it's not used again.
         self.delegate = None
 
-
     def prepareCommit(self):
         """ Called just before the data is committed.
             Can be used to take action before the client (e.g. the inspector) is updated.
         """
         logger.debug("Committing data from: {}".format(self.cti.nodePath))
-
 
     def addSubEditor(self, subEditor, isFocusProxy=False):
         """ Adds a sub editor to the layout (at the right but before the reset button)
@@ -531,7 +526,6 @@ class AbstractCtiEditor(QtWidgets.QWidget):
 
         return subEditor
 
-
     def removeSubEditor(self, subEditor):
         """ Removes the subEditor from the layout and removes the event filter.
         """
@@ -542,20 +536,17 @@ class AbstractCtiEditor(QtWidgets.QWidget):
         self._subEditors.remove(subEditor)
         self.hBoxLayout.removeWidget(subEditor)
 
-
     def setData(self, value):
         """ Provides the editor widget with a data to manipulate.
             Value originates from the ConfigTreeModel.data(role=QEditRole).
         """
         raise NotImplementedError()
 
-
     def getData(self):
         """ Gets data from the editor widget.
             Should return a value that can be set into the ConfigTreeModel with the QEditRole.
         """
         raise NotImplementedError()
-
 
     def eventFilter(self, watchedObject, event):
         """ Calls commitAndClose when the tab and back-tab are pressed.
@@ -571,7 +562,6 @@ class AbstractCtiEditor(QtWidgets.QWidget):
                 return False
 
         return super(AbstractCtiEditor, self).eventFilter(watchedObject, event)
-
 
     def modelItemChanged(self, cti):
         """ Called when the an Config Tree Item (CTI) in the model has changed.
@@ -592,8 +582,6 @@ class AbstractCtiEditor(QtWidgets.QWidget):
 
         # print('modelItemChanged called', self.cti)
 
-
-
     def commitAndClose(self):
         """ Commits the data of the sub editor and instructs the delegate to close this ctiEditor.
 
@@ -612,7 +600,6 @@ class AbstractCtiEditor(QtWidgets.QWidget):
             # explicitly as well (e.g. in FontCtiEditor.execFontDialog(). We guard against this.
             logger.debug("AbstractCtiEditor.commitAndClose: editor already closed (ignored).")
 
-
     def resetEditorValue(self, checked=False):
         """ Resets the editor to the default value. Also resets the children.
         """
@@ -625,7 +612,6 @@ class AbstractCtiEditor(QtWidgets.QWidget):
         # This will commit the children as well.
         self.setData(self.cti.defaultData)
         self.commitAndClose()
-
 
     def paintEvent(self, event):
         """ Reimplementation of paintEvent to allow for style sheets

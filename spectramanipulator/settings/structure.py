@@ -5,10 +5,13 @@ from spectramanipulator.config_sel.intcti import IntCti
 from spectramanipulator.config_sel.floatcti import FloatCti, SnFloatCti
 from spectramanipulator.config_sel.stringcti import StringCti
 from spectramanipulator.config_sel.boolcti import BoolCti, BoolGroupCti
-from spectramanipulator.config_sel.abstractcti import AbstractCti
+from spectramanipulator.config_sel.pgctis import PgColorMapCti
 from spectramanipulator.config_sel.choicecti import ChoiceCti
 
-from spectramanipulator.config_sel.qtctis import ColorCti, FontCti, PenCti
+from spectramanipulator.config_sel.colors import DEFAULT_COLOR_MAP
+
+
+# from spectramanipulator.config_sel.qtctis import ColorCti, FontCti, PenCti
 
 # node_structure = {
 #     'type': class type,
@@ -66,221 +69,396 @@ def delimiter_setting_factory(default_value: str = 'Any whitespace'):
 
 
 # groups with nothing has no value and no default value,
-settings = {
-    'items': [
-        {
-            'type': GroupCti,
-            'name': 'Import',
-            'description': 'Import settings.',
-            'items': [
-                {
-                    'type': GroupCti,
-                    'name': 'Parser',
-                    'description': 'Input parser specific settings.',
-                    'items': [
-                        {
-                            'type': BoolCti,
-                            'name': 'Remove empty entries',
-                            'value': None,
-                            'default_value': True,
-                            'description': 'Removes empty entries for a given delimiter for each parsed lines.',
-                        },
-                        {
-                            'type': IntCti,
-                            'name': 'Skip first',
-                            'value': None,
-                            'default_value': 0,
-                            'minValue': 0,
-                            'maxValue': 100000,
-                            'stepSize': 1,
-                            'suffix': ' columns',
-                            'description': 'First n columns in input file will be skipped.',
-                        },
-                        {
-                            'type': BoolCti,
-                            'name': 'Skip columns containing NaNs',
-                            'value': None,
-                            'default_value': False,
-                            'childrenDisabledValue': True,
-                            'description': 'Skips columns that contains the NaN (Not a Number) values.',
-                            'items': [
-                                {
-                                    'type': SnFloatCti,
-                                    'name': 'NaN value replacement',
-                                    'value': None,
-                                    'default_value': 0,
-                                    'precision': 5,
-                                    'description': 'Value that replaces NaN values.',
-                                }
-                            ]
-                        },
-                        {
-                            'type': GroupCti,
-                            'name': 'Clipoboard',
-                            'description': 'Import from clipboard settings.',
-                            'items': [
-                                {
-                                    'type': BoolCti,
-                                    'name': 'Import as text from Excel',
-                                    'value': None,
-                                    'default_value': False,
-                                    'description': 'Imports data from MS Excel as text (if checked, decimal precision will be lost).'
-                                                   ' If unchecked, data are imported from XML data format where the numbers are'
-                                                   ' stored in full precision.',
-                                },
-                                delimiter_setting_factory('Horizontal tabulator \\t'),
-                                dec_separator_setting_factory(),
-                            ]
-                        },
-                    ]
-                },
-                {
-                    'type': GroupCti,
-                    'name': 'Files',
-                    'description': 'File import specific settings.',
-                    'items': [
-                        {
-                            'type': GroupCti,
-                            'name': 'DX file',
-                            'description': 'DX file specific settings.',
-                            'items': [
-                                delimiter_setting_factory('Space'),
-                                dec_separator_setting_factory(),
-                                {
-                                    'type': BoolCti,
-                                    'name': 'If ##TITLE is empty...',
-                                    'value': None,
-                                    'default_value': True,
-                                    'childrenDisabledValue': True,
-                                    'description': 'If ##TITLE field is empty, set spectra name to filename.',
-                                    'items': [
-                                        {
-                                            'type': ChoiceCti,
-                                            'name': 'Import spectra name from',
-                                            'value': None,
-                                            'default_value': 1,
-                                            'configValues': ['Filename', '##TITLE entry'],
-                                            'description': '...', # TODO
-                                        }
-                                    ]
-                                },
-                            ]
-                        },
-                        {
-                            'type': GroupCti,
-                            'name': 'CSV and other files',
-                            'description': 'CSV and other files specific settings.',
-                            'items': [
-                                {
-                                    'type': BoolCti,
-                                    'name': 'If header is empty...',
-                                    'value': None,
-                                    'default_value': True,
-                                    'childrenDisabledValue': True,
-                                    'description': 'If header field is empty, set spectra name to filename.',
-                                    'items': [
-                                        {
-                                            'type': ChoiceCti,
-                                            'name': 'Import spectra name from',
-                                            'value': None,
-                                            'default_value': 1,
-                                            'configValues': ['Filename', 'Header'],
-                                            'description': '...',  # TODO
-                                        }
-                                    ]
-                                },
-                                {
-                                    'type': GroupCti,
-                                    'name': 'CSV file',
-                                    'description': 'CSV file specific settings.',
-                                    'items': [
-                                        delimiter_setting_factory('Comma'),
-                                        dec_separator_setting_factory()
-                                    ]
-                                },
-                                {
-                                    'type': GroupCti,
-                                    'name': 'Other files',
-                                    'description': 'CSV file specific settings.',
-                                    'items': [
-                                        delimiter_setting_factory('Any whitespace'),
-                                        dec_separator_setting_factory()
-                                    ]
-                                },
-                            ]
-                        },
+public_settings = [
+    {
+        'type': GroupCti,
+        'name': 'Import',
+        'description': 'Import settings.',
+        'items': [
+            {
+                'type': GroupCti,
+                'name': 'Parser',
+                'description': 'Input parser specific settings.',
+                'items': [
+                    {
+                        'type': BoolCti,
+                        'name': 'Remove empty entries',
+                        'value': None,
+                        'default_value': True,
+                        'description': 'Removes empty entries for a given delimiter for each parsed lines.',
+                    },
+                    {
+                        'type': IntCti,
+                        'name': 'Skip first',
+                        'value': None,
+                        'default_value': 0,
+                        'minValue': 0,
+                        'maxValue': 100000,
+                        'stepSize': 1,
+                        'suffix': ' columns',
+                        'description': 'First n columns in input file will be skipped.',
+                    },
+                    {
+                        'type': BoolCti,
+                        'name': 'Skip columns containing NaNs',
+                        'value': None,
+                        'default_value': False,
+                        'childrenDisabledValue': True,
+                        'description': 'Skips columns that contains the NaN (Not a Number) values.',
+                        'items': [
+                            {
+                                'type': SnFloatCti,
+                                'name': 'NaN value replacement',
+                                'value': None,
+                                'default_value': 0,
+                                'precision': 5,
+                                'description': 'Value that replaces NaN values.',
+                            }
+                        ]
+                    },
+                    {
+                        'type': GroupCti,
+                        'name': 'Clipboard',
+                        'description': 'Import from clipboard settings.',
+                        'items': [
+                            {
+                                'type': BoolCti,
+                                'name': 'Import as text from Excel',
+                                'value': None,
+                                'default_value': False,
+                                'description': 'Imports data from MS Excel as text (if checked, decimal precision will be lost).'
+                                               ' If unchecked, data are imported from XML data format where the numbers are'
+                                               ' stored in full precision.',
+                            },
+                            delimiter_setting_factory('Horizontal tabulator \\t'),
+                            dec_separator_setting_factory(),
+                        ]
+                    },
+                ]
+            },
+            {
+                'type': GroupCti,
+                'name': 'Files',
+                'description': 'File import specific settings.',
+                'items': [
+                    {
+                        'type': GroupCti,
+                        'name': 'DX file',
+                        'description': 'DX file specific settings.',
+                        'items': [
+                            delimiter_setting_factory('Space'),
+                            dec_separator_setting_factory(),
+                            {
+                                'type': BoolCti,
+                                'name': 'If ##TITLE is empty...',
+                                'value': None,
+                                'default_value': True,
+                                'childrenDisabledValue': True,
+                                'description': 'If ##TITLE field is empty, set spectra name to filename.',
+                                'items': [
+                                    {
+                                        'type': ChoiceCti,
+                                        'name': 'Import spectra name from',
+                                        'value': None,
+                                        'default_value': 1,
+                                        'configValues': ['Filename', '##TITLE entry'],
+                                        'description': '...', # TODO
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'type': GroupCti,
+                        'name': 'CSV and other files',
+                        'description': 'CSV and other files specific settings.',
+                        'items': [
+                            {
+                                'type': BoolCti,
+                                'name': 'If header is empty...',
+                                'value': None,
+                                'default_value': True,
+                                'childrenDisabledValue': True,
+                                'description': 'If header field is empty, set spectra name to filename.',
+                                'items': [
+                                    {
+                                        'type': ChoiceCti,
+                                        'name': 'Import spectra name from',
+                                        'value': None,
+                                        'default_value': 1,
+                                        'configValues': ['Filename', 'Header'],
+                                        'description': '...',  # TODO
+                                    }
+                                ]
+                            },
+                            {
+                                'type': GroupCti,
+                                'name': 'CSV file',
+                                'description': 'CSV file specific settings.',
+                                'items': [
+                                    delimiter_setting_factory('Comma'),
+                                    dec_separator_setting_factory()
+                                ]
+                            },
+                            {
+                                'type': GroupCti,
+                                'name': 'Other files',
+                                'description': 'CSV file specific settings.',
+                                'items': [
+                                    delimiter_setting_factory('Any whitespace'),
+                                    dec_separator_setting_factory()
+                                ]
+                            },
+                        ]
+                    },
 
-                    ]
-                },
+                ]
+            },
+        ]
+    },
+    {
+        'type': GroupCti,
+        'name': 'Export',
+        'description': 'Export settings.',
+        'items': [
+            {
+                'type': GroupCti,
+                'name': 'Files',
+                'description': 'Files export settings.',
+                'items': [
+                    {
+                        'type': BoolCti,
+                        'name': 'Include group name',
+                        'value': None,
+                        'default_value': False,
+                        'description': 'Includes the group name before the actual data when exporting to file.',
+                    },
+                    {
+                        'type': BoolCti,
+                        'name': 'Include header',
+                        'value': None,
+                        'default_value': True,
+                        'description': 'Includes the header row (x axis name and name(s) of the spectra) before'
+                                       ' the actual data when exporting to file.',
+                    },
+                ]
+
+            },
+            {
+                'type': GroupCti,
+                'name': 'Clipboard',
+                'description': 'Clipboard export settings. Sets, how to export text data to clipboard (in order'
+                               'to retain compatibility with MS Excel/Origin, keep delimiter set as tabulator \\t,'
+                               'decimal separator is application specific).',
+                'items': [
+                    {
+                        'type': BoolCti,
+                        'name': 'Include group name',
+                        'value': None,
+                        'default_value': False,
+                        'description': 'Includes the group name before the actual data when exporting to clipboard.',
+                    },
+                    {
+                        'type': BoolCti,
+                        'name': 'Include header',
+                        'value': None,
+                        'default_value': True,
+                        'description': 'Includes the header row (x axis name and name(s) of the spectra) before'
+                                       ' the actual data when exporting to clipboard.',
+                    },
+                    delimiter_setting_factory('Horizontal tabulator \\t'),
+                    dec_separator_setting_factory()
+                ]
+
+            },
+        ]
+
+    },
+    {
+        'type': GroupCti,
+        'name': 'Plotting',
+        'description': 'Plotting settings.',
+        'items': [
+            {
+                'type': GroupCti,
+                'name': 'Color and line style',
+                'description': 'Color and line style settings.',
+                'items': [
+                    {
+                        'type': BoolCti,
+                        'name': 'Plot spectra with same color in groups',
+                        'value': None,
+                        'default_value': False,
+                        'description': 'If True, the spectra in groups will be plotted with the same color.',
+                    },
+                    {
+                        'type': BoolCti,
+                        'name': 'Plot spectra with different line style among groups',
+                        'value': None,
+                        'default_value': False,
+                        'description': 'If True, the line style of the spectra will be different for different groups.',
+                    },
+                    {
+                        'type': BoolCti,
+                        'name': 'Reversed Z order',
+                        'value': None,
+                        'default_value': False,
+                        'description': 'If True, first spectra will be plotted behind the next ones.',
+                    },
+                    {
+                        'type': SnFloatCti,
+                        'name': 'Line width',
+                        'value': None,
+                        'default_value': 1.0,
+                        'minValue': 0.1,
+                        'maxValue': 100.0,
+                        'precision': 2,
+                        'description': 'Line width of the plotted spectra.',
+                    },
+                    {
+                        'type': BoolCti,
+                        'name': 'Use gradient colormap',
+                        'value': None,
+                        'default_value': False,
+                        'childrenDisabledValue': False,
+                        'description': 'If True, gradient colormap will be used, otherwise, default colors '
+                                       '(red, green, blue, black, yellow, magenta, cyan, gray, ... and repeat) will be used',
+                        'items': [
+                            {
+                                'type': PgColorMapCti,
+                                'name': 'Colormap',
+                                'value': None,
+                                'default_value': DEFAULT_COLOR_MAP,
+                                'items': [
+                                    {
+                                        'type': IntCti,
+                                        'name': 'Number of spectra',
+                                        'value': None,
+                                        'default_value': 9,
+                                        'minValue': 1,
+                                        'maxValue': 9999999,
+                                        'stepSize': 1,
+                                        'description': 'Number of spectra plotted with the selected gradient.',
+                                    },
+                                    {
+                                        'type': SnFloatCti,
+                                        'name': 'Start range',
+                                        'value': None,
+                                        'default_value': 0.0,
+                                        'minValue': 0.0,
+                                        'maxValue': 1.0,
+                                        'precision': 2,
+                                        'description': 'Start range of the colormap used (value from 0 to 1), default 0.',
+                                    },
+                                    {
+                                        'type': SnFloatCti,
+                                        'name': 'End range',
+                                        'value': None,
+                                        'default_value': 1.0,
+                                        'minValue': 0.0,
+                                        'maxValue': 1.0,
+                                        'precision': 2,
+                                        'description': 'End range of the colormap used (value from 0 to 1), default 1.',
+                                    },
+                                    {
+                                        'type': BoolCti,
+                                        'name': 'Reversed',
+                                        'value': None,
+                                        'default_value': False,
+                                        'description': 'If True, the colormap will be reversed.',
+                                    },
+                                ]
+                            },
+                        ]
+                    },
+                ]
+            },
+            {
+                'type': GroupCti,
+                'name': 'Graph',
+                'description': 'Graph settings.',
+                'items': [
+                    {
+                        'type': BoolCti,
+                        'name': 'Antialiasing',
+                        'value': None,
+                        'default_value': True,
+                    },
+                    {
+                        'type': StringCti,
+                        'name': 'Graph title',
+                        'value': None,
+                        'default_value': '',
+                    },
+                    {
+                        'type': StringCti,
+                        'name': 'X axis label',
+                        'value': None,
+                        'default_value': 'Wavelength / nm',
+                    },
+                    {
+                        'type': StringCti,
+                        'name': 'Y axis label',
+                        'value': None,
+                        'default_value': 'Absorbance',
+                    },
+
+                    {
+                        'type': SnFloatCti,
+                        'name': 'Legend spacing',
+                        'value': None,
+                        'default_value': 8.0,
+                        'minValue': 0.0,
+                        'maxValue': 200,
+                        'precision': 1,
+                        'description': 'Spacing of the legend labels.',
+                    },
+                ]
+            },
 
 
-                # {
-                #     'type': BoolCti,
-                #     'name': 'bool cti test',
-                #     'value': None,
-                #     'default_value': True,
-                #     'childrenDisabledValue': False,
-                #     'description': 'Long description of this setting...',
-                #     'items': [
-                #         {
-                #             'type': StringCti,
-                #             'name': 'bool Random string 1',
-                #             'value': None,
-                #             'default_value': 'Random',
-                #             'description': 'Long description of this setting...',
-                #         },
-                #         {
-                #             'type': StringCti,
-                #             'name': 'bool Random string 2',
-                #             'value': None,
-                #             'default_value': '56sad65  4sd5',
-                #             'description': 'Long description of this setting...',
-                #         },
-                #     ]
-                # },
-                # {
-                #     'type': ColorCti,
-                #     'name': 'Line color',
-                #     'value': None,
-                #     'default_value': 'blue',
-                #     'description': 'Long description of this setting...',
-                # },
-                # {
-                #     'type': PenCti,
-                #     'name': 'Pen',
-                #     'value': None,
-                #     'default_value': True,
-                #     'resetTo': default_pen,
-                #     'description': 'Long description of this setting...',
-                # },
-                # {
-                #     'type': GroupCti,
-                #     'name': 'X axis',
-                #     'value': None,
-                #     'default_value': None,
-                #     'description': 'Long description of this setting...',
-                #     'items': [
-                #         {
-                #             'type': StringCti,
-                #             'name': 'Label',
-                #             'value': 'some val',
-                #             'default_value': 'Wavelength / nm',
-                #             'description': 'Setting...',
-                #         },
-                #         {
-                #             'type': IntCti,
-                #             'name': 'Font size',
-                #             'value': None,
-                #             'default_value': 10,
-                #             'minValue': 0,
-                #             'maxValue': 100,
-                #             'stepSize': 1,
-                #             'description': 'Long description of this setting...',
-                #         },
-                #     ]
-                # },
-            ]
-        },
+            # {
+            #     'type': ColorCti,
+            #     'name': 'Line color',
+            #     'value': None,
+            #     'default_value': 'blue',
+            #     'description': 'Long description of this setting...',
+            # },
+            # {
+            #     'type': PenCti,
+            #     'name': 'Pen',
+            #     'value': None,
+            #     'default_value': True,
+            #     'resetTo': default_pen,
+            #     'description': 'Long description of this setting...',
+            # },
+            # {
+            #     'type': GroupCti,
+            #     'name': 'X axis',
+            #     'value': None,
+            #     'default_value': None,
+            #     'description': 'Long description of this setting...',
+            #     'items': [
+            #         {
+            #             'type': StringCti,
+            #             'name': 'Label',
+            #             'value': 'some val',
+            #             'default_value': 'Wavelength / nm',
+            #             'description': 'Setting...',
+            #         },
+            #         {
+            #             'type': IntCti,
+            #             'name': 'Font size',
+            #             'value': None,
+            #             'default_value': 10,
+            #             'minValue': 0,
+            #             'maxValue': 100,
+            #             'stepSize': 1,
+            #             'description': 'Long description of this setting...',
+            #         },
+            #     ]
+            # },
+        ]
+    }
+]
 
-    ]
-}

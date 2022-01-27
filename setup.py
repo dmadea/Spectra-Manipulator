@@ -24,7 +24,8 @@ setup(
         'qtconsole>=5.1.0',
         'numba',
         'requests',
-        'winshell'
+        'winshell',
+        'cmlib'
     ],
 
     keywords=['python', 'spectra manipulator'],

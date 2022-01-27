@@ -11,7 +11,7 @@ class BaseTreeItem(object):
         The tree items have no notion of which field is stored in which column. This is implemented
         in BaseTreeModel._itemValueForColumn
     """
-    def __init__(self, nodeName):
+    def __init__(self, nodeName, root_xpath=''):
         """ Constructor
 
             :param nodeName: short name describing this node. Is used to construct the nodePath.
@@ -24,8 +24,10 @@ class BaseTreeItem(object):
         self._nodeName = str(nodeName)
         self._parentItem = None
         self._model = None
-        self._childItems = [] # the fetched children
+        self._childItems = []  # the fetched children
+        self._root_xpath = root_xpath
         self._nodePath = self._constructNodePath()
+        a = 5
 
     def finalize(self):
         """ Can be used to cleanup resources. Should be called explicitly.
@@ -111,7 +113,7 @@ class BaseTreeItem(object):
     def _constructNodePath(self):
         """ Recursively prepends the parents nodeName to the path until the root node is reached."""
         if self.parentItem is None:
-            return '' # invisible root node; is not included in the path
+            return self._root_xpath  # invisible root node; is not included in the path
         else:
             return self.parentItem.nodePath + '/' + self.nodeName
 

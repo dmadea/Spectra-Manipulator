@@ -98,10 +98,10 @@ class MainGroupCti(GroupCti):
     _font = QtGui.QFont()
     _font.setWeight(QtGui.QFont.Bold)
 
-    def __init__(self, nodeName, defaultData=None):
+    def __init__(self, nodeName, defaultData=None, **kwargs):
         """ Constructor. For the parameters see the AbstractCti constructor documentation.
         """
-        super(MainGroupCti, self).__init__(nodeName, defaultData, expanded=True)  # always expand
+        super(MainGroupCti, self).__init__(nodeName, defaultData, expanded=True, **kwargs)  # always expand
 
 
     @property

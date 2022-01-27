@@ -1,7 +1,7 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtWidgets
 
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDialogButtonBox, QPushButton
+from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QDialogButtonBox, QPushButton
 from spectramanipulator.singleton import PersistentDialog
 
 from spectramanipulator.config_sel.configtreemodel import ConfigTreeModel
@@ -9,18 +9,15 @@ from spectramanipulator.config_sel.configtreeview import ConfigTreeView
 from spectramanipulator.config_sel.groupcti import MainGroupCti
 from spectramanipulator.config_sel.abstractcti import AbstractCti
 
-from spectramanipulator.test import Settings
+from spectramanipulator.settings.settings import Settings
 from copy import deepcopy
-import sys
-
-import logging
 
 
 class RootCti(MainGroupCti):
     """ Configuration tree item for a main settings.
     """
     def __init__(self, nodeName='root'):
-        super(RootCti, self).__init__(nodeName)
+        super(RootCti, self).__init__(nodeName, root_xpath='/Public settings')
 
         def _insert_child(node: dict, parent_item: AbstractCti):
             kwargs = {key: value for key, value in node.items() if
@@ -45,16 +42,18 @@ class RootCti(MainGroupCti):
                 group_item = _insert_child(dict_item, parent_item)
                 _insert_items(dict_item, group_item)
 
-        _insert_items(Settings().settings, self)
+        _insert_items(Settings().find_node_by_xpath('/Public settings'), self)
 
 
 class SettingsDialog(PersistentDialog):
 
     applied = pyqtSignal()
 
+    # flags=Qt.WindowStaysOnTopHint
+
     def __init__(self, parent=None, title='Settings Dialog', flags=Qt.WindowStaysOnTopHint):
 
-        super(SettingsDialog, self).__init__(parent, flags)
+        super(SettingsDialog, self).__init__(parent)
 
         # # disable resizing of the window,
         # # help from https://stackoverflow.com/questions/16673074/in-qt-c-how-can-i-fully-disable-resizing-a-window-including-the-resize-icon-w
@@ -92,7 +91,7 @@ class SettingsDialog(PersistentDialog):
         self.last_setting_dict = deepcopy(self.sett.settings)  # instantiate last settings
 
         def value_changed(cti: AbstractCti):
-            print("value has changed", cti)
+            print(f"value of {cti} has changed, new value: {cti.data}")
             self.sett[cti.nodePath] = cti.data
 
         self.tree_model.value_changed.connect(value_changed)

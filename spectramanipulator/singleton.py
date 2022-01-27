@@ -21,7 +21,7 @@ class Singleton(object):
 #         return cls._instances[cls]
 
 
-class PersistentDialog(Singleton, QDialog):
+class PersistentDialog(QDialog, Singleton):
 
     _is_opened = False
 
