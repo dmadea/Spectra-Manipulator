@@ -1,7 +1,7 @@
 
 import sys
 import os
-from spectramanipulator.settings import Settings
+from spectramanipulator.settings.settings import Settings
 import winshell
 from ctypes import windll
 
@@ -16,7 +16,7 @@ ShowWindow = windll.user32.ShowWindow
 IsWindowVisible = windll.user32.IsWindowVisible
 
 # Handle to console window associated with current Python
-# interpreter procss, 0 if there is no window
+# interpreter process, 0 if there is no window
 console_window_handle = GetConsoleWindow()
 
 

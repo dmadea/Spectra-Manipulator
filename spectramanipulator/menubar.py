@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QMenuBar, QAction, QMenu
-from spectramanipulator.settings import Settings
+# from spectramanipulator.settings.settings import Settings
 from spectramanipulator.dialogs.fitwidget import FitWidget
 from spectramanipulator import __version__
 

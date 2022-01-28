@@ -14,7 +14,7 @@ from matplotlib import colors as c
 from PyQt5.QtWidgets import QApplication
 from scipy.linalg import lstsq
 
-from spectramanipulator.settings import Settings
+from spectramanipulator.settings.settings import Settings
 from spectramanipulator.spectrum import fi, Spectrum, SpectrumList, group2mat
 from scipy.integrate import simps, cumtrapz
 from scipy.stats import linregress

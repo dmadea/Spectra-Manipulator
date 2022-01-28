@@ -10,7 +10,7 @@ from spectramanipulator.pyqtgraphmodif.view_box import ViewBox
 from pyqtgraph.exporters import ImageExporter
 from pyqtgraph.exporters import SVGExporter
 
-from spectramanipulator.settings import Settings
+from spectramanipulator.settings.settings import Settings
 
 from PyQt5.QtCore import Qt
 # from PyQt5.QtGui import QColor
@@ -45,6 +45,7 @@ class PlotWidget(pg.PlotWidget):
 
         self.lr_item = None  # linear region item
 
+        self.sett = Settings()
         self.update_settings()
         self.plotItem.setDownsampling(ds=True, auto=True, mode='subsample')
         self.plotItem.setClipToView(True)
@@ -52,25 +53,27 @@ class PlotWidget(pg.PlotWidget):
     def update_settings(self):
 
         self.clear_plots()
-        self.add_legend(spacing=Settings.legend_spacing)
+        self.add_legend(spacing=self.sett['/Public settings/Plotting/Graph/Legend spacing'])
 
-        pg.setConfigOptions(antialias=Settings.antialiasing)
+        pg.setConfigOptions(antialias=self.sett['/Public settings/Plotting/Graph/Antialiasing'])
         self.plotItem.showAxis('top', show=True)
         self.plotItem.showAxis('right', show=True)
 
-        self.plotItem.setTitle(Settings.graph_title, size="{}pt".format(Settings.graph_title_font_size))
+        self.plotItem.setTitle(self.sett['/Public settings/Plotting/Graph/Graph title'], size="{}pt".format(20))
 
-        self.plotItem.setLabel('left', text=Settings.left_axis_label, units=Settings.left_axis_unit)
-        self.plotItem.setLabel('bottom', text=Settings.bottom_axis_label, units=Settings.bottom_axis_unit)
-        self.plotItem.showGrid(x=Settings.show_grid, y=Settings.show_grid, alpha=Settings.grid_alpha)
+        self.plotItem.setLabel('left', text=self.sett['/Public settings/Plotting/Graph/Y axis label'],
+                               units=None)
+        self.plotItem.setLabel('bottom', text=self.sett['/Public settings/Plotting/Graph/X axis label'],
+                               units=None)
+        # self.plotItem.showGrid(x=Settings.show_grid, y=Settings.show_grid, alpha=Settings.grid_alpha)
 
         left_label_font = QtGui.QFont()
-        left_label_font.setPixelSize(Settings.left_axis_font_size)
+        left_label_font.setPixelSize(20)
 
         self.plotItem.getAxis('left').label.setFont(left_label_font)
 
         bottom_label_font = QtGui.QFont()
-        bottom_label_font.setPixelSize(Settings.bottom_axis_font_size)
+        bottom_label_font.setPixelSize(20)
 
         self.plotItem.getAxis('bottom').label.setFont(bottom_label_font)
 

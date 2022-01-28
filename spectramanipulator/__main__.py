@@ -19,7 +19,7 @@ import pyqtgraph as pg
 from .treewidget import TreeWidget, get_hierarchic_list
 from .treeview.model import ItemIterator
 from .project import Project
-from .settings import Settings
+from .settings.settings import Settings
 from .logger import Logger, Transcript
 from .plotwidget import PlotWidget
 
@@ -34,6 +34,8 @@ from .dataloader import parse_files_specific
 from .spectrum import SpectrumList
 from .dialogs.fitwidget import FitWidget
 from .dialogs.load_kinetics_dialog import LoadKineticsDialog
+
+from .config_sel.colors import CmLibSingleton
 import re
 
 import numpy as np
@@ -99,7 +101,8 @@ class Main(QMainWindow):
         self.resizeDocks([self.console], [h // 3], Qt.Vertical)
         self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
 
-        Settings.load()
+        self.sett = Settings()
+        self.sett.load()
 
         self.coor_label = QLabel()
         self.grpView = PlotWidget(self, coordinates_func=self.coor_label.setText)
@@ -145,11 +148,12 @@ class Main(QMainWindow):
 
     def update_recent_files(self):
         # num = min(len(Settings.recent_project_filepaths), len(self.menuBar().recent_file_actions))
-        num = len(Settings.recent_project_filepaths)
+        recent_project_filepaths = self.sett['/Private settings/Recent project filepaths']
+        num = len(recent_project_filepaths)
 
         # update all of them
         for i in range(num):
-            filepath = Settings.recent_project_filepaths[i]
+            filepath = recent_project_filepaths[i]
             head, tail = os.path.split(filepath)
             text = os.path.split(head)[1] + '/' + os.path.splitext(tail)[0]
             self.menuBar().recent_file_actions[i].setText(text)
@@ -163,14 +167,16 @@ class Main(QMainWindow):
     def add_recent_file(self, filepath):
         filepath = filepath.replace('\\', '/')  # replace \ for /
 
+        recent_project_filepaths = self.sett['/Private settings/Recent project filepaths']
+
         # if there is the same filepath in the list, remove this entry
-        if filepath in Settings.recent_project_filepaths:
-            Settings.recent_project_filepaths.remove(filepath)
+        if filepath in recent_project_filepaths:
+            recent_project_filepaths.remove(filepath)
 
-        Settings.recent_project_filepaths.insert(0, filepath)
-        Settings.recent_project_filepaths = Settings.recent_project_filepaths[:self.menuBar().MAX_RECENT_FILES]
+        recent_project_filepaths.insert(0, filepath)
+        self.sett['/Private settings/Recent project filepaths'] = recent_project_filepaths[:self.menuBar().MAX_RECENT_FILES]
 
-        Settings.save()
+        self.sett.save()
 
         self.update_recent_files()
 
@@ -186,7 +192,7 @@ class Main(QMainWindow):
 
             if reply == QMessageBox.Yes:
                 self.save_project()
-                Settings.save()
+                self.sett.save()
             if reply == QMessageBox.No:
                 event.accept()
             else:
@@ -194,18 +200,19 @@ class Main(QMainWindow):
 
     def open_settings(self):
 
-        if SettingsDialog.is_opened:
-            SettingsDialog.get_instance().activateWindow()
-            SettingsDialog.get_instance().setFocus()
-            return
+        dialog = SettingsDialog(self)
 
-        sett_dialog = SettingsDialog()
+        def accepted_applied(save=False):
+            self.grpView.update_settings()
+            self.redraw_all_spectra()
+            print(f'accepted_applied {save}')
+            if save:
+                self.sett.save()
 
-        if not sett_dialog.accepted:
-            return
+        dialog.accepted.connect(lambda: accepted_applied(True))
+        dialog.applied.connect(lambda: accepted_applied(False))
 
-        self.grpView.update_settings()
-        self.redraw_all_spectra()
+        dialog.show()
 
     def batch_load_kinetics(self):
         """Opens a Batch Load Kinetics dialog and then call the function from treewidget"""
@@ -246,7 +253,6 @@ class Main(QMainWindow):
 
         f = QFileDialog.getOpenFileNames if choose_multiple else QFileDialog.getOpenFileName
 
-
         filepaths = f(caption=caption,
                       directory=initial_dir,
                       filter=_filter,
@@ -268,7 +274,7 @@ class Main(QMainWindow):
     def open_project(self, filepath=None, open_dialog=True):
 
         if open_dialog:
-            filepath = self._open_file_dialog("Open project", Settings.open_project_dialog_path,
+            filepath = self._open_file_dialog("Open project", self.sett['/Private settings/Open project dialog path'],
                                               _filter=f"Project files (*{Settings.PROJECT_EXTENSION});;All Files (*.*)",
                                               initial_filter=f"Project files (*{Settings.PROJECT_EXTENSION})",
                                               choose_multiple=False)
@@ -276,15 +282,15 @@ class Main(QMainWindow):
             if filepath is None:
                 return
 
-            Settings.open_project_dialog_path = os.path.dirname(filepath)
-            Settings.save()
+            self.sett['/Private settings/Open project dialog path'] = os.path.dirname(filepath)
+            self.sett.save()
 
         if not os.path.exists(filepath):
             filepath = filepath.replace('\\', '/')
             Logger.message(f"File {filepath} does not exist.")
-            if filepath in Settings.recent_project_filepaths:
-                Settings.recent_project_filepaths.remove(filepath)
-                Settings.save()
+            if filepath in self.sett['/Private settings/Recent project filepaths']:
+                self.sett['/Private settings/Recent project filepaths'].remove(filepath)
+                self.sett.save()
 
             self.update_recent_files()
             return
@@ -304,7 +310,7 @@ class Main(QMainWindow):
             elif reply == QMessageBox.No:
                 # delete all spectra and import new
                 self.tree_widget.clear()
-                project.settings.set_settings()
+                # project.settings.set_settings()  # TODO
             else:
                 return
 
@@ -324,7 +330,7 @@ class Main(QMainWindow):
         _filter = f"Project files (*{Settings.PROJECT_EXTENSION})"
 
         filepath = QFileDialog.getSaveFileName(caption="Save project",
-                                               directory=Settings.save_project_dialog_path if self.current_file is None else self.current_file,
+                                               directory=self.sett['/Private settings/Save project dialog path'] if self.current_file is None else self.current_file,
                                                filter=_filter, initialFilter=_filter)
 
         if filepath[0] == '':
@@ -332,8 +338,8 @@ class Main(QMainWindow):
 
         Logger.message(f"Saving project to {filepath[0]}")
 
-        Settings.save_project_dialog_path = os.path.dirname(filepath[0])
-        Settings.save()
+        self.sett['/Private settings/Save project dialog path'] = os.path.dirname(filepath[0])
+        self.sett.save()
 
         project = Project(generic_item=self.tree_widget.myModel.root)
         project.serialize(filepath[0])
@@ -358,7 +364,7 @@ class Main(QMainWindow):
             self.save_project_as()
 
     def file_menu_import_files(self):
-        filepaths = self._open_file_dialog("Import files", Settings.import_files_dialog_path,
+        filepaths = self._open_file_dialog("Import files", self.sett['/Private settings/Import files dialog path'],
                                            _filter="Data Files (*.txt, *.TXT, *.csv, *.CSV, *.dx, *.DX);;All Files (*.*)",
                                            initial_filter=f"All Files (*.*)",
                                            choose_multiple=True)
@@ -366,13 +372,13 @@ class Main(QMainWindow):
         if filepaths is None:
             return
 
-        Settings.import_files_dialog_path = os.path.dirname(filepaths[0])
-        Settings.save()
+        self.sett['/Private settings/Import files dialog path'] = os.path.dirname(filepaths[0])
+        self.sett.save()
 
         self.tree_widget.import_files(filepaths)
 
     def import_LPF_kinetics(self):
-        filepaths = self._open_file_dialog("Import LFP Kinetics", Settings.import_LPF_dialog_path,
+        filepaths = self._open_file_dialog("Import LFP Kinetics", self.sett['/Private settings/Import LPF dialog path'],
                                            _filter="Data Files (*.csv, *.CSV);;All Files (*.*)",
                                            initial_filter="Data Files (*.csv, *.CSV)",
                                            choose_multiple=True)
@@ -380,8 +386,8 @@ class Main(QMainWindow):
         if filepaths is None:
             return
 
-        Settings.import_LPF_dialog_path = os.path.dirname(filepaths[0])
-        Settings.save()
+        self.sett['/Private settings/Import LPF dialog path'] = os.path.dirname(filepaths[0])
+        self.sett.save()
 
         kwargs = dict(delimiter=',',
                       decimal_sep='.',
@@ -415,7 +421,7 @@ class Main(QMainWindow):
         """
 
         filepaths = self._open_file_dialog("Import Excitation Emission Map from Duetta Fluorimeter",
-                                           Settings.import_EEM_dialog_path,
+                                           self.sett['/Private settings/Import EEM dialog path'],
                                            _filter="Data Files (*.txt, *.TXT);;All Files (*.*)",
                                            initial_filter="Data Files (*.txt, *.TXT)",
                                            choose_multiple=True)
@@ -423,8 +429,8 @@ class Main(QMainWindow):
         if filepaths is None:
             return
 
-        Settings.import_EEM_dialog_path = os.path.dirname(filepaths[0])
-        Settings.save()
+        self.sett['/Private settings/Import EEM dialog path'] = os.path.dirname(filepaths[0])
+        self.sett.save()
 
         kwargs = dict(delimiter='\t',
                       decimal_sep='.',
@@ -494,7 +500,7 @@ class Main(QMainWindow):
         """
 
         filepaths = self._open_file_dialog("Import Kinetics from Duetta Fluorimeter",
-                                           Settings.import_EEM_dialog_path,
+                                           self.sett['/Private settings/Import EEM dialog path'],
                                            _filter="Data Files (*.txt, *.TXT);;All Files (*.*)",
                                            initial_filter="Data Files (*.txt, *.TXT)",
                                            choose_multiple=True)
@@ -502,8 +508,8 @@ class Main(QMainWindow):
         if filepaths is None:
             return
 
-        Settings.import_EEM_dialog_path = os.path.dirname(filepaths[0])
-        Settings.save()
+        self.sett['/Private settings/Import EEM dialog path'] = os.path.dirname(filepaths[0])
+        self.sett.save()
 
         kwargs = dict(delimiter='\t',
                       decimal_sep='.',
@@ -569,30 +575,30 @@ class Main(QMainWindow):
         styles = [Qt.SolidLine, Qt.DashLine, Qt.DotLine, Qt.DashDotLine, Qt.DashDotDotLine]
         return styles[counter % len(styles)]
 
-    def get_user_gradient(self):
-        """Gradient in a format of
-        position (0, 1) \t R \t G \t B \t A \n
-        etc.
-
-        Entries separated by tabulator \t and lines by new line \n
-
-        """
-        try:
-            lines = Settings.user_defined_grad.split('\n')
-            lines = list(filter(None, lines))  # remove empty entries
-
-            data = np.zeros((len(lines), 5), dtype=np.float32)
-
-            for i, line in enumerate(lines):  # parse the string data into matrix
-                entries = line.split('\t')
-                data[i] = np.asarray([float(entry) for entry in entries])
-
-            data[:, 1:] *= 255  # multiply the rgba values by 255
-
-            return data
-        except:
-            pass
-            # Console.showMessage("User defined color scheme is not correct.")
+    # def get_user_gradient(self):
+    #     """Gradient in a format of
+    #     position (0, 1) \t R \t G \t B \t A \n
+    #     etc.
+    #
+    #     Entries separated by tabulator \t and lines by new line \n
+    #
+    #     """
+    #     try:
+    #         lines = Settings.user_defined_grad.split('\n')
+    #         lines = list(filter(None, lines))  # remove empty entries
+    #
+    #         data = np.zeros((len(lines), 5), dtype=np.float32)
+    #
+    #         for i, line in enumerate(lines):  # parse the string data into matrix
+    #             entries = line.split('\t')
+    #             data[i] = np.asarray([float(entry) for entry in entries])
+    #
+    #         data[:, 1:] *= 255  # multiply the rgba values by 255
+    #
+    #         return data
+    #     except:
+    #         pass
+    #         # Console.showMessage("User defined color scheme is not correct.")
 
     def redraw_all_spectra(self):
         self.grpView.clear_plots()
@@ -607,12 +613,14 @@ class Main(QMainWindow):
             for item in items:
                 self.grpView.remove(item)
 
-        gradient_mat = None
-        if Settings.color_scheme == 2:  # user defined
-            gradient_mat = self.get_user_gradient()
-            if gradient_mat is None:
-                Console.showMessage("Cannot plot the spectra, user defined gradient matrix is not correct.")
-                return
+        cm = CmLibSingleton()
+
+        # gradient_mat = None
+        # if Settings.color_scheme == 2:  # user defined
+        #     gradient_mat = self.get_user_gradient()
+        #     if gradient_mat is None:
+        #         Console.showMessage("Cannot plot the spectra, user defined gradient matrix is not correct.")
+        #         return
 
         # item_counter = 0
         # iterate over all checked spectra items and draw them
@@ -645,37 +653,31 @@ class Main(QMainWindow):
                 else item.name
 
             style = self.intLineStyle(
-                group_counter) if Settings.different_line_style_among_groups and item.is_in_group() else Qt.SolidLine
+                group_counter) if self.sett['/Public settings/Plotting/Color and line style/Plot spectra with different line style among groups'] and item.is_in_group() else Qt.SolidLine
 
-            counter = group_counter if Settings.same_color_in_group and item.is_in_group() else item_counter
+            counter = group_counter if self.sett['/Public settings/Plotting/Color and line style/Plot spectra with same color in groups'] and item.is_in_group() else item_counter
 
-            if Settings.color_scheme == 0:
+            if not self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap']:
                 color = int_default_color_scheme(counter)
-            elif Settings.color_scheme == 1:
-                color = intColor(counter,
-                                 hues=Settings.hues,
-                                 values=Settings.values,
-                                 maxValue=Settings.maxValue,
-                                 minValue=Settings.minValue,
-                                 maxHue=Settings.maxHue,
-                                 minHue=Settings.minHue,
-                                 sat=Settings.sat,
-                                 alpha=Settings.alpha,
-                                 reversed=Settings.HSV_reversed)
             else:
-                color = intColorGradient(counter, Settings.hues, gradient_mat, reversed=Settings.HSV_reversed)
+                cmap = cm.getColorMapByKey(self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap'])
+                n = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap/Number of spectra']
+
+                lut = cmap.rgb_float_array
+                color_index = int(np.round((counter % n) / n * lut.shape[0], 0))
+                color = [*lut[color_index, :] * 255, 255]
 
             try:
                 line_alpha = item.line_alpha if hasattr(item, 'line_alpha') else 255
                 line_color = color if item.color is None else QColor(*item.color) if isinstance(item.color, (
                     tuple, list)) else QColor(item.color)  # if string - html format or name of color
-                if Settings.color_scheme < 2:  # only for default and HSV
-                    line_color.setAlpha(line_alpha)
+                line_color.setAlpha(line_alpha)
                 pen = pg.mkPen(color=line_color,
-                               width=Settings.line_width if item.line_width is None else item.line_width,
+                               width=self.sett['/Public settings/Plotting/Color and line style/Line width'] if item.line_width is None else item.line_width,
                                style=style if item.line_type is None else item.line_type)
             except AttributeError:
-                pen = pg.mkPen(color=color, width=Settings.line_width, style=style)
+                pen = pg.mkPen(color=color, width=self.sett['/Public settings/Plotting/Color and line style/Line width'],
+                               style=style)
 
             try:
                 symbol = item.symbol
@@ -701,7 +703,7 @@ class Main(QMainWindow):
                               symbolPen=symbolPen,
                               symbol=symbol,
                               symbolSize=symbol_size,
-                              zValue=item_counter if Settings.reverse_z_order else -item_counter)
+                              zValue=item_counter if self.sett['/Public settings/Plotting/Color and line style/Reversed Z order'] else -item_counter)
 
         FitWidget.replot()  # replot all fits if FitWidget is active
 

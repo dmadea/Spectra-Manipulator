@@ -7,7 +7,7 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QMessageBox, QLineEdit, QCheckBox, QFileDialog
 import numpy as np
 
-from spectramanipulator.settings import Settings
+from spectramanipulator.settings.settings import Settings
 from spectramanipulator.logger import Logger
 from spectramanipulator.treeview.item import SpectrumItem, SpectrumItemGroup
 from spectramanipulator.console import Console

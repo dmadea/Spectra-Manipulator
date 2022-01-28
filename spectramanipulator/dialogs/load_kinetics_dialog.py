@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QFileDialog, QListView, QAbstractItemView, QTreeView
 from PyQt5.QtCore import Qt
 from PyQt5 import QtGui
 from spectramanipulator.dialogs.gui_load_kinetics import Ui_Dialog
-from spectramanipulator.settings import Settings
+from spectramanipulator.settings.settings import Settings
 import os
 
 
@@ -50,6 +50,8 @@ class LoadKineticsDialog(QtWidgets.QDialog, Ui_Dialog):
 
         self.setWindowTitle("Batch Load Kinetics")
 
+        self.sett = Settings()
+
         self.cbKineticsMeasuredByEach.toggled.connect(self.cbKineticsMeasuredByEach_toggled)
         self.cbBCorr.toggled.connect(self.cbBCorr_toggled)
         self.cbCut.toggled.connect(self.cbCut_toggled)
@@ -83,7 +85,7 @@ class LoadKineticsDialog(QtWidgets.QDialog, Ui_Dialog):
         file_dialog = QFileDialog()
         file_dialog.setFileMode(QFileDialog.DirectoryOnly)
         file_dialog.setOption(QFileDialog.DontUseNativeDialog, True)
-        file_dialog.setDirectory(Settings.load_kinetics_last_path)
+        file_dialog.setDirectory(self.sett['/Private settings/Load kinetics last path'])
         file_view = file_dialog.findChild(QListView, 'listView')
 
         # to make it possible to select multiple directories:
@@ -98,7 +100,7 @@ class LoadKineticsDialog(QtWidgets.QDialog, Ui_Dialog):
                 head, tail = os.path.split(path)
                 head2, tail2 = os.path.split(head)
                 name = os.path.join(tail2, tail)
-                Settings.load_kinetics_last_path = head
+                self.sett['/Private settings/Load kinetics last path'] = head
                 if name not in self.lwFolders.item_names:
                     self.lwFolders.addItem(name, path)
 
@@ -131,7 +133,7 @@ class LoadKineticsDialog(QtWidgets.QDialog, Ui_Dialog):
         self.accepted = True
         LoadKineticsDialog.is_opened = False
         LoadKineticsDialog._instance = None
-        Settings.save()
+        self.sett.save()
         super(LoadKineticsDialog, self).accept()
 
     def reject(self):

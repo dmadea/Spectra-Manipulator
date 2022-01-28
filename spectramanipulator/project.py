@@ -1,5 +1,5 @@
 import pickle
-from spectramanipulator.settings import Settings
+from spectramanipulator.settings.settings import Settings
 from spectramanipulator.logger import Logger
 import spectramanipulator
 import sys

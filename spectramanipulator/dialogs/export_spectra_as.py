@@ -9,7 +9,7 @@ from pathlib import Path
 
 import os
 
-from ..settings import Settings
+from ..settings.settings import Settings
 
 
 class ExportSpectraAsDialog(QtWidgets.QDialog, Ui_Dialog):
@@ -27,10 +27,10 @@ class ExportSpectraAsDialog(QtWidgets.QDialog, Ui_Dialog):
 
         self.setWindowTitle("Export Selected Spectra As")
 
-        self.leDir.setText(Settings.export_spectra_as_dialog_path)
-        self.leFileExt.setText(Settings.export_spectra_as_dialog_ext)
-        self.leDelimiter.setText(self.textualize_special_chars(Settings.export_spectra_as_dialog_delimiter))
-        self.leDecimalSeparator.setText(Settings.export_spectra_as_dialog_decimal_sep)
+        self.leDir.setText(self.sett['/Private settings/Export spectra as dialog/Path'])
+        self.leFileExt.setText(self.sett['/Private settings/Export spectra as dialog/Ext'])
+        self.leDelimiter.setText(self.textualize_special_chars(self.sett['/Private settings/Export spectra as dialog/Delimiter']))
+        self.leDecimalSeparator.setText(self.sett['/Private settings/Export spectra as dialog/Decimal separator'])
 
         self.btnDir.clicked.connect(self.btnDir_clicked)
 

@@ -12,7 +12,7 @@ from PyQt5.QtGui import QColor
 
 
 from PyQt5.QtCore import Qt
-from ..settings import Settings
+from ..settings.settings import Settings
 
 
 class StyleWidget(QtWidgets.QWidget, Ui_Form):

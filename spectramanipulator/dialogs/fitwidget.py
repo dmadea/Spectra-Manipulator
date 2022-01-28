@@ -9,7 +9,7 @@ import numpy as np
 
 from .checkbox_rc import CheckBoxRC
 
-from spectramanipulator.settings import Settings
+from spectramanipulator.settings.settings import Settings
 from spectramanipulator.logger import Logger
 from spectramanipulator.treeview.item import SpectrumItem, SpectrumItemGroup
 from spectramanipulator.console import Console

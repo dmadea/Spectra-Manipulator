@@ -6,7 +6,7 @@ from functools import partial
 # import time
 
 from .parsers import GeneralParser, DXFileParser, CSVFileParser
-from .settings import Settings
+from .settings.settings import Settings
 from .logger import Logger
 
 

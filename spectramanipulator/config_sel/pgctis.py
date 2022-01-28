@@ -71,14 +71,6 @@ class PgColorMapCti(GroupCti):
 
         super(PgColorMapCti, self).__init__(nodeName, defaultData, expanded=expanded, **kwargs)
 
-        # self.reverseCti = self.insertChild(
-        #     BoolCti("reversed", False, description="Reversed... TODO"))
-        #
-        # self.subSampleCti = self.insertChild(
-        #     IntCti("subsample", self.SUB_SAMPLING_OFF, specialValueText="off",
-        #            minValue=self.SUB_SAMPLING_OFF, maxValue=64, stepSize=1, description="Subsampling... TODO")
-        # )
-
     def _enforceDataType(self, data):
         """ Converts to int so that this CTI always stores that type.
         """

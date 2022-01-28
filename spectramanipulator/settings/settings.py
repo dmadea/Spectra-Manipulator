@@ -16,7 +16,7 @@ from PyQt5.QtGui import QPen
 
 class Settings(Singleton):
 
-    _config_filename = "config_new.json"
+    _config_filename = "config.json"
 
     enable_multiprocessing = True  # enables importing files as separate processes
     force_multiprocess = False  # importing of files will only run in multiple processes
@@ -25,9 +25,7 @@ class Settings(Singleton):
     REG_PROGRAM_NAME = 'SpectraManipulator.projectfile'
     PROJECT_EXTENSION = '.smpj'
 
-    def __init__(self):
-
-        self.settings = {
+    settings = {
             'items': [
                 {
                     'name': 'Public settings',
@@ -69,6 +67,9 @@ class Settings(Singleton):
             ]
         }
 
+    def __init__(self):
+        pass
+
     def iterate_settings(self, only_with_value=True):
         """
         Recursive generator to iterate all the settings. Returns tuple of xpath and actual node.
@@ -87,6 +88,16 @@ class Settings(Singleton):
                 yield from _iter_sett(item, xpath=new_xpath)
 
         return _iter_sett(self.settings, '')
+
+    def set_default_values(self):
+        for xpath, item in self.iterate_settings(True):
+            value = None
+            if 'value' in item:
+                value = item['value']
+            if value is None and 'default_value' in item:
+                value = item['default_value']
+
+            item['value'] = value
 
     def find_node_by_xpath(self, path):
         # split path by / and find return the value
@@ -145,6 +156,7 @@ class Settings(Singleton):
             logging.error(
                 "Error loading settings from file {}, setting up default settings. Error message:\n{}".format(
                     Settings._config_filename, ex.__str__()))
+            self.set_default_values()
 
 
 if __name__ == '__main__':

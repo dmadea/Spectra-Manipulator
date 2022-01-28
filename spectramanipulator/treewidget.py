@@ -16,7 +16,7 @@ from spectramanipulator.dialogs.stylewidget import StyleWidget
 from spectramanipulator.dialogs.rangewidget import RangeWidget
 from spectramanipulator.dialogs.export_spectra_as import ExportSpectraAsDialog
 
-from spectramanipulator.settings import Settings
+from spectramanipulator.settings.settings import Settings
 from spectramanipulator.logger import Logger
 from spectramanipulator.utils.rename import rename
 
