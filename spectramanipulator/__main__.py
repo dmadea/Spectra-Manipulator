@@ -1,3 +1,4 @@
+import logging
 import sys
 import os
 from PyQt5 import QtCore
@@ -26,7 +27,7 @@ from .plotwidget import PlotWidget
 from .user_namespace import UserNamespace
 from .menubar import MenuBar
 from .console import Console
-from .misc import intColor, intColorGradient, int_default_color_scheme
+from .misc import get_cmap_color, int_default_color_scheme
 
 from .dialogs.settingsdialog import SettingsDialog
 from .treeview.item import SpectrumItemGroup
@@ -36,6 +37,9 @@ from .dialogs.fitwidget import FitWidget
 from .dialogs.load_kinetics_dialog import LoadKineticsDialog
 
 from .config_sel.colors import CmLibSingleton
+
+
+
 import re
 
 import numpy as np
@@ -613,7 +617,6 @@ class Main(QMainWindow):
             for item in items:
                 self.grpView.remove(item)
 
-        cm = CmLibSingleton()
 
         # gradient_mat = None
         # if Settings.color_scheme == 2:  # user defined
@@ -631,6 +634,20 @@ class Main(QMainWindow):
 
         group_counter = -1
         last_group = None
+
+        cm = CmLibSingleton()
+
+        cmap = cm.getColorMapByKey(
+            self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap'])
+        n = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap/Number of spectra']
+
+        start_range = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap/Start range']
+        end_range = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap/End range']
+        reversed = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap/Reversed']
+        lw = self.sett['/Public settings/Plotting/Color and line style/Line width']
+        use_grad_cmap = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap']
+
+        logging.warning(f"Use gradient colormap {use_grad_cmap}.")
 
         # iterate over all checked items, if iterated item is already plotted, continue
         for item_counter, item in enumerate(self.tree_widget.myModel.iterate_items(ItemIterator.Checked)):
@@ -657,15 +674,10 @@ class Main(QMainWindow):
 
             counter = group_counter if self.sett['/Public settings/Plotting/Color and line style/Plot spectra with same color in groups'] and item.is_in_group() else item_counter
 
-            if not self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap']:
-                color = int_default_color_scheme(counter)
+            if use_grad_cmap:
+                color = get_cmap_color(counter, cmap, n, start_range, end_range, reversed)
             else:
-                cmap = cm.getColorMapByKey(self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap'])
-                n = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap/Number of spectra']
-
-                lut = cmap.rgb_float_array
-                color_index = int(np.round((counter % n) / n * lut.shape[0], 0))
-                color = [*lut[color_index, :] * 255, 255]
+                color = int_default_color_scheme(counter)
 
             try:
                 line_alpha = item.line_alpha if hasattr(item, 'line_alpha') else 255
@@ -673,10 +685,10 @@ class Main(QMainWindow):
                     tuple, list)) else QColor(item.color)  # if string - html format or name of color
                 line_color.setAlpha(line_alpha)
                 pen = pg.mkPen(color=line_color,
-                               width=self.sett['/Public settings/Plotting/Color and line style/Line width'] if item.line_width is None else item.line_width,
+                               width=lw if item.line_width is None else item.line_width,
                                style=style if item.line_type is None else item.line_type)
             except AttributeError:
-                pen = pg.mkPen(color=color, width=self.sett['/Public settings/Plotting/Color and line style/Line width'],
+                pen = pg.mkPen(color=color, width=lw,
                                style=style)
 
             try:

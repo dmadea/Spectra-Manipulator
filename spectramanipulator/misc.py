@@ -1,5 +1,25 @@
 import numpy as np
 from PyQt5.QtGui import QColor
+# from spectramanipulator.settings.settings import Settings
+
+
+
+def get_cmap_color(counter, cmap, n, start_range, end_range, reversed):
+    if end_range < start_range:
+        start_range, end_range = end_range, start_range
+
+    r_diff = end_range - start_range
+
+    lut = cmap.rgb_float_array
+
+    counter = n - 1 - (counter % n) if reversed else (counter % n)
+
+    cmap_index = counter * r_diff / n + start_range  # number between start_range and end_range
+
+    color_index = int(np.floor(cmap_index * lut.shape[0]))
+    color = [*lut[color_index, :] * 255, 255]
+
+    return color
 
 
 def int_default_color_scheme(counter):

@@ -6,6 +6,12 @@ import sys
 
 COMPRESS_LEVEL = 3
 
+
+class SettingsOld(object):
+    """Kept for backward compatibility. Old settings are not used anymore."""
+    pass
+
+
 # used for backward compatibility
 class SafeUnpickler(pickle.Unpickler):
     # help from https://www.programcreek.com/python/example/1606/pickle.Unpickler
@@ -33,7 +39,10 @@ class SafeUnpickler(pickle.Unpickler):
             __import__(module)
 
         mod = sys.modules[module]
-        klass = getattr(mod, name)
+        try:
+            klass = getattr(mod, name)
+        except AttributeError:  # for backward compatibility
+            klass = SettingsOld
         return klass
 
 
@@ -43,7 +52,7 @@ class Project:
 
         # self.spectra_list = spectra_list  # used in older program versions
         self.generic_item = generic_item
-        self.settings = Settings()  # saves the static attributes to instance attributes that are saved
+        self.settings = Settings()  # saves the current settings
 
         self.args = args
         self.__version__ = spectramanipulator.__version__
@@ -69,8 +78,6 @@ class Project:
 
     @staticmethod
     def deserialize(filepath):
-
-        # instance = pickle.load(open(filepath, 'rb'))
 
         instance = SafeUnpickler(open(filepath, 'rb')).load()
         return instance
