@@ -20,6 +20,7 @@ class Settings(Singleton):
 
     enable_multiprocessing = True  # enables importing files as separate processes
     force_multiprocess = False  # importing of files will only run in multiple processes
+    coordinates_sig_figures = 4  # number of significant figures
 
     general_models_dir = 'general models'
     REG_PROGRAM_NAME = 'SpectraManipulator.projectfile'

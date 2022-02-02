@@ -27,7 +27,7 @@ from .plotwidget import PlotWidget
 from .user_namespace import UserNamespace
 from .menubar import MenuBar
 from .console import Console
-from .misc import get_cmap_color, int_default_color_scheme
+from .misc import get_cmap_color, int_default_color_scheme, int_line_style
 
 from .dialogs.settingsdialog import SettingsDialog
 from .treeview.item import SpectrumItemGroup
@@ -37,8 +37,6 @@ from .dialogs.fitwidget import FitWidget
 from .dialogs.load_kinetics_dialog import LoadKineticsDialog
 
 from .config_sel.colors import CmLibSingleton
-
-
 
 import re
 
@@ -108,8 +106,7 @@ class Main(QMainWindow):
         self.sett = Settings()
         self.sett.load()
 
-        self.coor_label = QLabel()
-        self.grpView = PlotWidget(self, coordinates_func=self.coor_label.setText)
+        self.grpView = PlotWidget(self)
         self.setCentralWidget(self.grpView)
 
         self.createStatusBar()
@@ -140,7 +137,6 @@ class Main(QMainWindow):
         self.console_button.setFlat(True)
         self.console_button.setCheckable(True)
         self.console_button.toggled.connect(self.console.setVisible)
-        statusBar.addPermanentWidget(self.coor_label)
 
         statusBar.addPermanentWidget(self.console_button)
         self.console_button.isChecked()
@@ -209,12 +205,13 @@ class Main(QMainWindow):
         def accepted_applied(save=False):
             self.grpView.update_settings()
             self.redraw_all_spectra()
-            print(f'accepted_applied {save}')
+            # print(f'accepted_applied {save}')
             if save:
                 self.sett.save()
 
         dialog.accepted.connect(lambda: accepted_applied(True))
         dialog.applied.connect(lambda: accepted_applied(False))
+        dialog.rejected.connect(lambda: accepted_applied(False))
 
         dialog.show()
 
@@ -575,34 +572,6 @@ class Main(QMainWindow):
 
         self.tree_widget.import_spectra(spectra)
 
-    def intLineStyle(self, counter):
-        styles = [Qt.SolidLine, Qt.DashLine, Qt.DotLine, Qt.DashDotLine, Qt.DashDotDotLine]
-        return styles[counter % len(styles)]
-
-    # def get_user_gradient(self):
-    #     """Gradient in a format of
-    #     position (0, 1) \t R \t G \t B \t A \n
-    #     etc.
-    #
-    #     Entries separated by tabulator \t and lines by new line \n
-    #
-    #     """
-    #     try:
-    #         lines = Settings.user_defined_grad.split('\n')
-    #         lines = list(filter(None, lines))  # remove empty entries
-    #
-    #         data = np.zeros((len(lines), 5), dtype=np.float32)
-    #
-    #         for i, line in enumerate(lines):  # parse the string data into matrix
-    #             entries = line.split('\t')
-    #             data[i] = np.asarray([float(entry) for entry in entries])
-    #
-    #         data[:, 1:] *= 255  # multiply the rgba values by 255
-    #
-    #         return data
-    #     except:
-    #         pass
-    #         # Console.showMessage("User defined color scheme is not correct.")
 
     def redraw_all_spectra(self):
         self.grpView.clear_plots()
@@ -616,7 +585,6 @@ class Main(QMainWindow):
         if remove is True:
             for item in items:
                 self.grpView.remove(item)
-
 
         # gradient_mat = None
         # if Settings.color_scheme == 2:  # user defined
@@ -646,8 +614,11 @@ class Main(QMainWindow):
         reversed = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap/Reversed']
         lw = self.sett['/Public settings/Plotting/Color and line style/Line width']
         use_grad_cmap = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap']
+        reversed_Z_order = self.sett['/Public settings/Plotting/Color and line style/Reversed Z order']
+        same_color_in_groups = self.sett['/Public settings/Plotting/Color and line style/Plot spectra with same color in groups']
+        same_ls = self.sett['/Public settings/Plotting/Color and line style/Plot spectra with different line style among groups']
 
-        logging.warning(f"Use gradient colormap {use_grad_cmap}.")
+        # logging.warning(f"Use gradient colormap {use_grad_cmap}.")
 
         # iterate over all checked items, if iterated item is already plotted, continue
         for item_counter, item in enumerate(self.tree_widget.myModel.iterate_items(ItemIterator.Checked)):
@@ -669,10 +640,9 @@ class Main(QMainWindow):
             spectrum_name = '<strong>{}</strong>: {}'.format(item.parent.name, item.name) if item.is_in_group() \
                 else item.name
 
-            style = self.intLineStyle(
-                group_counter) if self.sett['/Public settings/Plotting/Color and line style/Plot spectra with different line style among groups'] and item.is_in_group() else Qt.SolidLine
+            style = int_line_style(group_counter) if same_ls and item.is_in_group() else Qt.SolidLine
 
-            counter = group_counter if self.sett['/Public settings/Plotting/Color and line style/Plot spectra with same color in groups'] and item.is_in_group() else item_counter
+            counter = group_counter if same_color_in_groups and item.is_in_group() else item_counter
 
             if use_grad_cmap:
                 color = get_cmap_color(counter, cmap, n, start_range, end_range, reversed)
@@ -688,8 +658,7 @@ class Main(QMainWindow):
                                width=lw if item.line_width is None else item.line_width,
                                style=style if item.line_type is None else item.line_type)
             except AttributeError:
-                pen = pg.mkPen(color=color, width=lw,
-                               style=style)
+                pen = pg.mkPen(color=color, width=lw, style=style)
 
             try:
                 symbol = item.symbol
@@ -715,7 +684,7 @@ class Main(QMainWindow):
                               symbolPen=symbolPen,
                               symbol=symbol,
                               symbolSize=symbol_size,
-                              zValue=item_counter if self.sett['/Public settings/Plotting/Color and line style/Reversed Z order'] else -item_counter)
+                              zValue=item_counter if reversed_Z_order else -item_counter)
 
         FitWidget.replot()  # replot all fits if FitWidget is active
 

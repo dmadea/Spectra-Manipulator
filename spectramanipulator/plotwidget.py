@@ -7,6 +7,7 @@ from spectramanipulator.pyqtgraphmodif.legend_item import LegendItem
 from spectramanipulator.pyqtgraphmodif.plot_item import PlotItem
 from spectramanipulator.pyqtgraphmodif.view_box import ViewBox
 
+from spectramanipulator.singleton import Singleton
 from pyqtgraph.exporters import ImageExporter
 from pyqtgraph.exporters import SVGExporter
 
@@ -16,39 +17,36 @@ from PyQt5.QtCore import Qt
 # from PyQt5.QtGui import QColor
 
 
-# subclassing of PlotWidget
-class PlotWidget(pg.PlotWidget):
-    _instance = None
+# subclassing of GraphicsLayoutWidget
+class PlotWidget(pg.GraphicsLayoutWidget, Singleton):
 
-    def __init__(self, parent=None, coordinates_func=None):
+    def __init__(self, parent=None, **kwargs):
 
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
+
+        super(PlotWidget, self).__init__(parent)
 
         self.plotted_items = {}  # dictionary with keys as spectrum objects and values as plot data items
         self.plotted_fits = {}  #
 
         self.plotItem = PlotItem(viewBox=ViewBox(self.plotted_items))
-
-        # use our modified plotItem
-        super(PlotWidget, self).__init__(parent, plotItem=self.plotItem)
-
-        PlotWidget._instance = self
-
-        self.coordinates_func = coordinates_func
+        self.probe_label = pg.LabelItem('no cursor data shown', justify='left')
 
         self.legend = None
-        # self.add_legend(spacing=Settings.legend_spacing)
-
-        self.img_exporter = ImageExporter(self.plotItem)
-        self.svg_exporter = SVGExporter(self.plotItem)
-
         self.lr_item = None  # linear region item
 
         self.sett = Settings()
         self.update_settings()
         self.plotItem.setDownsampling(ds=True, auto=True, mode='subsample')
         self.plotItem.setClipToView(True)
+
+        self.addItem(self.plotItem, 0, 0)
+        self.addItem(self.probe_label, 1, 0)
+
+        # self.img_exporter = ImageExporter(self.plotItem)
+        # self.svg_exporter = SVGExporter(self.plotItem)
+        self.plotItem.scene().sigMouseMoved.connect(self.mouse_moved)
 
     def update_settings(self):
 
@@ -100,14 +98,14 @@ class PlotWidget(pg.PlotWidget):
 
     def remove(self, spectrum):
         if spectrum in self.plotted_items:
-            self.removeItem(self.plotted_items[spectrum])  # remove from pyqtgraph
+            self.plotItem.removeItem(self.plotted_items[spectrum])  # remove from pyqtgraph
             del self.plotted_items[spectrum]  # remove entry in dictionary
 
     def clear_plots(self):
         """Removes all plots except of linear region item and fits"""
         # self.plotted_spectra.clear()
         for item in self.plotted_items.values():
-            self.removeItem(item)
+            self.plotItem.removeItem(item)
 
         self.plotted_items.clear()
 
@@ -139,7 +137,7 @@ class PlotWidget(pg.PlotWidget):
 
         for item in items:
             if item in self.plotted_fits:
-                self.removeItem(self.plotted_fits[item])
+                self.plotItem.removeItem(self.plotted_fits[item])
                 del self.plotted_fits[item]
 
     @classmethod
@@ -149,7 +147,7 @@ class PlotWidget(pg.PlotWidget):
             return
 
         for val in self.plotted_fits.values():
-            self.removeItem(val)
+            self.plotItem.removeItem(val)
 
         self.plotted_fits.clear()
 
@@ -190,7 +188,7 @@ class PlotWidget(pg.PlotWidget):
             return
 
         if self.lr_item is not None:
-            self.removeItem(self.lr_item)
+            self.plotItem.removeItem(self.lr_item)
             self.lr_item = None
 
     @classmethod
@@ -212,20 +210,17 @@ class PlotWidget(pg.PlotWidget):
 
         return x0, x1, y0, y1
 
-    def save_plot_to_clipboard_as_png(self):
-        self.img_exporter.export(copy=True)
-
-    def save_plot_to_clipboard_as_svg(self):
-        self.svg_exporter.export(copy=True)
+    # def save_plot_to_clipboard_as_png(self):
+    #     self.img_exporter.export(copy=True)
+    #
+    # def save_plot_to_clipboard_as_svg(self):
+    #     self.svg_exporter.export(copy=True)
 
     def leaveEvent(self, ev):
         super(PlotWidget, self).leaveEvent(ev)
         self.setCursor(Qt.ArrowCursor)
 
-    def mouseMoveEvent(self, ev):
-        super(PlotWidget, self).mouseMoveEvent(ev)
-
-        pos = ev.pos()
+    def mouse_moved(self, pos):
 
         in_scene = self.plotItem.sceneBoundingRect().contains(pos)
         in_legend = self.legend.sceneBoundingRect().contains(pos)
@@ -244,9 +239,11 @@ class PlotWidget(pg.PlotWidget):
                 mouse_point = self.plotItem.vb.mapSceneToView(pos)
                 n = Settings.coordinates_sig_figures
                 # double format with n being the number of significant figures of a number
-                self.coordinates_func(f"x={{:.{n}g}}, y={{:.{n}g}}".format(mouse_point.x(), mouse_point.y()))
+                self.probe_label.setText(f"x={{:.{n}g}}, y={{:.{n}g}}".format(mouse_point.x(), mouse_point.y()))
             except:
                 pass
+        else:
+            self.probe_label.setText("<span style='color: #808080'>No data at cursor</span>")
 
         # set the corresponding cursor
         if in_scene and not lin_reg_moving:

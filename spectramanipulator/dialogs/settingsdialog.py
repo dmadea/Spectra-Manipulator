@@ -97,7 +97,7 @@ class SettingsDialog(PersistentDialog):
             if isinstance(cti, PgColorMapCti):
                 data = data.key
 
-            print(f"value of {cti} has changed, new value: {data}")
+            # print(f"value of {cti} has changed, new value: {data}")
             self.sett[cti.nodePath] = data
 
         self.tree_model.value_changed.connect(value_changed)

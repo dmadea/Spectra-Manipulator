@@ -1,7 +1,7 @@
 import numpy as np
 from PyQt5.QtGui import QColor
+from PyQt5.QtCore import Qt
 # from spectramanipulator.settings.settings import Settings
-
 
 
 def get_cmap_color(counter, cmap, n, start_range, end_range, reversed):
@@ -20,6 +20,11 @@ def get_cmap_color(counter, cmap, n, start_range, end_range, reversed):
     color = [*lut[color_index, :] * 255, 255]
 
     return color
+
+
+def int_line_style(counter):
+    styles = [Qt.SolidLine, Qt.DashLine, Qt.DotLine, Qt.DashDotLine, Qt.DashDotDotLine]
+    return styles[counter % len(styles)]
 
 
 def int_default_color_scheme(counter):
