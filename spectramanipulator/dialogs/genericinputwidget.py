@@ -3,19 +3,16 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 import sys
+from spectramanipulator.singleton import Singleton
 
 
-class GenericInputWidget(QtWidgets.QWidget):
-
-    instance = None
+class GenericInputWidget(QtWidgets.QWidget, Singleton):
 
     def __init__(self, widget_list=None, label_text='Some shity descriptive text...', title='GenericInputDialog',
                  parent=None):
         super(GenericInputWidget, self).__init__(parent)
 
         GenericInputWidget.instance = self
-
-        self.accepted = False
 
         self.button_box = QtWidgets.QDialogButtonBox(self)
         self.button_box.setOrientation(QtCore.Qt.Horizontal)
@@ -39,7 +36,7 @@ class GenericInputWidget(QtWidgets.QWidget):
         if widget_list is None:
             widget_list = [("par1", QLineEdit("some fucking text")),
                            ("par2", QLineEdit("some another fucking text")),
-                           ("fuck paramters", QCheckBox("more shity text"))]
+                           ("fuck parameters", QCheckBox("more shity text"))]
 
         self.label_list = []
         self.widget_list = []
@@ -62,13 +59,12 @@ class GenericInputWidget(QtWidgets.QWidget):
         if isinstance(self.widget_list[0], QLineEdit):
             self.widget_list[0].selectAll()
 
-
-    # virtual method
-    def set_result(self):
-        pass
+    # # virtual method
+    # def set_result(self):
+    #     pass
 
     def accept(self):
-        self.set_result()
+        # self.set_result()
         self.accepted = True
         GenericInputWidget.instance = None
 

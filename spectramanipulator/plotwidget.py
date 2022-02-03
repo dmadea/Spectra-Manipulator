@@ -8,8 +8,8 @@ from spectramanipulator.pyqtgraphmodif.plot_item import PlotItem
 from spectramanipulator.pyqtgraphmodif.view_box import ViewBox
 
 from spectramanipulator.singleton import Singleton
-from pyqtgraph.exporters import ImageExporter
-from pyqtgraph.exporters import SVGExporter
+# from pyqtgraph.exporters import ImageExporter
+# from pyqtgraph.exporters import SVGExporter
 
 from spectramanipulator.settings.settings import Settings
 
@@ -18,9 +18,11 @@ from PyQt5.QtCore import Qt
 
 
 # subclassing of GraphicsLayoutWidget
-class PlotWidget(pg.GraphicsLayoutWidget, Singleton):
+class PlotWidget(Singleton, pg.GraphicsLayoutWidget):
 
-    def __init__(self, parent=None, **kwargs):
+    def __init__(self, parent=None):
+
+        # TODO singleton...
 
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
@@ -28,9 +30,10 @@ class PlotWidget(pg.GraphicsLayoutWidget, Singleton):
         super(PlotWidget, self).__init__(parent)
 
         self.plotted_items = {}  # dictionary with keys as spectrum objects and values as plot data items
-        self.plotted_fits = {}  #
+        self.plotted_fits = {}
 
-        self.plotItem = PlotItem(viewBox=ViewBox(self.plotted_items))
+        self.vb = ViewBox(self.plotted_items)
+        self.plotItem = PlotItem(viewBox=self.vb)
         self.probe_label = pg.LabelItem('no cursor data shown', justify='left')
 
         self.legend = None
@@ -109,17 +112,7 @@ class PlotWidget(pg.GraphicsLayoutWidget, Singleton):
 
         self.plotted_items.clear()
 
-    @classmethod
-    def plotted_items(cls):
-        if cls._instance is not None:
-            return cls._instance.plotted_items
-
-    @classmethod
-    def plot_fit(cls, item, **kwargs):
-        self = cls._instance
-        if self is None:
-            return
-
+    def plot_fit(self, item, **kwargs):
         if item in self.plotted_fits:
             self.plotted_fits[item].setData(item.data, **kwargs)
             if 'zValue' in kwargs:
@@ -129,39 +122,25 @@ class PlotWidget(pg.GraphicsLayoutWidget, Singleton):
         pi = self.plotItem.plot(item.data, **kwargs)
         self.plotted_fits[item] = pi
 
-    @classmethod
-    def remove_fits(cls, items: list):
-        self = cls._instance
-        if self is None:
-            return
-
+    def remove_fits(self, items: list):
         for item in items:
             if item in self.plotted_fits:
                 self.plotItem.removeItem(self.plotted_fits[item])
                 del self.plotted_fits[item]
 
-    @classmethod
-    def remove_all_fits(cls):
-        self = cls._instance
-        if self is None:
-            return
-
+    def remove_all_fits(self):
         for val in self.plotted_fits.values():
             self.plotItem.removeItem(val)
 
         self.plotted_fits.clear()
 
-    @classmethod
-    def add_linear_region(cls, region=None, bounds=None, brush=None, orientation='vertical', z_value=-10):
+    def add_linear_region(self, region=None, bounds=None, brush=None, orientation='vertical', z_value=-10):
         """bounds is tuple or None"""
-
-        self = cls._instance
-        if self is None:
-            return
 
         if region is None:
             # if no region is setup, sets a region from 13 - 87 % of the current view range
-            region = self.getViewBox().viewRange()[0]
+            region = self.plotItem.getViewBox().viewRange()[0]
+            # region = self.vb.viewRange()[0]
             f = 0.13
             diff = region[1] - region[0]
             region[0] += f * diff
@@ -171,7 +150,7 @@ class PlotWidget(pg.GraphicsLayoutWidget, Singleton):
 
         if self.lr_item is None:
             self.lr_item = pg.LinearRegionItem(region, orientation=orientation, brush=brush, bounds=bounds)
-            self.addItem(self.lr_item)
+            self.plotItem.addItem(self.lr_item)
 
         self.lr_item.setRegion(region)
         if bounds is not None:
@@ -181,32 +160,18 @@ class PlotWidget(pg.GraphicsLayoutWidget, Singleton):
 
         return self.lr_item
 
-    @classmethod
-    def remove_linear_region(cls):
-        self = cls._instance
-        if self is None:
-            return
-
+    def remove_linear_region(self):
         if self.lr_item is not None:
             self.plotItem.removeItem(self.lr_item)
             self.lr_item = None
 
-    @classmethod
-    def set_lr_x_range(cls, x0, x1):
-        self = cls._instance
-        if self is None:
-            return
-
+    def set_lr_x_range(self, x0, x1):
         if self.lr_item is not None:
             self.lr_item.setRegion((x0, x1))
 
-    @classmethod
-    def get_view_range(cls):
-        if cls._instance is None:
-            return
-
-        x0, x1 = cls._instance.getViewBox().viewRange()[0]
-        y0, y1 = cls._instance.viewRange()[1]
+    def get_view_range(self):
+        x0, x1 = self._instance.getViewBox().viewRange()[0]
+        y0, y1 = self._instance.viewRange()[1]
 
         return x0, x1, y0, y1
 

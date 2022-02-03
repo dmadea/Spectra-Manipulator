@@ -1,6 +1,9 @@
 
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QDialog, QWidget
 from PyQt5.QtGui import QCloseEvent
+from PyQt5.QtCore import Qt
+
+import logging
 
 
 class Singleton(object):
@@ -21,7 +24,30 @@ class Singleton(object):
 #         return cls._instances[cls]
 
 
-class PersistentDialog(QDialog, Singleton):
+class InputWidget(QWidget, Singleton):
+
+    _is_visible = False
+
+    def __init__(self, dock_widget, title='title', parent=None):
+        super(InputWidget, self).__init__(parent=parent)
+
+        self.dock_widget = dock_widget
+
+        self.dock_widget.parent().resizeDocks([self.dock_widget], [250], Qt.Vertical)
+        self.dock_widget.titleBarWidget().setText(title)
+        self.dock_widget.setWidget(self)
+        self.dock_widget.setVisible(True)
+
+        self._is_visible = True
+
+    def closeEvent(self, a0: QCloseEvent):
+        logging.warning('InputWidget closeEvent called.')
+        self._is_visible = False
+        self.dock_widget.setVisible(False)
+        super(InputWidget, self).closeEvent(a0)
+
+
+class PersistentDialog(Singleton, QDialog):
 
     _is_opened = False
 

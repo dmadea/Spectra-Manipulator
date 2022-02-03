@@ -1,43 +1,62 @@
 from PyQt5.QtGui import QBrush, QColor
-from PyQt5.QtWidgets import QMessageBox
-from .genericinputwidget import GenericInputWidget
+from PyQt5.QtWidgets import QMessageBox, QDialogButtonBox, QVBoxLayout, QLabel, QGridLayout
+from spectramanipulator.singleton import InputWidget
 from .mylineedit import MyLineEdit
 from PyQt5.QtCore import Qt
 
 from ..plotwidget import PlotWidget
 import pyqtgraph as pg
+from typing import Callable
 
 
-class RangeWidget(GenericInputWidget):
+class RangeWidget(InputWidget):
 
-    def __init__(self, dock_widget, accepted_func=None, label_text='Set xrange', title='SetRangeDialog', parent=None):
+    def __init__(self, dock_widget, accepted_func: Callable = None,
+                 label_text='Set xrange:', title='SetRangeDialog', parent=None):
 
-        if RangeWidget.instance is not None:
-            PlotWidget._instance.removeItem(RangeWidget.instance.lr)
+        # if RangeWidget.instance is not None:
+        #     PlotWidget._instance.removeItem(RangeWidget.instance.lr)
 
-        self.dock_widget = dock_widget
         self.accepted_func = accepted_func
+        super(RangeWidget, self).__init__(dock_widget, title, parent)
+
+        # self.pw = PlotWidget._instance
+        self.pw = PlotWidget()
 
         self.le_x0 = MyLineEdit()
         self.le_x1 = MyLineEdit()
 
-        super(RangeWidget, self).__init__([('x0', self.le_x0), ('x1', self.le_x1)],
-                                          label_text=label_text,
-                                          title=title, parent=parent)
+        self.button_box = QDialogButtonBox(self)
+        self.button_box.setOrientation(Qt.Horizontal)
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
 
-        self.lr = PlotWidget.add_linear_region(z_value=1e8)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+
+        self.VLayout = QVBoxLayout()
+        # self.VLayout.setContentsMargins(0, 0, 0, 0)
+
+        self.label = QLabel(label_text)
+        self.label.setWordWrap(True)
+
+        self.VLayout.addWidget(self.label)
+
+        self.grid_layout = QGridLayout()
+        self.grid_layout.setSpacing(7)
+        self.grid_layout.setContentsMargins(15, 0, 0, 0)
+
+        self.grid_layout.addWidget(QLabel('x0:'), 0, 0)
+        self.grid_layout.addWidget(self.le_x0, 0, 1)
+        self.grid_layout.addWidget(QLabel('x1:'), 1, 0)
+        self.grid_layout.addWidget(self.le_x1, 1, 1)
+
+        self.VLayout.addItem(self.grid_layout)
+        self.VLayout.addWidget(self.button_box)
+
+        self.setLayout(self.VLayout)
+
+        self.lr = self.pw.add_linear_region(z_value=1e8)
         self.lr.sigRegionChanged.connect(lambda: self.update_values())
-
-        #
-        # f = 0.87
-        # # x0, x1 = x0_value, x1_value
-        # x0, x1 = PlotWidget._instance.getViewBox().viewRange()[0]
-        # xy_dif = x1 - x0
-        # self.lr = pg.LinearRegionItem([x0 + (1 - f) * xy_dif, x0 + f * xy_dif],
-        #                               brush=QBrush(QColor(0, 255, 0, 20)))
-        #
-        # self.lr.setZValue(1e6)
-        # PlotWidget._instance.addItem(self.lr)
 
         self.le_x0.focus_lost.connect(self.update_region)
         self.le_x1.focus_lost.connect(self.update_region)
@@ -45,29 +64,21 @@ class RangeWidget(GenericInputWidget):
         self.le_x1.returnPressed.connect(self.update_region)
 
         self.lr.sigRegionChanged.connect(self.update_values)
+
         self.update_values()
-        # we have to update region, otherwide there would be some bug in with manually mooving the region
+
+        # we have to update region, otherwise there would be some bug in with manually moving the region
         self.update_region()
-
         self.returned_range = None
-
-        self.dock_widget.parent().resizeDocks([self.dock_widget], [250], Qt.Vertical)
-        self.dock_widget.titleBarWidget().setText(title)
-        self.dock_widget.setWidget(self)
-        self.dock_widget.setVisible(True)
 
         # set focus
         self.le_x0.setFocus(Qt.TabFocusReason)
+        self.le_x0.selectAll()
 
     def update_values(self):
         x0, x1 = self.lr.getRegion()
         self.le_x0.setText("{:.4g}".format(x0))
         self.le_x1.setText("{:.4g}".format(x1))
-
-    # def update_values(self):
-    #     x0, x1 = self.lr.getRegion()
-    #     self.le_x0.setText("{:.4g}".format(x0))
-    #     self.le_x1.setText("{:.4g}".format(x1))
 
     def update_region(self):
         try:
@@ -81,7 +92,7 @@ class RangeWidget(GenericInputWidget):
         try:
             self.returned_range = [float(self.le_x0.text()), float(self.le_x1.text())]
 
-            # swap range if it is revesed
+            # swap range if it is reversed
             if self.returned_range[0] > self.returned_range[1]:
                 temp = self.returned_range[0]
                 self.returned_range[0] = self.returned_range[1]
@@ -91,16 +102,16 @@ class RangeWidget(GenericInputWidget):
             QMessageBox.warning(self, "Warning", "Invalid format of the range.", QMessageBox.Ok)
             return
 
-        PlotWidget.remove_linear_region()
-        self.dock_widget.setVisible(False)
-        super(RangeWidget, self).accept()
-
+        self.pw.remove_linear_region()
+        # self.dock_widget.setVisible(False)
         self.accepted_func()
+        self.close()
 
     def reject(self):
-        PlotWidget.remove_linear_region()
-        self.dock_widget.setVisible(False)
-        super(RangeWidget, self).reject()
+        self.pw.remove_linear_region()
+        # self.dock_widget.setVisible(False)
+        # super(RangeWidget, self).reject()
+        self.close()
 
 
 # if __name__ == "__main__":
