@@ -3,6 +3,7 @@ import sys
 import os
 from PyQt5 import QtCore
 from spectramanipulator import windows
+import logging
 
 # from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QCoreApplication
@@ -42,6 +43,7 @@ import re
 
 import numpy as np
 
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 debug = False
 
@@ -203,11 +205,11 @@ class Main(QMainWindow):
         dialog = SettingsDialog(self)
 
         def accepted_applied(save=False):
-            self.grpView.update_settings()
-            self.redraw_all_spectra()
-            # print(f'accepted_applied {save}')
             if save:
                 self.sett.save()
+
+            self.grpView.update_settings()
+            self.redraw_all_spectra()
 
         dialog.accepted.connect(lambda: accepted_applied(True))
         dialog.applied.connect(lambda: accepted_applied(False))

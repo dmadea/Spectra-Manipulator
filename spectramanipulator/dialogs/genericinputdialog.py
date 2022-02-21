@@ -5,8 +5,7 @@ from PyQt5.QtWidgets import *
 from ..singleton import Singleton
 import sys
 
-
-class GenericInputDialog(Singleton, QtWidgets.QDialog):
+class GenericInputDialog(QtWidgets.QDialog, metaclass=Singleton):
 
     # static variables
     is_opened = False

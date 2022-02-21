@@ -7,6 +7,7 @@ from functools import partial
 
 from .parsers import GeneralParser, DXFileParser, CSVFileParser
 from .settings.settings import Settings
+from .settings.structure import get_delimiter_from_idx
 from .logger import Logger
 
 
@@ -27,14 +28,20 @@ def parse_files_specific(filepaths, use_CSV_parser=False, **kwargs):
 
 
 def parse_text(text):
-    txt_parser = GeneralParser(str_data=text, delimiter=Settings.clip_imp_delimiter,
-                               decimal_sep=Settings.clip_imp_decimal_sep,
-                               remove_empty_entries=Settings.remove_empty_entries,
-                               skip_col_num=Settings.skip_columns_num,
-                               general_import_spectra_name_from_filename=Settings.general_import_spectra_name_from_filename,
-                               general_if_header_is_empty_use_filename=Settings.general_if_header_is_empty_use_filename,
-                               skip_nan_columns=Settings.skip_nan_columns,
-                               nan_replacement=Settings.nan_replacement)
+
+    sett = Settings()
+
+    clip_delimiter = get_delimiter_from_idx(sett['/Public settings/Import/Parser/Clipboard/Delimiter'])
+    use_filename = not bool(sett['/Public settings/Import/Files/CSV and other files/If header is empty.../Import spectra name from'])
+
+    txt_parser = GeneralParser(str_data=text, delimiter=clip_delimiter,
+                               decimal_sep=sett['/Public settings/Import/Parser/Clipboard/Decimal separator'],
+                               remove_empty_entries=sett['/Public settings/Import/Parser/Remove empty entries'],
+                               skip_col_num=sett['/Public settings/Import/Parser/Skip first'],
+                               general_import_spectra_name_from_filename=sett['/Public settings/Import/Files/CSV and other files/If header is empty...'],
+                               general_if_header_is_empty_use_filename=use_filename,
+                               skip_nan_columns=sett['/Public settings/Import/Parser/Skip columns containing NaNs'],
+                               nan_replacement=sett['/Public settings/Import/Parser/Skip columns containing NaNs/NaN value replacement'])
 
     spectra = txt_parser.parse()
     if spectra is None or len(spectra) == 0:

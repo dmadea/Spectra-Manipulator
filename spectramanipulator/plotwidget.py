@@ -18,7 +18,7 @@ from PyQt5.QtCore import Qt
 
 
 # subclassing of GraphicsLayoutWidget
-class PlotWidget(Singleton, pg.GraphicsLayoutWidget):
+class PlotWidget(pg.GraphicsLayoutWidget, metaclass=Singleton):
 
     def __init__(self, parent=None):
 

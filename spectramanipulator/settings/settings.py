@@ -14,7 +14,7 @@ import json
 from PyQt5.QtGui import QPen
 
 
-class Settings(Singleton):
+class Settings(metaclass=Singleton):
 
     _config_filename = "config.json"
 

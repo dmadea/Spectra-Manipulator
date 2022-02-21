@@ -33,20 +33,18 @@ logger = logging.getLogger(__name__)
 # The color maps that are favorites then the program is started for the first time or reset.
 DEF_FAV_COLOR_MAPS = [
     'MatPlotLib/Gray', 'MatPlotLib/Hsv', 'MatPlotLib/Hot', 'MatPlotLib/Magma',
-    'MatPlotLib/Viridis', 'MatPlotLib/Inferno', 'MatPlotLib/Jet', 'MatPlotLib/Seismic',
-    'MatPlotLib/Oranges']
+    'MatPlotLib/Viridis', 'MatPlotLib/Inferno', 'MatPlotLib/Jet', 'MatPlotLib/Spectral', 'MatPlotLib/Seismic',
+    'MatPlotLib/Oranges', 'MatPlotLib/Paired']
 
 
 DEFAULT_COLOR_MAP = "MatPlotLib/Hsv"
 assert DEFAULT_COLOR_MAP in DEF_FAV_COLOR_MAPS, "Default color map not in default favorites."
 
 
-class CmLibSingleton(CmLib, Singleton):
+class CmLibSingleton(CmLib, metaclass=Singleton):
 
-    def __init__(self, **kwargs):
-        super(CmLibSingleton, self).__init__(**kwargs)
-
-        logger.debug("CmLib singleton: {}".format(self))
+    def __init__(self):
+        super(CmLibSingleton, self).__init__()
 
         cmDataDir = DATA_DIR
         logger.info("Importing color map library from: {}".format(cmDataDir))
@@ -70,7 +68,7 @@ class CmLibSingleton(CmLib, Singleton):
             colorMap.meta_data.favorite = colorMap.key in DEF_FAV_COLOR_MAPS
 
 
-class CmLibModelSingleton(CmLibModel, Singleton):
+class CmLibModelSingleton(CmLibModel, metaclass=Singleton):
 
     def __init__(self, **kwargs):
         cmlib = CmLibSingleton()

@@ -33,12 +33,13 @@ from PyQt5.QtWidgets import QSizePolicy
 
 from .groupcti import GroupCti
 from .abstractcti import AbstractCti, AbstractCtiEditor
-from .boolcti import BoolCti
-from .intcti import IntCti
+# from .boolcti import BoolCti
+# from .intcti import IntCti
 from .misc import setWidgetSizePolicy
 from .colors import CmLibModelSingleton, DEFAULT_COLOR_MAP
 
 logger = logging.getLogger(__name__)
+# logger = logging
 
 X_AXIS = pg.ViewBox.XAxis
 Y_AXIS = pg.ViewBox.YAxis
@@ -195,6 +196,6 @@ class PgColorMapCtiEditor(AbstractCtiEditor):
         """ Is called when the user chooses an item in the combo box. The item's index is passed.
             Note that this signal is sent even when the choice is not changed.
         """
-        logger.debug("onColorMapChanged")
+        logger.debug(f"onColorMapChanged, {self.cti.data}")
         self.delegate.commitData.emit(self)
 

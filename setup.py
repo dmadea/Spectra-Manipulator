@@ -25,7 +25,8 @@ setup(
         'numba',
         'requests',
         'winshell',
-        'cmlib'
+        'cmlib',
+        'sip'
     ],
 
     keywords=['python', 'spectra manipulator'],

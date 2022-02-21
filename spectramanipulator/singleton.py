@@ -2,29 +2,45 @@
 from PyQt5.QtWidgets import QDialog, QWidget
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtCore import Qt
+import types
+
+# from six import with_metaclass
+
 
 import logging
 
+# from https://forum.qt.io/topic/88531/singleton-in-python-with-qobject/2
 
-class Singleton(object):
-    _instance = None
+try:
+    from PyQt5.QtCore import pyqtWrapperType
+except ImportError:
+    from sip import wrappertype as pyqtWrapperType
 
-    def __new__(cls, *args, **kwargs):
-        if not isinstance(cls._instance, cls):
-            cls._instance = super().__new__(cls, *args, **kwargs)
-        return cls._instance
+# also from # https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python?page=1&tab=votes#tab-top
+class Singleton(pyqtWrapperType, type):
+    _instances = {}
 
-# as meta class
-# class Singleton(type):
+    # def __init__(cls, name, bases, dict):
+    #     super().__init__(name, bases, dict)
+    #     cls._instances[cls] = None
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+# # https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python?page=1&tab=votes#tab-top
+# class SingletonMeta(type):
+#     """Singleton as a metaclass."""
 #     _instances = {}
 #
 #     def __call__(cls, *args, **kwargs):
 #         if cls not in cls._instances:
-#             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+#             cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
 #         return cls._instances[cls]
 
 
-class InputWidget(QWidget, Singleton):
+class InputWidget(QWidget):
 
     _is_visible = False
 
@@ -47,7 +63,7 @@ class InputWidget(QWidget, Singleton):
         super(InputWidget, self).closeEvent(a0)
 
 
-class PersistentDialog(Singleton, QDialog):
+class PersistentDialog(QDialog):
 
     _is_opened = False
 
@@ -59,8 +75,33 @@ class PersistentDialog(Singleton, QDialog):
         self._is_opened = True
         super(PersistentDialog, self).show()
 
-    def closeEvent(self, a0: QCloseEvent):
-        # logging.info('Settings closeEvent.')
+    def reject(self) -> None:
+        self._is_opened = False  # need to do it here
+        super(PersistentDialog, self).reject()  # does not call the closeevent...
+
+    def accept(self) -> None:
         self._is_opened = False
-        super(PersistentDialog, self).closeEvent(a0)
+        super(PersistentDialog, self).accept()
+
+
+class TestClass(object, metaclass=Singleton):
+
+    def __init__(self, b):
+        self.b = b
+
+
+if __name__ == '__main__':
+    # pass
+    t = TestClass('asd')
+    b = TestClass(4865)
+    pD = PersistentDialog()
+
+    print(t == b)
+    # t = TestClass(5)
+    # t = TestClass(5)
+    # t = TestClass(5)
+
+
+
+
 

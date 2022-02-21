@@ -43,6 +43,9 @@ delimiter_separators = {
     'Formfeed \\f': '\f'
 }
 
+def get_delimiter_from_idx(idx: int):
+    return list(delimiter_separators.keys())[idx]
+
 
 def dec_separator_setting_factory():
     return {

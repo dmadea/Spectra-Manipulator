@@ -86,7 +86,7 @@ class AbstractCti(BaseTreeItem):
         self._enabled = enabled
         self._expanded = expanded
         self._blockRefresh = False
-        self._last_data = self._data
+        # self._last_data = self._data
         self._description = description
 
     def finalize(self):
@@ -299,7 +299,7 @@ class AbstractCti(BaseTreeItem):
 
         self._updateTargetFromNode()
         for child in self.childItems:
-            child.updateTarget(level = level + 1)
+            child.updateTarget(level=level + 1)
 
 
     def _updateTargetFromNode(self):
@@ -322,9 +322,10 @@ class AbstractCti(BaseTreeItem):
             childItems.logBranch(indent + 1, level=level)
 
     def setDataCalled(self):
-        if self._last_data != self._data:
-            self._last_data = self._data
-            self.model.value_changed.emit(self)
+        self.model.value_changed.emit(self)
+        # if self._last_data != self._data:
+        #     self._last_data = self._data
+        #     self.model.value_changed.emit(self)
 
     #################
     # serialization #
