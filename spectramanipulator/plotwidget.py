@@ -22,8 +22,6 @@ class PlotWidget(pg.GraphicsLayoutWidget, metaclass=Singleton):
 
     def __init__(self, parent=None):
 
-        # TODO singleton...
-
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
 

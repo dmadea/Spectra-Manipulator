@@ -10,6 +10,9 @@ from PyQt5.QtCore import Qt, QCoreApplication
 from PyQt5.QtWidgets import QMessageBox, QMainWindow, QFileDialog, QWidget, QPushButton, QStatusBar, QLabel, \
     QDockWidget, QApplication
 
+from PyQt5.QtWidgets import QMenuBar, QAction, QMenu
+
+
 from PyQt5.QtGui import QColor, QFont
 from PyQt5 import QtWidgets
 import argparse
@@ -37,7 +40,7 @@ from .spectrum import SpectrumList
 from .dialogs.fitwidget import FitWidget
 from .dialogs.load_kinetics_dialog import LoadKineticsDialog
 
-from .config_sel.colors import CmLibSingleton
+from .configtree.colors import CmLibSingleton
 
 import re
 
@@ -46,6 +49,8 @@ import numpy as np
 # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 debug = False
+
+MAX_RECENT_FILES = 20
 
 import cProfile
 import pstats
@@ -609,7 +614,6 @@ class Main(QMainWindow):
 
         cmap = cm.getColorMapByKey(
             self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap'])
-        n = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap/Number of spectra']
 
         start_range = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap/Start range']
         end_range = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap/End range']
@@ -622,9 +626,15 @@ class Main(QMainWindow):
 
         # logging.warning(f"Use gradient colormap {use_grad_cmap}.")
 
-        # iterate over all checked items, if iterated item is already plotted, continue
-        for item_counter, item in enumerate(self.tree_widget.myModel.iterate_items(ItemIterator.Checked)):
+        checked_items = list(self.tree_widget.myModel.iterate_items(ItemIterator.Checked))
 
+        automatically_spread_cmap = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap/Automatically spread']
+        n = self.sett['/Public settings/Plotting/Color and line style/Use gradient colormap/Colormap/Automatically spread/Number of spectra']
+        n = len(checked_items) if automatically_spread_cmap else n
+
+        # iterate over all checked items
+        # for item_counter, item in enumerate(self.tree_widget.myModel.iterate_items(ItemIterator.Checked)):
+        for item_counter, item in enumerate(checked_items):
             if isinstance(item, SpectrumItemGroup):
                 # last_group = item
                 continue
@@ -650,7 +660,6 @@ class Main(QMainWindow):
                 color = get_cmap_color(counter, cmap, n, start_range, end_range, reversed)
             else:
                 color = int_default_color_scheme(counter)
-
             try:
                 line_alpha = item.line_alpha if hasattr(item, 'line_alpha') else 255
                 line_color = color if item.color is None else QColor(*item.color) if isinstance(item.color, (

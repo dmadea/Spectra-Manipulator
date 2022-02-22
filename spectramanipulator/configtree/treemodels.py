@@ -1,11 +1,12 @@
 
 import logging
 
-from argos.qt.treeitems import BaseTreeItem
-from argos.info import DEBUGGING
-from argos.qt import Qt, QtCore, QtSignal, QtSlot
-from argos.utils.cls import check_is_a_string, check_class
-from argos.widgets.constants import TREE_CELL_SIZE_HINT
+from spectramanipulator.configtree.treeitems import BaseTreeItem
+# from argos.info import DEBUGGING
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt, pyqtSignal
+# from argos.utils.cls import check_is_a_string, check_class
+from spectramanipulator.configtree.constants import TREE_CELL_SIZE_HINT
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +33,13 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
     # update the tree model.
     # Inspired by the QStandardItemModel itemChanged signal but named sigItemChanged so that users
     # will see this is argos specific and thus find this definition more easily.
-    sigItemChanged = QtSignal(BaseTreeItem)
+    sigItemChanged = pyqtSignal(BaseTreeItem)
+
+    # when actual value of item changes
+    value_changed = pyqtSignal(BaseTreeItem)
 
     # Emitted in removeAllChildrenAtIndex.
-    sigAllChildrenRemovedAtIndex = QtSignal(QtCore.QModelIndex)
+    sigAllChildrenRemovedAtIndex = pyqtSignal(QtCore.QModelIndex)
 
     def __init__(self, parent=None):
 
@@ -95,7 +99,7 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
         return len(self.horizontalHeaders)
 
 
-    @QtSlot(QtCore.QModelIndex, Qt.ItemDataRole)
+    # @QtSlot(QtCore.QModelIndex, Qt.ItemDataRole)
     def data(self, index, role=Qt.DisplayRole):
         """ Returns the data stored under the given role for the item referred to by the index.
 
@@ -112,11 +116,12 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
             # This Qt slot is called directly from the event loop so uncaught exception make the
             # application crash (exceptions can come from plugins here). Instead of crashing we
             # show the error message in the table/tree and hope the users report the error.
-            if not DEBUGGING and role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole,
-                                          Qt.StatusTipRole, Qt.WhatsThisRole):
-                return repr(ex)
-            else:
-                raise # Still fail hard for the other roles.
+            raise
+            # if not DEBUGGING and role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole,
+            #                               Qt.StatusTipRole, Qt.WhatsThisRole):
+            #     return repr(ex)
+            # else:
+            #     raise # Still fail hard for the other roles.
 
 
     def itemData(self, item, column, role=Qt.DisplayRole):
@@ -275,13 +280,16 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
 
                 # Emit sigItemChanged to update other widgets.
                 self.sigItemChanged.emit(treeItem)
+                treeItem.setDataCalled()  # to handle value_changing
+
             return result
 
         except Exception as ex:
             # When does this still happen? Can we remove it?
+            # when there is a relative import of BaseTreeItem, it crashes for no reason
             logger.warning("Unable to set data: {}".format(ex))
-            if DEBUGGING:
-                raise
+            # if DEBUGGING:
+            #     raise
             return False
 
 
@@ -495,7 +503,7 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
 
         # The actual body of findItemAndIndexPath starts here
 
-        check_is_a_string(path)
+        # check_is_a_string(path)
         if not path:
             raise IndexError("Item not found: {!r}".format(path))
 

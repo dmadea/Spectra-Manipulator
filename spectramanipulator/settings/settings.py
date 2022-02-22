@@ -2,9 +2,9 @@ import logging
 # import sys
 # import pyqtgraph as pg
 # from PyQt5 import QtWidgets
-# from spectramanipulator.config_sel.configtreemodel import ConfigTreeModel
-# from spectramanipulator.config_sel.configtreeview import ConfigTreeView
-# from spectramanipulator.config_sel.abstractcti import AbstractCti
+# from spectramanipulator.configtree.configtreemodel import ConfigTreeModel
+# from spectramanipulator.configtree.configtreeview import ConfigTreeView
+# from spectramanipulator.configtree.abstractcti import AbstractCti
 from spectramanipulator.settings.structure import public_settings
 
 from spectramanipulator.singleton import Singleton
@@ -42,6 +42,7 @@ class Settings(metaclass=Singleton):
                         dict(name='Save project dialog path', value=""),
                         dict(name='Load kinetics last path', value=""),
                         dict(name='Recent project filepaths', value=[]),
+                        dict(name='Import DX file dialog path', value=""),
                         {
                             'name': 'Export spectra as dialog',
                             'items': [

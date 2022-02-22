@@ -4,11 +4,11 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QDialogButtonBox, QPushButton
 from spectramanipulator.singleton import PersistentDialog
 
-from spectramanipulator.config_sel.configtreemodel import ConfigTreeModel
-from spectramanipulator.config_sel.configtreeview import ConfigTreeView
-from spectramanipulator.config_sel.groupcti import MainGroupCti
-from spectramanipulator.config_sel.abstractcti import AbstractCti
-from spectramanipulator.config_sel.pgctis import PgColorMapCti
+from spectramanipulator.configtree.configtreemodel import ConfigTreeModel
+from spectramanipulator.configtree.configtreeview import ConfigTreeView
+from spectramanipulator.configtree.groupcti import MainGroupCti
+from spectramanipulator.configtree.abstractcti import AbstractCti
+from spectramanipulator.configtree.pgctis import PgColorMapCti
 
 
 from spectramanipulator.settings.settings import Settings
@@ -62,6 +62,8 @@ class SettingsDialog(PersistentDialog):
         # self.setWindowFlags(Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
         self.setWindowTitle(title)
+
+        self.resize(500, 600)
 
         self.button_box = QDialogButtonBox(self)
         self.button_box.setOrientation(Qt.Horizontal)

@@ -19,164 +19,28 @@
 """
 from __future__ import print_function
 
-import enum
+# import enum
 import logging
-import os.path
-import sys
+# import os.path
+# import sys
 
 # from .abstractcti import ResetMode
 from .configitemdelegate import ConfigItemDelegate
 from .configtreemodel import ConfigTreeModel
 # from argos.info import DEBUGGING, icons_directory
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 # from PyQt5.QtCore import Qt
 from .argostreeview import ArgosTreeView
-from .constants import RIGHT_DOCK_WIDTH, DOCK_SPACING, DOCK_MARGIN
+# from .constants import RIGHT_DOCK_WIDTH, DOCK_SPACING, DOCK_MARGIN
 # from argos.widgets.misc import BasePanel
 # from argos.utils.cls import check_class
+
+RIGHT_DOCK_WIDTH = 200
 
 logger = logging.getLogger(__name__)
 
 # Qt classes have many ancestors
 #pylint: disable=R0901
-
-
-
-# class ConfigWidget(BasePanel):
-#     """ Shows the configuration. At the moment only the confg tree view.
-#     """
-#
-#     def __init__(self, configTreeModel, parent=None):
-#         """ Constructor.
-#             :param parent:
-#         """
-#         super(ConfigWidget, self).__init__(parent=parent)
-#
-#         # Actions that change the reset mode of the reset button
-#         self.modeActionGroup = QtWidgets.QActionGroup(self)
-#         self.modeActionGroup.setExclusive(True)
-#
-#         self.modeAllAction = QtWidgets.QAction("Reset All", self.modeActionGroup)
-#         self.modeAllAction.setToolTip("Changes button reset mode to reset all settings")
-#         self.modeAllAction.setCheckable(True)
-#         self.modeAllAction.triggered.connect(lambda : self.setResetMode(ResetMode.All))
-#
-#
-#         self.modeRangeAction = QtWidgets.QAction("Reset Ranges", self.modeActionGroup)
-#         self.modeRangeAction.setToolTip("Changes button reset mode to reset axes")
-#         self.modeRangeAction.setCheckable(True)
-#         self.modeRangeAction.triggered.connect(lambda : self.setResetMode(ResetMode.Ranges))
-#
-#         # Sanity check that actions have been added to action group
-#         assert self.modeActionGroup.actions(), "Sanity check. resetActionGroup is empty"
-#
-#         # Actions that actually reset the settings
-#
-#         self.resetAllAction = QtWidgets.QAction("Reset All", self)
-#         self.resetAllAction.setToolTip("Resets all settings.")
-#         self.resetAllAction.setIcon(QtGui.QIcon(os.path.join(icons_directory(), 'reset-l.svg')))
-#         self.resetAllAction.setShortcut("Ctrl+=")
-#
-#         self.resetRangesAction = QtWidgets.QAction("Reset Ranges", self)
-#         self.resetRangesAction.setToolTip(
-#             "Resets range of all plots, color scales, table column/row sizes etc.")
-#         self.resetRangesAction.setIcon(QtGui.QIcon(os.path.join(icons_directory(), 'reset-l.svg')))
-#         self.resetRangesAction.setShortcut("Ctrl+0")
-#
-#         self.resetButtonMenu = QtWidgets.QMenu()
-#         self.resetButtonMenu.addAction(self.resetAllAction)
-#         self.resetButtonMenu.addAction(self.resetRangesAction)
-#         self.resetButtonMenu.addSection("Default")
-#         self.resetButtonMenu.addAction(self.modeAllAction)
-#         self.resetButtonMenu.addAction(self.modeRangeAction)
-#
-#         # Widgets
-#
-#         self.mainLayout = QtWidgets.QVBoxLayout(self)
-#         self.mainLayout.setSpacing(5)
-#         self.mainLayout.setContentsMargins(DOCK_MARGIN, DOCK_MARGIN, DOCK_MARGIN, DOCK_MARGIN)
-#
-#         self.configTreeView = ConfigTreeView(configTreeModel, parent=self)
-#         self.mainLayout.addWidget(self.configTreeView)
-#
-#         self.buttonLayout = QtWidgets.QHBoxLayout()
-#         self.mainLayout.addLayout(self.buttonLayout)
-#
-#         self.autoCheckBox = QtWidgets.QCheckBox("Auto")
-#         self.autoCheckBox.setToolTip("Auto reset when a new item or axis is selected.")
-#         self.autoCheckBox.setChecked(True)
-#
-#         self.resetButton = QtWidgets.QToolButton()
-#         self.resetButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-#         self.resetButton.setDefaultAction(self.resetButtonMenu.defaultAction())
-#         self.resetButton.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
-#         self.resetButton.setMenu(self.resetButtonMenu)
-#
-#         # Set font size to the same as used for push buttons
-#         dummyButton = QtWidgets.QPushButton("dummy")
-#         fontSize = dummyButton.font().pointSize()
-#         del dummyButton
-#
-#         logger.debug("Setting QToolButtons font size to: {} point".format(fontSize))
-#         font = self.resetButton.font()
-#         font.setPointSizeF(fontSize)
-#         self.resetButton.setFont(font)
-#
-#         self.buttonLayout.addStretch()
-#         self.buttonLayout.addWidget(self.autoCheckBox)
-#         self.buttonLayout.addWidget(self.resetButton)
-#         self.buttonLayout.addStretch()
-#
-#         self.autoCheckBox.stateChanged.connect(self.setAutoReset)
-#         self.resetRangesAction.triggered.connect(self.configTreeView.resetAllRanges)
-#         self.resetAllAction.triggered.connect(self.configTreeView.resetAllSettings)
-#
-#         self.setResetMode(self.configTreeView.resetMode)
-#
-#
-#     def setAutoReset(self, value):
-#         """ Sets config tree widget auto reset
-#         """
-#         self.configTreeView.autoReset = value
-#
-#
-#     def setResetMode(self, resetMode):
-#         """ Sets the reset mode of the reset button reset
-#
-#             :param resetMode: 'Ranges' all 'All'
-#         """
-#         check_class(resetMode, ResetMode)
-#         if resetMode == ResetMode.All:
-#             self.resetButton.setDefaultAction(self.resetAllAction)
-#             self.modeAllAction.setChecked(True)
-#         elif resetMode == ResetMode.Ranges:
-#             self.resetButton.setDefaultAction(self.resetRangesAction)
-#             self.modeRangeAction.setChecked(True)
-#         else:
-#             raise ValueError("Unexpected resetMode: {}".format(resetMode))
-#
-#         self.configTreeView.resetMode = resetMode
-#
-#
-#     def marshall(self):
-#         """ Returns a dictionary to save in the persistent settings
-#         """
-#         cfg = dict(
-#             autoRange = self.autoCheckBox.isChecked(),
-#             resetMode = self.configTreeView.resetMode.value,
-#         )
-#         return cfg
-#
-#
-#     def unmarshall(self, cfg):
-#         """ Initializes itself from a config dict form the persistent settings.
-#         """
-#         if 'autoRange' in cfg:
-#             self.autoCheckBox.setChecked(cfg['autoRange'])
-#
-#         if 'resetMode' in cfg:
-#             self.setResetMode(ResetMode(cfg['resetMode']))
-
 
 
 class ConfigTreeView(ArgosTreeView):
@@ -195,8 +59,8 @@ class ConfigTreeView(ArgosTreeView):
         #self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
 
         treeHeader = self.header()
-        treeHeader.resizeSection(ConfigTreeModel.COL_NODE_NAME, RIGHT_DOCK_WIDTH * 0.5)
-        treeHeader.resizeSection(ConfigTreeModel.COL_VALUE, RIGHT_DOCK_WIDTH * 0.5)
+        treeHeader.resizeSection(ConfigTreeModel.COL_NODE_NAME, RIGHT_DOCK_WIDTH)
+        treeHeader.resizeSection(ConfigTreeModel.COL_VALUE, RIGHT_DOCK_WIDTH)
 
         headerNames = self.model().horizontalHeaders
         enabled = dict((name, True) for name in headerNames)

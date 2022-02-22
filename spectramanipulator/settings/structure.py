@@ -1,17 +1,17 @@
 
 import pyqtgraph as pg
-from spectramanipulator.config_sel.groupcti import GroupCti
-from spectramanipulator.config_sel.intcti import IntCti
-from spectramanipulator.config_sel.floatcti import FloatCti, SnFloatCti
-from spectramanipulator.config_sel.stringcti import StringCti
-from spectramanipulator.config_sel.boolcti import BoolCti, BoolGroupCti
-from spectramanipulator.config_sel.pgctis import PgColorMapCti
-from spectramanipulator.config_sel.choicecti import ChoiceCti
+from spectramanipulator.configtree.groupcti import GroupCti
+from spectramanipulator.configtree.intcti import IntCti
+from spectramanipulator.configtree.floatcti import FloatCti, SnFloatCti
+from spectramanipulator.configtree.stringcti import StringCti
+from spectramanipulator.configtree.boolcti import BoolCti, BoolGroupCti
+from spectramanipulator.configtree.pgctis import PgColorMapCti
+from spectramanipulator.configtree.choicecti import ChoiceCti
 
-from spectramanipulator.config_sel.colors import DEFAULT_COLOR_MAP
+from spectramanipulator.configtree.colors import DEFAULT_COLOR_MAP
 
 
-# from spectramanipulator.config_sel.qtctis import ColorCti, FontCti, PenCti
+# from spectramanipulator.configtree.qtctis import ColorCti, FontCti, PenCti
 
 # node_structure = {
 #     'type': class type,
@@ -43,8 +43,9 @@ delimiter_separators = {
     'Formfeed \\f': '\f'
 }
 
+
 def get_delimiter_from_idx(idx: int):
-    return list(delimiter_separators.keys())[idx]
+    return list(delimiter_separators.values())[idx]
 
 
 def dec_separator_setting_factory():
@@ -334,14 +335,24 @@ public_settings = [
                                 'default_value': DEFAULT_COLOR_MAP,
                                 'items': [
                                     {
-                                        'type': IntCti,
-                                        'name': 'Number of spectra',
+                                        'type': BoolCti,
+                                        'name': 'Automatically spread',
                                         'value': None,
-                                        'default_value': 9,
-                                        'minValue': 1,
-                                        'maxValue': 9999999,
-                                        'stepSize': 1,
-                                        'description': 'Number of spectra plotted with the selected gradient.',
+                                        'default_value': True,
+                                        'childrenDisabledValue': True,
+                                        'description': 'No matter what number of spectra are plotted, if true, colormap will automatically spread over all spectra.',
+                                        'items': [
+                                            {
+                                                'type': IntCti,
+                                                'name': 'Number of spectra',
+                                                'value': None,
+                                                'default_value': 10,
+                                                'minValue': 1,
+                                                'maxValue': 9999999,
+                                                'stepSize': 1,
+                                                'description': 'Number of spectra plotted with the selected gradient.',
+                                            },
+                                        ]
                                     },
                                     {
                                         'type': SnFloatCti,

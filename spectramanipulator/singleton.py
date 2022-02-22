@@ -7,7 +7,7 @@ import types
 # from six import with_metaclass
 
 
-import logging
+# import logging
 
 # from https://forum.qt.io/topic/88531/singleton-in-python-with-qobject/2
 
@@ -15,6 +15,7 @@ try:
     from PyQt5.QtCore import pyqtWrapperType
 except ImportError:
     from sip import wrappertype as pyqtWrapperType
+
 
 # also from # https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python?page=1&tab=votes#tab-top
 class Singleton(pyqtWrapperType, type):
@@ -28,16 +29,6 @@ class Singleton(pyqtWrapperType, type):
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
-
-# # https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python?page=1&tab=votes#tab-top
-# class SingletonMeta(type):
-#     """Singleton as a metaclass."""
-#     _instances = {}
-#
-#     def __call__(cls, *args, **kwargs):
-#         if cls not in cls._instances:
-#             cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
-#         return cls._instances[cls]
 
 
 class InputWidget(QWidget):
@@ -57,7 +48,7 @@ class InputWidget(QWidget):
         self._is_visible = True
 
     def closeEvent(self, a0: QCloseEvent):
-        logging.warning('InputWidget closeEvent called.')
+        # logging.warning('InputWidget closeEvent called.')
         self._is_visible = False
         self.dock_widget.setVisible(False)
         super(InputWidget, self).closeEvent(a0)
@@ -94,7 +85,7 @@ if __name__ == '__main__':
     # pass
     t = TestClass('asd')
     b = TestClass(4865)
-    pD = PersistentDialog()
+    # pD = PersistentDialog()
 
     print(t == b)
     # t = TestClass(5)
