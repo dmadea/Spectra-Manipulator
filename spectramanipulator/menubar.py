@@ -2,7 +2,8 @@ from PyQt5.QtWidgets import QMenuBar, QAction, QMenu
 # from spectramanipulator.settings.settings import Settings
 from spectramanipulator.dialogs.fitwidget import FitWidget
 from spectramanipulator import __version__
-from .special_importer import import_DX_HPLC_files
+from functools import partial
+from .special_importer import import_DX_HPLC_files, import_LPF_kinetics, import_EEM_Duetta, import_kinetics_Duetta
 
 
 class MenuBar(QMenuBar):
@@ -54,27 +55,28 @@ class MenuBar(QMenuBar):
         self.file_menu.addAction(self.import_special_menu.menuAction())
 
         self.nano_kinetics = QAction("Kinetics from LFP (with T\u2192A conversion)", self)
-        self.nano_kinetics.triggered.connect(self.main_window.import_LPF_kinetics)
+        self.nano_kinetics.triggered.connect(partial(self.import_spectral_data, import_LPF_kinetics))
         self.import_special_menu.addAction(self.nano_kinetics)
 
         self.EEM_duetta = QAction('Excitation-Emission Map from Duetta Fluorimeter', self)
-        self.EEM_duetta.triggered.connect(self.main_window.import_EEM_Duetta)
+        self.EEM_duetta.triggered.connect(partial(self.import_spectral_data, import_EEM_Duetta))
         self.import_special_menu.addAction(self.EEM_duetta)
 
         self.kinetics_duetta = QAction('Kinetics from Duetta Fluorimeter', self)
-        self.kinetics_duetta.triggered.connect(self.main_window.import_kinetics_Duetta)
+        self.kinetics_duetta.triggered.connect(partial(self.import_spectral_data, import_kinetics_Duetta))
         self.import_special_menu.addAction(self.kinetics_duetta)
 
         self.batch_load_kin = QAction('Batch Load UV-VIS kinetics', self)
         self.batch_load_kin.triggered.connect(self.main_window.batch_load_kinetics)
         self.import_special_menu.addAction(self.batch_load_kin)
 
+        # TODO create old HPLC importer
         self.old_HPLC_chrom = QAction('Old Agilent HPLC chromatogram (*.UV)', self)
         # self.old_HPLC_chrom.triggered.connect(self.main_window...)
         self.import_special_menu.addAction(self.old_HPLC_chrom)
 
         self.new_HPLC_chrom = QAction('New Agilent HPLC chromatogram (*.DX)', self)
-        self.new_HPLC_chrom.triggered.connect(self.import_HPLC_dx_file)
+        self.new_HPLC_chrom.triggered.connect(partial(self.import_spectral_data, import_DX_HPLC_files))
         self.import_special_menu.addAction(self.new_HPLC_chrom)
 
         self.export_selected_spectra_as_act = QAction("&Export Selected Items As", self)
@@ -126,10 +128,11 @@ class MenuBar(QMenuBar):
         self.update_act.triggered.connect(self.main_window.check_for_updates)
         self.about_menu.addAction(self.update_act)
 
-    def import_HPLC_dx_file(self):
-        spectral_data = import_DX_HPLC_files()
+    def import_spectral_data(self, func):
+        spectral_data = func()
+        if spectral_data is None:
+            return
         self.main_window.tree_widget.import_spectra(spectral_data)
-
 
     def open_function_plotter(self):
         # TODO

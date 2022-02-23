@@ -10,7 +10,6 @@ from spectramanipulator.configtree.groupcti import MainGroupCti
 from spectramanipulator.configtree.abstractcti import AbstractCti
 from spectramanipulator.configtree.pgctis import PgColorMapCti
 
-
 from spectramanipulator.settings.settings import Settings
 from copy import deepcopy
 

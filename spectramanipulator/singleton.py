@@ -54,9 +54,20 @@ class InputWidget(QWidget):
         super(InputWidget, self).closeEvent(a0)
 
 
+# singleton-type class but that ensures that __init__ is called every time
 class PersistentDialog(QDialog):
-
     _is_opened = False
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        return super(PersistentDialog, cls).__new__(*args, **kwargs)
+        # if cls._instance is None:
+        #     cls._instance = super(PersistentDialog, cls).__new__(*args, **kwargs)
+        # return cls._instance
+
+    # def __init__(self, parent=None):
+    #     self._instance = self
+    #     super(PersistentDialog, self).__init__(parent)
 
     def show(self):
         if self._is_opened:
@@ -68,10 +79,12 @@ class PersistentDialog(QDialog):
 
     def reject(self) -> None:
         self._is_opened = False  # need to do it here
+        self._instance = None
         super(PersistentDialog, self).reject()  # does not call the closeevent...
 
     def accept(self) -> None:
         self._is_opened = False
+        self._instance = None
         super(PersistentDialog, self).accept()
 
 

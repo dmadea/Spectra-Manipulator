@@ -1,5 +1,4 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-
+from PyQt5 import QtWidgets
 from .stylewidget_gui import Ui_Form
 from PyQt5.QtWidgets import QColorDialog
 from PyQt5.QtGui import QColor
@@ -78,7 +77,9 @@ class StyleWidget(QtWidgets.QWidget, Ui_Form):
         # self.sbSymBrushAlpha.setValue(255)
         # self.sbSymFillAlpha.setValue(255)
 
-        self.dsbLineWidth.setValue(Settings.line_width)
+        self.sett = Settings()
+
+        self.dsbLineWidth.setValue(self.sett['/Public settings/Plotting/Color and line style/Line width'])
         self.combLineType.setCurrentIndex(0)
         self.combSymbol.setCurrentIndex(0)
 

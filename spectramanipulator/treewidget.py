@@ -16,7 +16,8 @@ from spectramanipulator.dialogs.stylewidget import StyleWidget
 from spectramanipulator.dialogs.rangewidget import RangeWidget
 from spectramanipulator.dialogs.export_spectra_as import ExportSpectraAsDialog
 
-from spectramanipulator.settings.settings import Settings
+from .settings.settings import Settings
+from .settings.structure import get_delimiter_from_idx
 from spectramanipulator.logger import Logger
 from spectramanipulator.utils.rename import rename
 
@@ -96,6 +97,8 @@ class TreeWidget(TreeView):
         self.myModel.info_modified_signal.connect(self.info_modified)
         self.myModel.items_ungrouped_signal.connect(lambda: self.redraw_spectra.emit())
 
+        self.sett = Settings()
+
     def items_deleted(self, item_was_checked):
         if item_was_checked:
             self.redraw_spectra.emit()
@@ -135,37 +138,37 @@ class TreeWidget(TreeView):
 
     def export_selected_items_as(self):
 
-        if ExportSpectraAsDialog.is_opened:
-            ExportSpectraAsDialog.get_instance().activateWindow()
-            ExportSpectraAsDialog.get_instance().setFocus()
-            return
+        # if ExportSpectraAsDialog.is_opened:
+        #     ExportSpectraAsDialog.get_instance().activateWindow()
+        #     ExportSpectraAsDialog.get_instance().setFocus()
+        #     return
 
         if len(self.selectedIndexes()) == 0:
             return
 
-        dialog = ExportSpectraAsDialog()
+        def accepted():
+            path, ext, delimiter, decimal_sep = dialog.result
 
-        if not dialog.accepted:
-            return
+            sp_list = get_hierarchic_list(
+                self.myModel.iterate_selected_items(skip_groups=True,
+                                                    skip_childs_in_selected_groups=False))
 
-        path, ext, delimiter, decimal_sep = dialog.result
+            try:
+                list_to_files(sp_list, path, ext,
+                              include_group_name=self.sett['/Public settings/Export/Files/Include group name'],
+                              include_header=self.sett['/Public settings/Export/Files/Include header'],
+                              delimiter=delimiter,
+                              decimal_sep=decimal_sep,
+                              x_data_name=self.sett['/Public settings/Plotting/Graph/X axis label'])
 
-        sp_list = get_hierarchic_list(
-            self.myModel.iterate_selected_items(skip_groups=True,
-                                                skip_childs_in_selected_groups=False))
+            except Exception as ex:
+                QMessageBox.warning(self, 'Error', ex.__str__(), QMessageBox.Ok)
 
-        try:
-            list_to_files(sp_list, path, ext,
-                          include_group_name=Settings.files_exp_include_group_name,
-                          include_header=Settings.files_exp_include_header,
-                          delimiter=delimiter,
-                          decimal_sep=decimal_sep,
-                          x_data_name=Settings.bottom_axis_label)
+            Logger.message(f"Data were saved to {path}")
 
-        except Exception as ex:
-            QMessageBox.warning(self, 'Error', ex.__str__(), QMessageBox.Ok)
+        dialog = ExportSpectraAsDialog(accepted, parent=self)
+        dialog.show()
 
-        Logger.message(f"Data were saved to {path}")
 
     def copy_selected_items_to_clipboard(self):
 
@@ -178,11 +181,13 @@ class TreeWidget(TreeView):
         Logger.status_message("Copying selected items to clipboard...")
         try:
 
-            output = list_to_string(sp_list, include_group_name=Settings.clip_exp_include_group_name,
-                                    include_header=Settings.clip_exp_include_header,
-                                    delimiter=Settings.clip_exp_delimiter,
-                                    decimal_sep=Settings.clip_exp_decimal_sep,
-                                    x_data_name=Settings.bottom_axis_label)
+            delimiter = get_delimiter_from_idx(self.sett['/Public settings/Export/Clipboard/Delimiter'])
+
+            output = list_to_string(sp_list, include_group_name=self.sett['/Public settings/Export/Clipboard/Include group name'],
+                                    include_header=self.sett['/Public settings/Export/Clipboard/Include header'],
+                                    delimiter=delimiter,
+                                    decimal_sep=self.sett['/Public settings/Export/Clipboard/Decimal separator'],
+                                    x_data_name=self.sett['/Public settings/Plotting/Graph/X axis label'])
             cb = QApplication.clipboard()
             cb.clear(mode=cb.Clipboard)
             cb.setText(output, mode=cb.Clipboard)
@@ -197,7 +202,7 @@ class TreeWidget(TreeView):
 
         m = QApplication.clipboard().mimeData()
 
-        if m is not None and m.hasFormat("XML Spreadsheet") and not Settings.excel_imp_as_text:
+        if m is not None and m.hasFormat("XML Spreadsheet") and not self.sett['/Public settings/Import/Parser/Clipboard/Import as text from Excel']:
             self.parse_XML_Spreadsheet(m.data("XML Spreadsheet").data())
             return
 
@@ -873,8 +878,8 @@ class TreeWidget(TreeView):
                       b_corr=None, cut=None, corr_to_zero_time=True):
         """Given a directory name that contains folders of individual experiments, it loads all kinetics.
            each experiment folder must contain folder spectra (or defined in spectra_dir_name arg.)
-            if blank is given, it will be subtracted from all spectra, times.txt will contain
-            times for all spectra, optional baseline correction and cut can be done.
+           if blank is given, it will be subtracted from all spectra, times.txt will contain
+           times for all spectra, optional baseline correction and cut can be done.
 
         Folder structure:
             [dir_name]

@@ -14,13 +14,9 @@ class RangeWidget(InputWidget):
     def __init__(self, dock_widget, accepted_func: Callable = None,
                  label_text='Set xrange:', title='SetRangeDialog', parent=None):
 
-        # if RangeWidget.instance is not None:
-        #     PlotWidget._instance.removeItem(RangeWidget.instance.lr)
-
         self.accepted_func = accepted_func
         super(RangeWidget, self).__init__(dock_widget, title, parent)
 
-        # self.pw = PlotWidget._instance
         self.pw = PlotWidget()
 
         self.le_x0 = MyLineEdit()

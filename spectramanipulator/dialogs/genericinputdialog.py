@@ -3,7 +3,8 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 from ..singleton import Singleton
-import sys
+# import sys
+
 
 class GenericInputDialog(QtWidgets.QDialog, metaclass=Singleton):
 
@@ -84,12 +85,10 @@ class GenericInputDialog(QtWidgets.QDialog, metaclass=Singleton):
         self.set_result()
         # self.accepted = True
         self.is_opened = False
-        self._instance = None
         super(GenericInputDialog, self).accept()
 
     def reject(self):
         self.is_opened = False
-        self._instance = None
         super(GenericInputDialog, self).reject()
 
 

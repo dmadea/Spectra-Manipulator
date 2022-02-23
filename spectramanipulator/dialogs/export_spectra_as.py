@@ -1,56 +1,88 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QLabel, QLineEdit, QDialogButtonBox, QToolButton, QVBoxLayout, QGridLayout, QHBoxLayout
 
 from PyQt5.QtCore import Qt
-from .gui_export_spectra_as import Ui_Dialog
+from typing import Callable
+# from .gui_export_spectra_as import Ui_Dialog
 
 from pathlib import Path
 
 import os
 
-from ..settings.settings import Settings
+from spectramanipulator.settings.settings import Settings
+from spectramanipulator.singleton import PersistentDialog
 
 
-class ExportSpectraAsDialog(QtWidgets.QDialog, Ui_Dialog):
-    # static variables
-    is_opened = False
-    _instance = None
+class ExportSpectraAsDialog(PersistentDialog):
 
-    def __init__(self, parent=None):
+    def __init__(self, accepted_func: Callable, parent=None):
         super(ExportSpectraAsDialog, self).__init__(parent)
-        self.setupUi(self)
 
-        # disable resizing of the window,
-        # help from https://stackoverflow.com/questions/16673074/in-qt-c-how-can-i-fully-disable-resizing-a-window-including-the-resize-icon-w
-        self.setWindowFlags(Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
-
+        self.sett = Settings()
+        self.accepted_func = accepted_func
         self.setWindowTitle("Export Selected Spectra As")
+
+        self.description_label = QLabel("Each selected top-level item will be saved in separate file with its name as filename. Spectra in groups will be concatenated. Select directory where spectra will be saved and specify the file extension. Non existing directories will be created. Top level items with same name will be overwritten. Delimiter field: use \\t for tabulator.")
+        self.description_label.setWordWrap(True)
+
+        self.leDir = QLineEdit()
+        self.leFileExt = QLineEdit()
+        self.leDelimiter = QLineEdit()
+        self.leDecimalSeparator = QLineEdit()
+
+        self.btnDir = QToolButton()
+        self.btnDir.setText('...')
+        self.btnDir.clicked.connect(self.btnDir_clicked)
+        self.label1 = QLabel('File extension:')
+        self.label2 = QLabel('Delimiter:')
+        self.label3 = QLabel('Decimal separator:')
+
+        self.button_box = QDialogButtonBox(self)
+        self.button_box.setOrientation(Qt.Horizontal)
+        self.button_box.setStandardButtons(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+
+        self.button_box.accepted.connect(self.accept)  # OK button
+        self.button_box.rejected.connect(self.reject)  # Cancel button
+
+        self.grid_layout = QGridLayout()
+
+        self.grid_layout.addWidget(self.label1, 0, 0, 1, 1)
+        self.grid_layout.addWidget(self.label2, 1, 0, 1, 1)
+        self.grid_layout.addWidget(self.label3, 2, 0, 1, 1)
+        self.grid_layout.addWidget(self.leFileExt, 0, 1, 1, 1)
+        self.grid_layout.addWidget(self.leDelimiter, 1, 1, 1, 1)
+        self.grid_layout.addWidget(self.leDecimalSeparator, 2, 1, 1, 1)
+
+        self.h_layout = QHBoxLayout()
+        self.h_layout.addWidget(self.leDir)
+        self.h_layout.addWidget(self.btnDir)
+
+        self.h2_layout = QHBoxLayout()
+        self.h2_layout.addStretch()
+        self.h2_layout.addWidget(self.button_box)
+
+        self.main_layout = QVBoxLayout()
+        self.main_layout.addWidget(self.description_label)
+        self.main_layout.addLayout(self.h_layout)
+        self.main_layout.addLayout(self.grid_layout)
+        self.main_layout.addLayout(self.h2_layout)
+
+        self.setLayout(self.main_layout)
 
         self.leDir.setText(self.sett['/Private settings/Export spectra as dialog/Path'])
         self.leFileExt.setText(self.sett['/Private settings/Export spectra as dialog/Ext'])
         self.leDelimiter.setText(self.textualize_special_chars(self.sett['/Private settings/Export spectra as dialog/Delimiter']))
         self.leDecimalSeparator.setText(self.sett['/Private settings/Export spectra as dialog/Decimal separator'])
-
-        self.btnDir.clicked.connect(self.btnDir_clicked)
+        print('__init__ called')
 
         self.accepted = False
         self.result = None
-
-        ExportSpectraAsDialog.is_opened = True
-        ExportSpectraAsDialog._instance = self
-
-        self.show()
-        self.exec()
 
     def btnDir_clicked(self):
         dir = QFileDialog.getExistingDirectory(self, "Select Directory", self.leDir.text())
         if dir != '':
             self.leDir.setText(dir)
-
-    @staticmethod
-    def get_instance():
-        return ExportSpectraAsDialog._instance
 
     @staticmethod
     def textualize_special_chars(text):
@@ -95,22 +127,16 @@ class ExportSpectraAsDialog(QtWidgets.QDialog, Ui_Dialog):
             self.leDecimalSeparator.text()
         )
 
-        Settings.export_spectra_as_dialog_path = self.leDir.text()
-        Settings.export_spectra_as_dialog_ext = ext
-        Settings.export_spectra_as_dialog_delimiter = delimiter
-        Settings.export_spectra_as_dialog_decimal_sep = self.leDecimalSeparator.text()
+        self.sett['/Private settings/Export spectra as dialog/Path'] = self.leDir.text()
+        self.sett['/Private settings/Export spectra as dialog/Ext'] = ext
+        self.sett['/Private settings/Export spectra as dialog/Delimiter'] = delimiter
+        self.sett['/Private settings/Export spectra as dialog/Decimal separator'] = self.leDecimalSeparator.text()
 
-        Settings.save()
+        self.sett.save()
 
         self.accepted = True
-        ExportSpectraAsDialog.is_opened = False
-        ExportSpectraAsDialog._instance = None
+        self.accepted_func()
         super(ExportSpectraAsDialog, self).accept()
-
-    def reject(self):
-        ExportSpectraAsDialog.is_opened = False
-        ExportSpectraAsDialog._instance = None
-        super(ExportSpectraAsDialog, self).reject()
 
 
 if __name__ == "__main__":
@@ -118,5 +144,5 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     Dialog = ExportSpectraAsDialog()
-    # Dialog.show()
+    Dialog.show()
     sys.exit(app.exec_())

@@ -1,3 +1,5 @@
+# standalone version located on my Github https://github.com/dmadea/File-Converters/blob/master/dx2csv-hplc.py
+
 import os
 import numpy as np
 import struct

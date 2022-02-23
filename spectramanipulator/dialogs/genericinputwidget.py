@@ -6,13 +6,13 @@ import sys
 from spectramanipulator.singleton import Singleton
 
 
-class GenericInputWidget(QtWidgets.QWidget, Singleton):
+class GenericInputWidget(QtWidgets.QWidget, metaclass=Singleton):
 
     def __init__(self, widget_list=None, label_text='Some shity descriptive text...', title='GenericInputDialog',
                  parent=None):
         super(GenericInputWidget, self).__init__(parent)
 
-        GenericInputWidget.instance = self
+        # GenericInputWidget.instance = self
 
         self.button_box = QtWidgets.QDialogButtonBox(self)
         self.button_box.setOrientation(QtCore.Qt.Horizontal)
@@ -66,10 +66,6 @@ class GenericInputWidget(QtWidgets.QWidget, Singleton):
     def accept(self):
         # self.set_result()
         self.accepted = True
-        GenericInputWidget.instance = None
-
-    def reject(self):
-        GenericInputWidget.instance = None
 
 
 # if __name__ == "__main__":
