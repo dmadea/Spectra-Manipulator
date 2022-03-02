@@ -35,17 +35,15 @@ from .misc import get_cmap_color, int_default_color_scheme, int_line_style
 
 from .dialogs.settingsdialog import SettingsDialog
 from .treeview.item import SpectrumItemGroup
-from .dataloader import parse_files_specific
-from .spectrum import SpectrumList
+# from .dataloader import parse_files_specific
+# from .spectrum import SpectrumList
 from .dialogs.fitwidget import FitWidget
 from .dialogs.load_kinetics_dialog import LoadKineticsDialog
 
 from .configtree.colors import CmLibSingleton
 
-import re
-
-import numpy as np
-
+# import re
+# import numpy as np
 # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 debug = False
@@ -207,10 +205,10 @@ class Main(QMainWindow):
 
     def open_settings(self):
 
-        dialog = SettingsDialog.get(self)
+        dialog = SettingsDialog(self)
 
         def accepted_applied(save=False):
-            # print('accepted_applied')
+            # print(f'accepted_applied {save=}')
             # TODO -->  fix - is run multiple times
             if save:
                 self.sett.save()
@@ -386,7 +384,6 @@ class Main(QMainWindow):
         self.sett.save()
 
         self.tree_widget.import_files(filepaths)
-
 
     def redraw_all_spectra(self):
         self.grpView.clear_plots()

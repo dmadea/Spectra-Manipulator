@@ -138,11 +138,6 @@ class TreeWidget(TreeView):
 
     def export_selected_items_as(self):
 
-        # if ExportSpectraAsDialog.is_opened:
-        #     ExportSpectraAsDialog.get_instance().activateWindow()
-        #     ExportSpectraAsDialog.get_instance().setFocus()
-        #     return
-
         if len(self.selectedIndexes()) == 0:
             return
 
@@ -168,7 +163,6 @@ class TreeWidget(TreeView):
 
         dialog = ExportSpectraAsDialog(accepted, parent=self)
         dialog.show()
-
 
     def copy_selected_items_to_clipboard(self):
 

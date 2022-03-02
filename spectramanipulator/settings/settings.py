@@ -142,6 +142,8 @@ class Settings(metaclass=Singleton):
             with open(Settings.get_config_filepath(), "w") as file:
                 json.dump(sett, file, sort_keys=False, indent=4, separators=(',', ': '))
 
+            print('settings saved')
+
         except Exception as ex:
             logging.error("Error saving settings to file {}. Error message:\n{}".format(
                 Settings._config_filename, ex.__str__()))

@@ -2,11 +2,8 @@
 from PyQt5.QtWidgets import QDialog, QWidget
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtCore import Qt
-import types
-
+# import types
 # from six import with_metaclass
-
-
 # import logging
 
 # from https://forum.qt.io/topic/88531/singleton-in-python-with-qobject/2
@@ -19,16 +16,18 @@ except ImportError:
 
 # also from # https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python?page=1&tab=votes#tab-top
 class Singleton(pyqtWrapperType, type):
+    """
+        Singleton metaclass.
+    """
     _instances = {}
 
-    # def __init__(cls, name, bases, dict):
-    #     super().__init__(name, bases, dict)
-    #     cls._instances[cls] = None
-
     def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
+        if cls not in cls._instances or cls._instances[cls] is None:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
+
+    def remove_instance(cls):
+        cls._instances[cls] = None
 
 
 class InputWidget(QWidget):
@@ -54,17 +53,13 @@ class InputWidget(QWidget):
         super(InputWidget, self).closeEvent(a0)
 
 
-class PersistentDialog(QDialog):
+# the instance is removed after the dialog is closed
+class PersistentDialog(QDialog, metaclass=Singleton):
+    """
+    Singleton-type class that implement persistent dialog. After it is instantiated, it stores
+    its instance. After its closure, the instance is removed.
+    """
     _is_opened = False
-    _instance = None
-
-    # use this instead of constructor, behaves like singleton if the dialog is already opened
-    @classmethod
-    def get(cls, parent=None, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = cls(parent, *args, **kwargs)
-
-        return cls._instance
 
     def show(self):
         if self._is_opened:
@@ -76,12 +71,12 @@ class PersistentDialog(QDialog):
 
     def reject(self) -> None:
         self._is_opened = False  # need to do it here
-        self._instance = None
+        self.__class__.remove_instance()  # set the instance to None
         super(PersistentDialog, self).reject()  # does not call the closeevent...
 
     def accept(self) -> None:
         self._is_opened = False
-        self._instance = None
+        self.__class__.remove_instance()  # set the instance to None
         super(PersistentDialog, self).accept()
 
 
@@ -101,8 +96,4 @@ if __name__ == '__main__':
     # t = TestClass(5)
     # t = TestClass(5)
     # t = TestClass(5)
-
-
-
-
 

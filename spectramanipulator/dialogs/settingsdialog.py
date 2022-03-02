@@ -53,7 +53,6 @@ class SettingsDialog(PersistentDialog):
     # flags=Qt.WindowStaysOnTopHint
 
     def __init__(self, parent=None, title='Settings Dialog', flags=Qt.WindowStaysOnTopHint):
-
         super(SettingsDialog, self).__init__(parent)
 
         # # disable resizing of the window,
