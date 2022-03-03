@@ -27,6 +27,9 @@ class Singleton(pyqtWrapperType, type):
         return cls._instances[cls]
 
     def remove_instance(cls):
+        """
+        Sets the instance of a class to None.
+        """
         cls._instances[cls] = None
 
 

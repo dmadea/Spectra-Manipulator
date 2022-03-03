@@ -205,6 +205,8 @@ class Main(QMainWindow):
 
     def open_settings(self):
 
+        # TODO -> change as bottom
+
         dialog = SettingsDialog(self)
 
         def accepted_applied(save=False):
@@ -224,36 +226,32 @@ class Main(QMainWindow):
 
     def batch_load_kinetics(self):
         """Opens a Batch Load Kinetics dialog and then call the function from treewidget"""
-        if LoadKineticsDialog.is_opened:
-            LoadKineticsDialog.get_instance().activateWindow()
-            LoadKineticsDialog.get_instance().setFocus()
-            return
 
-        load_kin_dialog = LoadKineticsDialog()
+        def accepted():
+            paths = load_kin_dialog.lwFolders.paths
+            if len(paths) == 0:
+                return
 
-        if not load_kin_dialog.accepted:
-            return
+            try:
+                spectra_dir_name = load_kin_dialog.leSpectra.text()
+                times_name = load_kin_dialog.leTimes.text()
+                blank_name = load_kin_dialog.leBlank.text()
+                dt = float(
+                    load_kin_dialog.leTimeUnit.text()) if load_kin_dialog.cbKineticsMeasuredByEach.isChecked() else None
+                bcorr_range = (float(load_kin_dialog.leBCorr0.text()), float(load_kin_dialog.leBCorr1.text())) \
+                    if load_kin_dialog.cbBCorr.isChecked() else None
 
-        paths = load_kin_dialog.lwFolders.paths
-        if len(paths) == 0:
-            return
+                cut_range = (float(load_kin_dialog.leCut0.text()), float(load_kin_dialog.leCut1.text())) \
+                    if load_kin_dialog.cbCut.isChecked() else None
 
-        try:
-            spectra_dir_name = load_kin_dialog.leSpectra.text()
-            times_name = load_kin_dialog.leTimes.text()
-            blank_name = load_kin_dialog.leBlank.text()
-            dt = float(load_kin_dialog.leTimeUnit.text()) if load_kin_dialog.cbKineticsMeasuredByEach.isChecked() else None
-            bcorr_range = (float(load_kin_dialog.leBCorr0.text()), float(load_kin_dialog.leBCorr1.text())) \
-                if load_kin_dialog.cbBCorr.isChecked() else None
+                for path in paths:
+                    self.tree_widget.load_kinetic(path, spectra_dir_name, times_name, blank_name,
+                                                  dt=dt, b_corr=bcorr_range, cut=cut_range)
+            except Exception as ex:
+                Logger.message(f"Unable to load kinetics: {ex.__str__()}")
 
-            cut_range = (float(load_kin_dialog.leCut0.text()), float(load_kin_dialog.leCut1.text())) \
-                if load_kin_dialog.cbCut.isChecked() else None
-
-            for path in paths:
-                self.tree_widget.load_kinetic(path, spectra_dir_name, times_name, blank_name,
-                                              dt=dt, b_corr=bcorr_range, cut=cut_range)
-        except Exception as ex:
-            Logger.message(f"Unable to load kinetics: {ex.__str__()}")
+        load_kin_dialog = LoadKineticsDialog(accepted)
+        load_kin_dialog.show()
 
     @staticmethod
     def _open_file_dialog(caption='Open ...', initial_dir='...', _filter='All Files (*.*)',
