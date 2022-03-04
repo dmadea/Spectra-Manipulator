@@ -12,6 +12,7 @@ from spectramanipulator.configtree.pgctis import PgColorMapCti
 
 from spectramanipulator.settings.settings import Settings
 from copy import deepcopy
+from typing import Callable
 
 
 class RootCti(MainGroupCti):
@@ -48,19 +49,17 @@ class RootCti(MainGroupCti):
 
 class SettingsDialog(PersistentDialog):
 
-    applied = pyqtSignal()
-
     # flags=Qt.WindowStaysOnTopHint
 
-    def __init__(self, parent=None, title='Settings Dialog', flags=Qt.WindowStaysOnTopHint):
+    def __init__(self, accepted_func: Callable, rejected_func: Callable, applied_func: Callable,
+                 parent=None, title='Settings Dialog', flags=Qt.WindowStaysOnTopHint):
         super(SettingsDialog, self).__init__(parent)
 
-        # # disable resizing of the window,
-        # # help from https://stackoverflow.com/questions/16673074/in-qt-c-how-can-i-fully-disable-resizing-a-window-including-the-resize-icon-w
-        # self.setWindowFlags(Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
+        self.accepted_func = accepted_func
+        self.rejected_func = rejected_func
+        self.applied_func = applied_func
 
         self.setWindowTitle(title)
-
         self.resize(500, 600)
 
         self.button_box = QDialogButtonBox(self)
@@ -104,12 +103,15 @@ class SettingsDialog(PersistentDialog):
 
         self.VLayout.addWidget(self.tree_view)
         self.VLayout.addLayout(self.bottom_layout)
-        # self.VLayout.setContentsMargins(0, 0, 0, 0)
 
         self.setLayout(self.VLayout)
 
     def apply(self):
-        self.applied.emit()
+        self.applied_func()
+
+    def accept(self) -> None:
+        self.accepted_func()
+        super(SettingsDialog, self).accept()
 
     def restore_settings(self):
         # maybe not necessary
@@ -121,21 +123,16 @@ class SettingsDialog(PersistentDialog):
     def reject(self):
         # keep the original settings
         self.sett.settings = self.last_setting_dict
+        self.rejected_func()
         super(SettingsDialog, self).reject()
 
 
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    dialog = SettingsDialog()
-    # dialog.accepted.connect(lambda: print('accepted'))
-    # dialog.applied.connect(lambda: print('applied'))
+    dialog = SettingsDialog(lambda: None, lambda: None, lambda: None)
 
     dialog.show()
-
-    # TODO apply button does not work
-    # dialog2 = SettingsDialog()
-    # dialog2.show()
 
     sys.exit(app.exec_())
 

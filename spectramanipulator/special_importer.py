@@ -5,8 +5,10 @@ from .spectrum import SpectrumList
 from .settings.settings import Settings
 from PyQt5.QtWidgets import QFileDialog
 from .parsers.hplc_dxfileparser import parse_HPLC_DX_file
+from .dialogs.load_kinetics_dialog import LoadKineticsDialog
 import re
 from .logger import Logger
+from typing import Callable
 
 
 def open_file_dialog(caption='Open ...', initial_dir='...', _filter='All Files (*.*)',
@@ -26,6 +28,40 @@ def open_file_dialog(caption='Open ...', initial_dir='...', _filter='All Files (
         return None
 
     return filepaths[0]
+
+
+def batch_load_kinetics(load_kinetic_func: Callable):
+    """Opens a Batch Load Kinetics dialog and then call the function from treewidget
+
+    load_kinetic_func is a function from treewidget for loading a kinetics.
+
+    """
+
+    def accepted():
+        paths = load_kin_dialog.lwFolders.paths
+        if len(paths) == 0:
+            return
+
+        try:
+            spectra_dir_name = load_kin_dialog.leSpectra.text()
+            times_name = load_kin_dialog.leTimes.text()
+            blank_name = load_kin_dialog.leBlank.text()
+            dt = float(
+                load_kin_dialog.leTimeUnit.text()) if load_kin_dialog.cbKineticsMeasuredByEach.isChecked() else None
+            bcorr_range = (float(load_kin_dialog.leBCorr0.text()), float(load_kin_dialog.leBCorr1.text())) \
+                if load_kin_dialog.cbBCorr.isChecked() else None
+
+            cut_range = (float(load_kin_dialog.leCut0.text()), float(load_kin_dialog.leCut1.text())) \
+                if load_kin_dialog.cbCut.isChecked() else None
+
+            for path in paths:
+                load_kinetic_func(path, spectra_dir_name, times_name, blank_name,
+                                  dt=dt, b_corr=bcorr_range, cut=cut_range)
+        except Exception as ex:
+            Logger.message(f"Unable to load kinetics: {ex.__str__()}")
+
+    load_kin_dialog = LoadKineticsDialog(accepted)
+    load_kin_dialog.show()
 
 
 def import_DX_HPLC_files():

@@ -3,18 +3,15 @@ import sys
 import os
 from PyQt5 import QtCore
 from spectramanipulator import windows
-import logging
+# import logging
 
 # from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QCoreApplication
 from PyQt5.QtWidgets import QMessageBox, QMainWindow, QFileDialog, QWidget, QPushButton, QStatusBar, QLabel, \
     QDockWidget, QApplication
 
-from PyQt5.QtWidgets import QMenuBar, QAction, QMenu
-
-
 from PyQt5.QtGui import QColor, QFont
-from PyQt5 import QtWidgets
+# from PyQt5 import QtWidgets
 import argparse
 from spectramanipulator import __version__
 from .update import TaskUpdate
@@ -38,7 +35,6 @@ from .treeview.item import SpectrumItemGroup
 # from .dataloader import parse_files_specific
 # from .spectrum import SpectrumList
 from .dialogs.fitwidget import FitWidget
-from .dialogs.load_kinetics_dialog import LoadKineticsDialog
 
 from .configtree.colors import CmLibSingleton
 
@@ -50,8 +46,8 @@ debug = False
 
 MAX_RECENT_FILES = 20
 
-import cProfile
-import pstats
+# import cProfile
+# import pstats
 
 
 class Main(QMainWindow):
@@ -186,7 +182,6 @@ class Main(QMainWindow):
         self.update_recent_files()
 
     def actioncopy_to_svg_clicked(self):
-
         self.grpView.save_plot_to_clipboard_as_svg()
 
     # on close
@@ -204,54 +199,16 @@ class Main(QMainWindow):
                 event.ignore()
 
     def open_settings(self):
-
-        # TODO -> change as bottom
-
-        dialog = SettingsDialog(self)
-
         def accepted_applied(save=False):
-            # print(f'accepted_applied {save=}')
-            # TODO -->  fix - is run multiple times
             if save:
                 self.sett.save()
 
             self.grpView.update_settings()
             self.redraw_all_spectra()
 
-        dialog.accepted.connect(lambda: accepted_applied(True))
-        dialog.applied.connect(lambda: accepted_applied(False))
-        dialog.rejected.connect(lambda: accepted_applied(False))
-
+        dialog = SettingsDialog(lambda: accepted_applied(True), lambda: accepted_applied(False),
+                                lambda: accepted_applied(False), parent=self)
         dialog.show()
-
-    def batch_load_kinetics(self):
-        """Opens a Batch Load Kinetics dialog and then call the function from treewidget"""
-
-        def accepted():
-            paths = load_kin_dialog.lwFolders.paths
-            if len(paths) == 0:
-                return
-
-            try:
-                spectra_dir_name = load_kin_dialog.leSpectra.text()
-                times_name = load_kin_dialog.leTimes.text()
-                blank_name = load_kin_dialog.leBlank.text()
-                dt = float(
-                    load_kin_dialog.leTimeUnit.text()) if load_kin_dialog.cbKineticsMeasuredByEach.isChecked() else None
-                bcorr_range = (float(load_kin_dialog.leBCorr0.text()), float(load_kin_dialog.leBCorr1.text())) \
-                    if load_kin_dialog.cbBCorr.isChecked() else None
-
-                cut_range = (float(load_kin_dialog.leCut0.text()), float(load_kin_dialog.leCut1.text())) \
-                    if load_kin_dialog.cbCut.isChecked() else None
-
-                for path in paths:
-                    self.tree_widget.load_kinetic(path, spectra_dir_name, times_name, blank_name,
-                                                  dt=dt, b_corr=bcorr_range, cut=cut_range)
-            except Exception as ex:
-                Logger.message(f"Unable to load kinetics: {ex.__str__()}")
-
-        load_kin_dialog = LoadKineticsDialog(accepted)
-        load_kin_dialog.show()
 
     @staticmethod
     def _open_file_dialog(caption='Open ...', initial_dir='...', _filter='All Files (*.*)',

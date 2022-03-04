@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import QMenuBar, QAction, QMenu
 # from spectramanipulator.settings.settings import Settings
-from spectramanipulator.dialogs.fitwidget import FitWidget
+# from spectramanipulator.dialogs.fitwidget import FitWidget
 from spectramanipulator import __version__
 from functools import partial
-from .special_importer import import_DX_HPLC_files, import_LPF_kinetics, import_EEM_Duetta, import_kinetics_Duetta
+from .special_importer import import_DX_HPLC_files, import_LPF_kinetics, import_EEM_Duetta, import_kinetics_Duetta, batch_load_kinetics
 
 
 class MenuBar(QMenuBar):
@@ -67,7 +67,8 @@ class MenuBar(QMenuBar):
         self.import_special_menu.addAction(self.kinetics_duetta)
 
         self.batch_load_kin = QAction('Batch Load UV-VIS kinetics', self)
-        self.batch_load_kin.triggered.connect(self.main_window.batch_load_kinetics)
+        self.batch_load_kin.triggered.connect(lambda: batch_load_kinetics(self.main_window.tree_widget.load_kinetic))
+
         self.import_special_menu.addAction(self.batch_load_kin)
 
         # TODO create old HPLC importer
