@@ -1,26 +1,20 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
 
+from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QLabel, QLineEdit, QDialogButtonBox, QToolButton, QVBoxLayout, QGridLayout, QHBoxLayout
-
 from PyQt5.QtCore import Qt
 from typing import Callable
-# from .gui_export_spectra_as import Ui_Dialog
-
 from pathlib import Path
-
+from spectramanipulator.settings.settings import Settings
+from spectramanipulator.singleton import PersistentOKCancelDialog
 import os
 
-from spectramanipulator.settings.settings import Settings
-from spectramanipulator.singleton import PersistentDialog
 
-
-class ExportSpectraAsDialog(PersistentDialog):
+class ExportSpectraAsDialog(PersistentOKCancelDialog):
 
     def __init__(self, accepted_func: Callable, parent=None):
-        super(ExportSpectraAsDialog, self).__init__(parent)
+        super(ExportSpectraAsDialog, self).__init__(accepted_func, parent)
 
         self.sett = Settings()
-        self.accepted_func = accepted_func
         self.setWindowTitle("Export Selected Spectra As")
 
         self.description_label = QLabel("Each selected top-level item will be saved in separate file with its name as filename. Spectra in groups will be concatenated. Select directory where spectra will be saved and specify the file extension. Non existing directories will be created. Top level items with same name will be overwritten. Delimiter field: use \\t for tabulator.")
@@ -37,13 +31,6 @@ class ExportSpectraAsDialog(PersistentDialog):
         self.label1 = QLabel('File extension:')
         self.label2 = QLabel('Delimiter:')
         self.label3 = QLabel('Decimal separator:')
-
-        self.button_box = QDialogButtonBox(self)
-        self.button_box.setOrientation(Qt.Horizontal)
-        self.button_box.setStandardButtons(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
-
-        self.button_box.accepted.connect(self.accept)  # OK button
-        self.button_box.rejected.connect(self.reject)  # Cancel button
 
         self.grid_layout = QGridLayout()
 
@@ -74,9 +61,7 @@ class ExportSpectraAsDialog(PersistentDialog):
         self.leFileExt.setText(self.sett['/Private settings/Export spectra as dialog/Ext'])
         self.leDelimiter.setText(self.textualize_special_chars(self.sett['/Private settings/Export spectra as dialog/Delimiter']))
         self.leDecimalSeparator.setText(self.sett['/Private settings/Export spectra as dialog/Decimal separator'])
-        print('__init__ called')
-
-        self.accepted = False
+        # print('__init__ called')
         self.result = None
 
     def btnDir_clicked(self):
@@ -134,8 +119,6 @@ class ExportSpectraAsDialog(PersistentDialog):
 
         self.sett.save()
 
-        self.accepted = True
-        self.accepted_func()
         super(ExportSpectraAsDialog, self).accept()
 
 

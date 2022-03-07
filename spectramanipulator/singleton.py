@@ -1,10 +1,11 @@
 
-from PyQt5.QtWidgets import QDialog, QWidget
+from PyQt5.QtWidgets import QDialog, QWidget, QDialogButtonBox
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtCore import Qt
 # import types
 # from six import with_metaclass
 # import logging
+from typing import Callable
 
 # from https://forum.qt.io/topic/88531/singleton-in-python-with-qobject/2
 
@@ -81,6 +82,24 @@ class PersistentDialog(QDialog, metaclass=Singleton):
         self._is_opened = False
         self.__class__.remove_instance()  # set the instance to None
         super(PersistentDialog, self).accept()
+
+
+class PersistentOKCancelDialog(PersistentDialog):
+
+    def __init__(self, accepted_func: Callable, parent=None, **kwargs):
+        super(PersistentOKCancelDialog, self).__init__(parent=parent, **kwargs)
+        self.accepted_func = accepted_func
+
+        self.button_box = QDialogButtonBox()
+        self.button_box.setOrientation(Qt.Horizontal)
+        self.button_box.setStandardButtons(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+
+        self.button_box.accepted.connect(self.accept)  # OK button
+        self.button_box.rejected.connect(self.reject)  # Cancel button
+
+    def accept(self) -> None:
+        self.accepted_func()
+        super(PersistentOKCancelDialog, self).accept()
 
 
 class TestClass(object, metaclass=Singleton):

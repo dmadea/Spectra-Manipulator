@@ -1,34 +1,24 @@
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-
-# from PyQt5 import *
-from PyQt5.QtCore import Qt
-# from PyQt5.QtWidgets import *
-from .gui_intintinputdialog import Ui_Dialog
-import sys
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QLabel, QSpinBox, QGridLayout, QVBoxLayout
+# from PyQt5.QtCore import Qt
+from spectramanipulator.singleton import PersistentOKCancelDialog
+from typing import Callable
 
 
-class IntIntInputDialog(QtWidgets.QDialog, Ui_Dialog):
-
-    # static variables
-    is_opened = False
-    _instance = None
+class IntIntInputDialog(PersistentOKCancelDialog):
 
     int32_max = 2147483647
 
-    def __init__(self, n=1, offset=0, n_min=1, offset_min=0, title='Int Int Input Dialog', label='Set xrange',  parent=None):
-        super(IntIntInputDialog, self).__init__(parent)
-        self.setupUi(self)
-
-        #disable resizing of the window,
-        # help from https://stackoverflow.com/questions/16673074/in-qt-c-how-can-i-fully-disable-resizing-a-window-including-the-resize-icon-w
-        self.setWindowFlags(Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
+    def __init__(self, accepted_func: Callable, n=1, offset=0, n_min=1, offset_min=0,
+                 title='Int Int Input Dialog', label='Set xrange', parent=None):
+        super(IntIntInputDialog, self).__init__(accepted_func, parent)
 
         self.setWindowTitle(title)
-        self.label.setText(label)
+        self.label = QLabel(label)
 
-        # self.dbX0.valueChanged.connect(self.dbX0_value_changed)
-        # self.dbX1.valueChanged.connect(self.dbX1_value_changed)
+        self.sbn = QSpinBox()
+        self.sbOffset = QSpinBox()
 
         self.sbn.setValue(n)
         self.sbOffset.setValue(offset)
@@ -39,40 +29,28 @@ class IntIntInputDialog(QtWidgets.QDialog, Ui_Dialog):
         self.sbn.setMaximum(self.int32_max)
         self.sbOffset.setMaximum(self.int32_max)
 
-        self.accepted = False
+        self.grid_layout = QGridLayout()
 
-        IntIntInputDialog.is_opened = True
-        IntIntInputDialog._instance = self
+        self.grid_layout.addWidget(QLabel('n'), 0, 0, 1, 1)
+        self.grid_layout.addWidget(QLabel('shift'), 1, 0, 1, 1)
+        self.grid_layout.addWidget(self.sbn, 0, 1, 1, 1)
+        self.grid_layout.addWidget(self.sbOffset, 1, 1, 1, 1)
+
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.label)
+        self.layout.addLayout(self.grid_layout)
+        self.layout.addWidget(self.button_box)
+
+        self.setLayout(self.layout)
 
         self.sbn.setFocus()
         self.sbn.selectAll()
-
-        self.show()
-        self.exec()
-
-    @staticmethod
-    def get_instance():
-        return IntIntInputDialog._instance
-
-    def set_result(self):
-        self.returned_range = (self.sbn.value(), self.sbOffset.value())
-
-    def accept(self):
-        self.set_result()
-        self.accepted = True
-        IntIntInputDialog.is_opened = False
-        IntIntInputDialog._instance = None
-        super(IntIntInputDialog, self).accept()
-
-    def reject(self):
-        IntIntInputDialog.is_opened = False
-        IntIntInputDialog._instance = None
-        super(IntIntInputDialog, self).reject()
 
 
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    Dialog = IntIntInputDialog()
-    # Dialog.show()
+    Dialog = IntIntInputDialog(None)
+    Dialog.show()
     sys.exit(app.exec_())
+

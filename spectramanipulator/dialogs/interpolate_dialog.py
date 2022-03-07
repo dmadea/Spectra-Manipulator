@@ -1,32 +1,23 @@
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QMessageBox, QLabel, QDialogButtonBox, QGridLayout, QLineEdit, QComboBox, QVBoxLayout
 
 from PyQt5.QtCore import Qt
-from .gui_interpolate_dialog import Ui_Dialog
+from spectramanipulator.singleton import PersistentOKCancelDialog
 
 from webbrowser import open_new_tab
+from typing import Callable
 
 
-class InterpolateDialog(QtWidgets.QDialog, Ui_Dialog):
+class InterpolateDialog(PersistentOKCancelDialog):
 
-    # static variables
-    is_opened = False
-    _instance = None
+    def __init__(self, accepted_func: Callable, parent=None):
+        super(InterpolateDialog, self).__init__(accepted_func, parent)
 
-    def __init__(self, parent=None):
-        super(InterpolateDialog, self).__init__(parent)
-        self.setupUi(self)
-
-        #disable resizing of the window,
-        # help from https://stackoverflow.com/questions/16673074/in-qt-c-how-can-i-fully-disable-resizing-a-window-including-the-resize-icon-w
-        self.setWindowFlags(Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
+        self.setWindowTitle("Interpolate")
 
         self.spacing = 1
         self.selected_kind = 'linear'
-
-        self.setWindowTitle("Interpolate")
-        self.leSpacing.setText(str(self.spacing))
 
         self.kinds = [
             {'kind': 'linear', 'name': 'Linear'},
@@ -39,24 +30,28 @@ class InterpolateDialog(QtWidgets.QDialog, Ui_Dialog):
             {'kind': 'cubic', 'name': 'Spline (3rd order)'},
         ]
 
-        self.cbIntepolation.addItems(map(lambda d: d['name'], self.kinds))
+        self.description_label = QLabel(
+            "<html><head/><body><p>Set the spacing of x values and kind of interpolation. For documentation, see <a href=\"https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html#scipy.interpolate.interp1d\"><span style=\" text-decoration: underline; color:#0000ff;\">scipy.interpolate.interp1d.</span></a> Eg. for resampling the unevenly spaced spectral data by 1 nm, set spacing to 1.</p></body></html>")
+        self.description_label.setWordWrap(True)
 
-        self.label.linkActivated.connect(self.open_url)
+        self.grid_layout = QGridLayout()
 
-        self.accepted = False
+        self.leSpacing = QLineEdit(str(self.spacing))
+        self.cbInterpolation = QComboBox()
+        self.cbInterpolation.addItems(map(lambda d: d['name'], self.kinds))
 
-        InterpolateDialog.is_opened = True
-        InterpolateDialog._instance = self
+        self.grid_layout.addWidget(QLabel('Spacing'), 0, 0, 1, 1)
+        self.grid_layout.addWidget(QLabel('Interpolation'), 1, 0, 1, 1)
+        self.grid_layout.addWidget(self.leSpacing, 0, 1, 1, 1)
+        self.grid_layout.addWidget(self.cbInterpolation, 1, 1, 1, 1)
 
-        self.show()
-        self.exec()
+        self.layout = QVBoxLayout(self)
+        self.layout.addWidget(self.description_label)
+        self.layout.addLayout(self.grid_layout)
+        self.layout.addWidget(self.button_box)
+        self.setLayout(self.layout)
 
-    def open_url(self):
-        open_new_tab('https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html#scipy.interpolate.interp1d')
-
-    @staticmethod
-    def get_instance():
-        return InterpolateDialog._instance
+        self.description_label.linkActivated.connect(lambda: open_new_tab('https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html#scipy.interpolate.interp1d'))
 
     def accept(self):
         try:
@@ -65,21 +60,13 @@ class InterpolateDialog(QtWidgets.QDialog, Ui_Dialog):
             QMessageBox.warning(self, 'Error', "Cannot parse spacing value into float, please correct it.", QMessageBox.Ok)
             return
 
-        self.selected_kind = self.kinds[self.cbIntepolation.currentIndex()]['kind']
-        self.accepted = True
-        InterpolateDialog.is_opened = False
-        InterpolateDialog._instance = None
+        self.selected_kind = self.kinds[self.cbInterpolation.currentIndex()]['kind']
         super(InterpolateDialog, self).accept()
-
-    def reject(self):
-        InterpolateDialog.is_opened = False
-        InterpolateDialog._instance = None
-        super(InterpolateDialog, self).reject()
 
 
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    Dialog = InterpolateDialog()
-    # Dialog.show()
+    Dialog = InterpolateDialog(None)
+    Dialog.show()
     sys.exit(app.exec_())

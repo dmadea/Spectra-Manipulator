@@ -190,7 +190,7 @@ Required folder structure for one kinetics:
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    Dialog = LoadKineticsDialog()
+    Dialog = LoadKineticsDialog(None)
     Dialog.show()
     sys.exit(app.exec_())
 

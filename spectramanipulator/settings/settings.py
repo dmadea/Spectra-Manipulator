@@ -43,6 +43,8 @@ class Settings(metaclass=Singleton):
                         dict(name='Load kinetics last path', value=""),
                         dict(name='Recent project filepaths', value=[]),
                         dict(name='Import DX file dialog path', value=""),
+                        dict(name='Last rename expression', value=""),
+                        dict(name='Last rename name taken from list', value=False),
                         {
                             'name': 'Export spectra as dialog',
                             'items': [

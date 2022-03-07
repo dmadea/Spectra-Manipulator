@@ -1,11 +1,11 @@
-from PyQt5.QtGui import QBrush, QColor
+# from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import QMessageBox, QDialogButtonBox, QVBoxLayout, QLabel, QGridLayout
 from spectramanipulator.singleton import InputWidget
 from .mylineedit import MyLineEdit
 from PyQt5.QtCore import Qt
 
 from ..plotwidget import PlotWidget
-import pyqtgraph as pg
+# import pyqtgraph as pg
 from typing import Callable
 
 
@@ -105,8 +105,6 @@ class RangeWidget(InputWidget):
 
     def reject(self):
         self.pw.remove_linear_region()
-        # self.dock_widget.setVisible(False)
-        # super(RangeWidget, self).reject()
         self.close()
 
 

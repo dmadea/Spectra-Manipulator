@@ -76,8 +76,6 @@ class TreeWidget(TreeView):
     redraw_spectra = pyqtSignal()
     state_changed = pyqtSignal()
 
-    # all_spectra_list =
-
     def __init__(self, parent=None):
         super(TreeWidget, self).__init__(parent)
 
@@ -339,34 +337,27 @@ class TreeWidget(TreeView):
         if len(self.selectedIndexes()) == 0:
             return
 
-        if InterpolateDialog.is_opened:
-            InterpolateDialog.get_instance().activateWindow()
-            InterpolateDialog.get_instance().setFocus()
-            return
+        def accepted():
+            # Logger.status_message("Baseline correcting...")
+            try:
+                items = []
+                for item in self.myModel.iterate_selected_items(skip_groups=True,
+                                                                skip_childs_in_selected_groups=False):
+                    item.interpolate_no_update(interp_dialog.spacing, interp_dialog.selected_kind)
+                    items.append(item)
 
-        interp_dialog = InterpolateDialog(self)
+                self.data_modified(items)
+                self.info_modified(items)
+                self.state_changed.emit()
+            except ValueError as ex:
+                Logger.message(ex.__str__())
+                QMessageBox.warning(self, 'Warning', ex.__str__(), QMessageBox.Ok)
+                return
 
-        if not interp_dialog.accepted:
-            return
+            Logger.status_message("Done")
 
-        spacing, kind = interp_dialog.spacing, interp_dialog.selected_kind
-
-        try:
-            items = []
-            for item in self.myModel.iterate_selected_items(skip_groups=True,
-                                                            skip_childs_in_selected_groups=False):
-                item.interpolate_no_update(spacing, kind)
-                items.append(item)
-
-            self.data_modified(items)
-            self.info_modified(items)
-            self.state_changed.emit()
-        except ValueError as ex:
-            Logger.message(ex.__str__())
-            QMessageBox.warning(self, 'Warning', ex.__str__(), QMessageBox.Ok)
-            return
-
-        Logger.status_message("Done")
+        interp_dialog = InterpolateDialog(accepted, parent=self)
+        interp_dialog.show()
 
     def select_every_nth_item(self):
 
@@ -375,47 +366,39 @@ class TreeWidget(TreeView):
         if items_count == 0:
             return
 
-        if IntIntInputDialog.is_opened:
-            IntIntInputDialog.get_instance().activateWindow()
-            IntIntInputDialog.get_instance().setFocus()
-            return
+        def accepted():
+            try:
+                shift, n = intintinput_dialog.sbOffset.value(), intintinput_dialog.sbn.value()
+                shift = shift % n
+                i = 0
 
-        n, shift = 2, 0
+                self.selecting = True
 
-        intintinput_dialog = IntIntInputDialog(n, shift, n_min=1, offset_min=0,
+                flags = QItemSelectionModel.Select
+                selection = QItemSelection()
+
+                for item in self.myModel.iterate_selected_items(skip_groups=True,
+                                                                skip_childs_in_selected_groups=False,
+                                                                clear_selection=True):
+                    if i % n == shift:
+                        start_index = self.myModel.createIndex(item.row(), 0, item)
+                        end_index = self.myModel.createIndex(item.row(), 1, item)
+
+                        selection.select(start_index, end_index)
+
+                    i += 1
+                self.selectionModel().select(selection, flags)
+
+            except Exception as ex:
+                Logger.message(ex.__str__())
+                QMessageBox.warning(self, 'Error', ex.__str__(), QMessageBox.Ok)
+            finally:
+                self.selecting = False
+
+        intintinput_dialog = IntIntInputDialog(accepted, 2, 0, n_min=1, offset_min=0,
                                                title="Select every n-th item",
                                                label="Set the n value and shift value. Group items will be skipped:")
-        if not intintinput_dialog.accepted:
-            return
-        n, shift = intintinput_dialog.returned_range
-
-        try:
-            shift = shift % n
-            i = 0
-
-            self.selecting = True
-
-            flags = QItemSelectionModel.Select
-            selection = QItemSelection()
-
-            for item in self.myModel.iterate_selected_items(skip_groups=True,
-                                                            skip_childs_in_selected_groups=False,
-                                                            clear_selection=True):
-                if i % n == shift:
-                    start_index = self.myModel.createIndex(item.row(), 0, item)
-                    end_index = self.myModel.createIndex(item.row(), 1, item)
-
-                    selection.select(start_index, end_index)
-
-                i += 1
-            self.selectionModel().select(selection, flags)
-            # self.selecting = False
-
-        except Exception as ex:
-            Logger.message(ex.__str__())
-            QMessageBox.warning(self, 'Error', ex.__str__(), QMessageBox.Ok)
-        finally:
-            self.selecting = False
+        intintinput_dialog.show()
 
     def fit_curve(self):
 
@@ -510,54 +493,48 @@ class TreeWidget(TreeView):
         if items_count == 0:
             return
 
-        if RenameDialog.is_opened:
-            RenameDialog.get_instance().activateWindow()
-            RenameDialog.get_instance().setFocus()
-            return
+        def accepted():
 
-        expression, offset, c_mult_factor = Settings.last_rename_expression, 0, 1
+            if rename_dialog.cbTakeNamesFromList.isChecked():
+                import csv
+                splitted_list = csv.reader([rename_dialog.leList.text()], doublequote=True, skipinitialspace=True,
+                                           delimiter=',').__next__()
 
-        rename_dialog = RenameDialog(expression, offset,
-                                     last_rename_take_name_from_list=Settings.last_rename_take_name_from_list)
-        if not rename_dialog.accepted:
-            return
+                if len(splitted_list) == 0:
+                    return
+            expression, offset, c_mult_factor = rename_dialog.leExpression.text(), rename_dialog.sbOffset.value(), rename_dialog.leCounterMulFactor.text()
 
-        if rename_dialog.is_renaming_by_expression:
-            expression, offset, c_mult_factor = rename_dialog.result
-        else:
-            import csv
-            splitted_list = csv.reader([rename_dialog.list], doublequote=True, skipinitialspace=True,
-                                       delimiter=',').__next__()
+            try:
+                i = 0
+                for item in self.myModel.iterate_selected_items(skip_groups=True,
+                                                                skip_childs_in_selected_groups=False):
+                    name = item.name
+                    if not rename_dialog.cbTakeNamesFromList.isChecked():
+                        name = rename(expression, name, float(offset) * float(c_mult_factor))
+                        offset += 1
+                    else:
+                        try:
+                            name = splitted_list[i].strip()
+                            i += 1
+                        except IndexError:
+                            pass
+                    item.name = name
 
-            if len(splitted_list) == 0:
-                return
+                self.redraw_spectra.emit()
+                self.update_view()
+                self.state_changed.emit()
 
-        try:
-            i = 0
-            for item in self.myModel.iterate_selected_items(skip_groups=True,
-                                                            skip_childs_in_selected_groups=False):
-                name = item.name
-                if rename_dialog.is_renaming_by_expression:
-                    name = rename(expression, name, float(offset) * float(c_mult_factor))
-                    offset += 1
-                else:
-                    try:
-                        name = splitted_list[i].strip()
-                        i += 1
-                    except IndexError:
-                        pass
-                item.name = name
+                self.sett['/Private settings/Last rename expression'] = expression
+                self.sett['/Private settings/Last rename name taken from list'] = rename_dialog.cbTakeNamesFromList.isChecked()
+                self.sett.save()
+            except Exception as ex:
+                Logger.message(ex.__str__())
+                QMessageBox.warning(self, 'Error', ex.__str__(), QMessageBox.Ok)
 
-            self.redraw_spectra.emit()
-            self.update_view()
-            self.state_changed.emit()
-
-            Settings.last_rename_expression = expression
-            Settings.last_rename_take_name_from_list = not rename_dialog.is_renaming_by_expression
-            Settings.save()
-        except Exception as ex:
-            Logger.message(ex.__str__())
-            QMessageBox.warning(self, 'Error', ex.__str__(), QMessageBox.Ok)
+        rename_dialog = RenameDialog(accepted, self.sett['/Private settings/Last rename expression'], 0, 1,
+                                     last_rename_take_name_from_list=self.sett[
+                                         '/Private settings/Last rename name taken from list'])
+        rename_dialog.show()
 
     def context_menu(self, pos):
         """Creates a context menu in a TreeWidget."""
@@ -898,7 +875,7 @@ class TreeWidget(TreeView):
                 continue
 
             self.load_kinetic(path, spectra_dir_name=spectra_dir_name, times_fname=times_fname, blank_spectrum=blank_spectrum,
-                         dt=dt, b_corr=b_corr, cut=cut, corr_to_zero_time=corr_to_zero_time)
+                              dt=dt, b_corr=b_corr, cut=cut, corr_to_zero_time=corr_to_zero_time)
 
     def load_kinetic(self, dir_name, spectra_dir_name='spectra', times_fname='times.txt', blank_spectrum='blank.dx', dt=None,
                      b_corr=None, cut=None, corr_to_zero_time=True):

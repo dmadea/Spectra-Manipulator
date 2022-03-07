@@ -1,44 +1,59 @@
 
 from PyQt5 import QtWidgets
-
 from PyQt5.QtCore import Qt
-from .gui_rename_dialog import Ui_Dialog
+from spectramanipulator.singleton import PersistentOKCancelDialog
+from typing import Callable
+from PyQt5.QtWidgets import QLabel, QSpinBox, QGridLayout, QVBoxLayout, QLineEdit, QCheckBox
 
 
-class RenameDialog(QtWidgets.QDialog, Ui_Dialog):
-
-    # static variables
-    is_opened = False
-    _instance = None
+class RenameDialog(PersistentOKCancelDialog):
 
     int32_max = 2147483647
 
-    def __init__(self, expression='', offset=0, c_mult_facotr=1,
-                 last_rename_take_name_from_list=False,  parent=None):
-        super(RenameDialog, self).__init__(parent)
-        self.setupUi(self)
-        self.result = (expression, offset, c_mult_facotr)
-        self.list = last_rename_take_name_from_list
-
-        #disable resizing of the window,
-        # help from https://stackoverflow.com/questions/16673074/in-qt-c-how-can-i-fully-disable-resizing-a-window-including-the-resize-icon-w
-        self.setWindowFlags(Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
-
+    def __init__(self, accepted_func: Callable, expression='', offset=0, c_mult_factor=1,
+                 last_rename_take_name_from_list=False, parent=None):
+        super(RenameDialog, self).__init__(accepted_func, parent)
         self.setWindowTitle("Rename Items")
 
+        self.result = (expression, offset, c_mult_factor)
+        self.list = last_rename_take_name_from_list
+
+        self.description = QLabel("Renames selected items. {:2d} - integer counter, {:2f} - float counter, {:2g} - significant digits counter. for more see https://pyformat.info/. For original name slicing, use {start_idx:end_idx}, same from python slicing rules. Eg. expression is '{:02d}: t = {:} us', current name is '167' and current counter is 16. Resulting name will be '16: t = 167 us'. Current counter (integer counter starts with counter offset value) for each item is multiplied by counter mult. factor.")
+        self.description.setWordWrap(True)
+
+        self.leExpression = QLineEdit()
+        self.sbOffset = QSpinBox()
+        self.leCounterMulFactor = QLineEdit()
+
         self.leExpression.setText(expression)
-        self.leCounterMulFactor.setText(str(c_mult_facotr))
+        self.leCounterMulFactor.setText(str(c_mult_factor))
 
         self.sbOffset.setValue(offset)
         self.sbOffset.setMinimum(0)
         self.sbOffset.setMaximum(self.int32_max)
 
-        self.cbTakeNamesFromList.setCheckState(self.check_state(last_rename_take_name_from_list))
+        self.cbTakeNamesFromList = QCheckBox("Take names from list (separate values by comma):")
+        self.cbTakeNamesFromList.setChecked(last_rename_take_name_from_list)
 
-        self.accepted = False
+        self.leList = QLineEdit()
 
-        RenameDialog.is_opened = True
-        RenameDialog._instance = self
+        self.grid_layout = QGridLayout()
+
+        self.grid_layout.addWidget(QLabel('Expression:'), 0, 0, 1, 1)
+        self.grid_layout.addWidget(QLabel('Counter offset:'), 1, 0, 1, 1)
+        self.grid_layout.addWidget(QLabel('Counter mult. factor:'), 2, 0, 1, 1)
+        self.grid_layout.addWidget(self.leExpression, 0, 1, 1, 1)
+        self.grid_layout.addWidget(self.sbOffset, 1, 1, 1, 1)
+        self.grid_layout.addWidget(self.leCounterMulFactor, 2, 1, 1, 1)
+
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.description)
+        self.layout.addLayout(self.grid_layout)
+        self.layout.addWidget(self.cbTakeNamesFromList)
+        self.layout.addWidget(self.leList)
+        self.layout.addWidget(self.button_box)
+
+        self.setLayout(self.layout)
 
         self.leExpression.setFocus()
         self.leExpression.selectAll()
@@ -48,54 +63,25 @@ class RenameDialog(QtWidgets.QDialog, Ui_Dialog):
         # perform change
         self.cbTakeNamesFromList_check_changed()
 
-        self.show()
-        self.exec()
-
-    @staticmethod
-    def get_instance():
-        return RenameDialog._instance
-
-    @staticmethod
-    def check_state(checked):
-        return Qt.Checked if checked else 0
-
-    def set_result(self):
-
-        if self.is_renaming_by_expression:
-            self.result = (self.leExpression.text(), self.sbOffset.value(), self.leCounterMulFactor.text())
-        else:
-            self.list = self.leList.text()
+    # def set_result(self):
+    #     if not self.cbTakeNamesFromList.isChecked():
+    #         self.result = (self.leExpression.text(), self.sbOffset.value(), self.leCounterMulFactor.text())
+    #     else:
+    #         self.list = self.leList.text()
 
     def cbTakeNamesFromList_check_changed(self):
-        if self.cbTakeNamesFromList.checkState() == Qt.Checked:
-            self.sbOffset.setEnabled(False)
-            self.leExpression.setEnabled(False)
-            self.leList.setEnabled(True)
-            self.leCounterMulFactor.setEnabled(False)
-            self.is_renaming_by_expression = False
-        else:
-            self.sbOffset.setEnabled(True)
-            self.leExpression.setEnabled(True)
-            self.leList.setEnabled(False)
-            self.leCounterMulFactor.setEnabled(True)
-            self.is_renaming_by_expression = True
+        is_checked = self.cbTakeNamesFromList.isChecked()
+        self.sbOffset.setEnabled(not is_checked)
+        self.leExpression.setEnabled(not is_checked)
+        self.leList.setEnabled(is_checked)
+        self.leCounterMulFactor.setEnabled(not is_checked)
 
-    def accept(self):
-        self.set_result()
-        self.accepted = True
-        RenameDialog.is_opened = False
-        RenameDialog._instance = None
-        super(RenameDialog, self).accept()
-
-    def reject(self):
-        RenameDialog.is_opened = False
-        RenameDialog._instance = None
-        super(RenameDialog, self).reject()
 
 
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    Dialog = RenameDialog()
-    # Dialog.show()
+    Dialog = RenameDialog(None)
+    Dialog.show()
     sys.exit(app.exec_())
+
