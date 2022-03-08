@@ -1,50 +1,18 @@
 from PyQt5 import QtWidgets
 
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QDialogButtonBox, QPushButton
 from spectramanipulator.singleton import PersistentDialog
 
 from spectramanipulator.configtree.configtreemodel import ConfigTreeModel
 from spectramanipulator.configtree.configtreeview import ConfigTreeView
-from spectramanipulator.configtree.groupcti import MainGroupCti
+from spectramanipulator.configtree.groupcti import RootCti
 from spectramanipulator.configtree.abstractcti import AbstractCti
 from spectramanipulator.configtree.pgctis import PgColorMapCti
 
 from spectramanipulator.settings.settings import Settings
 from copy import deepcopy
 from typing import Callable
-
-
-class RootCti(MainGroupCti):
-    """ Configuration tree item for a main settings.
-    """
-    def __init__(self, nodeName='root'):
-        super(RootCti, self).__init__(nodeName, root_xpath='/Public settings')
-
-        def _insert_child(node: dict, parent_item: AbstractCti):
-            kwargs = {key: value for key, value in node.items() if
-                      key not in ['name', 'type', 'items', 'value', 'default_value']}
-
-            # nodeName, defaultData
-            cls = node['type']
-            value = node['value'] if 'value' in node else None
-            default_value = node['default_value'] if 'default_value' in node else None
-            cti: AbstractCti = cls(node['name'], default_value, **kwargs)
-            if value is not None:
-                cti.data = node['value']
-            parent_item.insertChild(cti)
-            return cti
-
-        def _insert_items(node_dict: dict, parent_item: AbstractCti):
-            """Recursively inserts all items from settings"""
-            if 'items' not in node_dict or len(node_dict['items']) == 0:
-                return
-
-            for dict_item in node_dict['items']:
-                group_item = _insert_child(dict_item, parent_item)
-                _insert_items(dict_item, group_item)
-
-        _insert_items(Settings().find_node_by_xpath('/Public settings'), self)
 
 
 class SettingsDialog(PersistentDialog):
@@ -84,11 +52,11 @@ class SettingsDialog(PersistentDialog):
         self.tree_model = ConfigTreeModel()
         self.tree_view = ConfigTreeView(self.tree_model)
 
-        self.root_cti = RootCti()
+        self.sett = Settings()
+        self.root_cti = RootCti(self.sett.find_node_by_xpath('/Public settings'), root_xpath='/Public settings')
         self.tree_model.setInvisibleRootItem(self.root_cti)
         self.tree_view.expandBranch()
 
-        self.sett = Settings()
         self.last_setting_dict = deepcopy(self.sett.settings)  # instantiate last settings
 
         def value_changed(cti: AbstractCti):

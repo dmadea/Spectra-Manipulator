@@ -14,20 +14,12 @@ class RangeWidget(InputWidget):
     def __init__(self, dock_widget, accepted_func: Callable = None,
                  label_text='Set xrange:', title='SetRangeDialog', parent=None):
 
-        self.accepted_func = accepted_func
-        super(RangeWidget, self).__init__(dock_widget, title, parent)
+        super(RangeWidget, self).__init__(dock_widget, accepted_func, title, parent)
 
         self.pw = PlotWidget()
 
         self.le_x0 = MyLineEdit()
         self.le_x1 = MyLineEdit()
-
-        self.button_box = QDialogButtonBox(self)
-        self.button_box.setOrientation(Qt.Horizontal)
-        self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
 
         self.VLayout = QVBoxLayout()
         # self.VLayout.setContentsMargins(0, 0, 0, 0)
@@ -99,13 +91,11 @@ class RangeWidget(InputWidget):
             return
 
         self.pw.remove_linear_region()
-        # self.dock_widget.setVisible(False)
-        self.accepted_func()
-        self.close()
+        super(RangeWidget, self).accept()
 
     def reject(self):
         self.pw.remove_linear_region()
-        self.close()
+        super(RangeWidget, self).reject()
 
 
 # if __name__ == "__main__":

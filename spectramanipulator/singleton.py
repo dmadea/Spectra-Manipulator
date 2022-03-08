@@ -38,8 +38,17 @@ class InputWidget(QWidget):
 
     _is_visible = False
 
-    def __init__(self, dock_widget, title='title', parent=None):
+    def __init__(self, dock_widget, accepted_func: Callable, title='title', parent=None):
         super(InputWidget, self).__init__(parent=parent)
+
+        self.accepted_func = accepted_func
+
+        self.button_box = QDialogButtonBox(self)
+        self.button_box.setOrientation(Qt.Horizontal)
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
 
         self.dock_widget = dock_widget
 
@@ -55,6 +64,13 @@ class InputWidget(QWidget):
         self._is_visible = False
         self.dock_widget.setVisible(False)
         super(InputWidget, self).closeEvent(a0)
+
+    def accept(self):
+        self.accepted_func()
+        self.close()
+
+    def reject(self):
+        self.close()
 
 
 # the instance is removed after the dialog is closed

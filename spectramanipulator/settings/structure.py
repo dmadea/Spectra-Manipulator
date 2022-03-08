@@ -7,6 +7,8 @@ from spectramanipulator.configtree.stringcti import StringCti
 from spectramanipulator.configtree.boolcti import BoolCti, BoolGroupCti
 from spectramanipulator.configtree.pgctis import PgColorMapCti
 from spectramanipulator.configtree.choicecti import ChoiceCti
+from spectramanipulator.configtree.qtctis import ColorCti, PenCti
+from PyQt5.QtCore import Qt
 
 from spectramanipulator.configtree.colors import DEFAULT_COLOR_MAP
 
@@ -476,3 +478,182 @@ public_settings = [
     }
 ]
 
+line_types = [
+    {'name': 'Solid line', 'index': Qt.SolidLine},
+    {'name': 'Dashed line', 'index': Qt.DashLine},
+    {'name': 'Dotted line', 'index': Qt.DotLine},
+    {'name': 'Dash-dotted line', 'index': Qt.DashDotLine},
+    {'name': 'Dash-dot-dotted line', 'index': Qt.DashDotDotLine},
+    {'name': 'No line', 'index': Qt.NoPen}
+]
+
+symbol_types = [
+    {'name': 'No symbol', 'sym': None},
+    {'name': '\u25CF', 'sym': 'o'},
+    {'name': '\u25BC', 'sym': 't'},
+    {'name': '\u25B2', 'sym': 't1'},
+    {'name': '\u25BA', 'sym': 't2'},
+    {'name': '\u25C4', 'sym': 't3'},
+    {'name': '\u25A0', 'sym': 's'},
+    {'name': '\u2B1F', 'sym': 'p'},
+    {'name': '\u2B22', 'sym': 'h'},
+    {'name': '\u2605', 'sym': 'star'},
+    {'name': '+', 'sym': '+'},
+    {'name': '\u2666', 'sym': 'd'}
+]
+
+
+style_settings = [
+    {
+        'type': BoolCti,
+        'name': 'Line color',
+        'value': None,
+        'default_value': False,
+        'childrenDisabledValue': True,
+        'description': 'Skips columns that contains the NaN (Not a Number) values.',
+        'items': [
+            {
+                'type': ColorCti,
+                'name': 'Line color',
+                'value': None,
+                'default_value': 'blue',
+                'description': 'Line color',
+            },
+            {
+                'type': IntCti,
+                'name': 'Alpha',
+                'value': None,
+                'default_value': 255,
+                'minValue': 0,
+                'maxValue': 255,
+                'description': 'Value that replaces NaN values.',
+            }
+        ]
+    },
+    {
+        'type': BoolCti,
+        'name': 'Line style',
+        'value': None,
+        'default_value': False,
+        'childrenDisabledValue': True,
+        'description': 'Skips columns that contains the NaN (Not a Number) values.',
+        'items': [
+            {
+                'type': SnFloatCti,
+                'name': 'Line width',
+                'value': None,
+                'default_value': 1,
+                'precision': 1,
+                'minValue': 0,
+                'maxValue': 100,
+                'description': 'Value that replaces NaN values.',
+            },
+            {
+                'type': ChoiceCti,
+                'name': 'Line type',
+                'value': None,
+                'default_value': 1,
+                'configValues': list(map(lambda d: d['name'], line_types)),
+                'description': '...',  # TODO
+            }
+        ]
+    },
+    {
+        'type': BoolCti,
+        'name': 'Symbol style',
+        'value': None,
+        'default_value': False,
+        'childrenDisabledValue': True,
+        'description': 'Skips columns that contains the NaN (Not a Number) values.',
+        'items': [
+            {
+                'type': SnFloatCti,
+                'name': 'Size',
+                'value': None,
+                'default_value': 1,
+                'precision': 1,
+                'minValue': 0,
+                'maxValue': 100,
+                'description': 'Value that replaces NaN values.',
+            },
+            {
+                'type': ChoiceCti,
+                'name': 'Type',
+                'value': None,
+                'default_value': 1,
+                'configValues': list(map(lambda d: d['name'], symbol_types)),
+                'description': '...',  # TODO
+            },
+            {
+                'type': SnFloatCti,
+                'name': 'Line type',
+                'value': None,
+                'default_value': 1,
+                'precision': 1,
+                'minValue': 0,
+                'maxValue': 100,
+                'description': 'Value that replaces NaN values.',
+            },
+            {
+                'type': BoolCti,
+                'name': 'Brush color',
+                'value': None,
+                'default_value': False,
+                'childrenDisabledValue': True,
+                'description': 'Skips columns that contains the NaN (Not a Number) values.',
+                'items': [
+                    {
+                        'type': ColorCti,
+                        'name': 'Brush color',
+                        'value': None,
+                        'default_value': 'blue',
+                        'description': 'Line color',
+                    },
+                    {
+                        'type': IntCti,
+                        'name': 'Alpha',
+                        'value': None,
+                        'default_value': 255,
+                        'minValue': 0,
+                        'maxValue': 255,
+                        'description': 'Value that replaces NaN values.',
+                    }
+                ]
+            },
+            {
+                'type': BoolCti,
+                'name': 'Fill color',
+                'value': None,
+                'default_value': False,
+                'childrenDisabledValue': True,
+                'description': 'Skips columns that contains the NaN (Not a Number) values.',
+                'items': [
+                    {
+                        'type': ColorCti,
+                        'name': 'Fill color',
+                        'value': None,
+                        'default_value': 'blue',
+                        'description': 'Line color',
+                    },
+                    {
+                        'type': IntCti,
+                        'name': 'Alpha',
+                        'value': None,
+                        'default_value': 255,
+                        'minValue': 0,
+                        'maxValue': 255,
+                        'description': 'Value that replaces NaN values.',
+                    }
+                ]
+            },
+        ]
+    },
+    {
+        'type': BoolCti,
+        'name': 'Plot legend',
+        'value': None,
+        'default_value': True,
+        'description': 'If False, legend will not be shown for the selected items.',
+    }
+
+]
