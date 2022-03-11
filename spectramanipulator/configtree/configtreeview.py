@@ -46,12 +46,13 @@ logger = logging.getLogger(__name__)
 class ConfigTreeView(ArgosTreeView):
     """ Tree widget for manipulating a tree of configuration options.
     """
-    def __init__(self, configTreeModel, parent=None):
+    def __init__(self, configTreeModel, right_dock_width=200, parent=None):
         """ Constructor
         """
         super(ConfigTreeView, self).__init__(treeModel=configTreeModel, parent=parent)
 
         self._configTreeModel = configTreeModel
+        self.right_dock_width = right_dock_width
 
         self.expanded.connect(configTreeModel.expand)
         self.collapsed.connect(configTreeModel.collapse)
@@ -59,8 +60,8 @@ class ConfigTreeView(ArgosTreeView):
         #self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
 
         treeHeader = self.header()
-        treeHeader.resizeSection(ConfigTreeModel.COL_NODE_NAME, RIGHT_DOCK_WIDTH)
-        treeHeader.resizeSection(ConfigTreeModel.COL_VALUE, RIGHT_DOCK_WIDTH)
+        treeHeader.resizeSection(ConfigTreeModel.COL_NODE_NAME, right_dock_width)
+        treeHeader.resizeSection(ConfigTreeModel.COL_VALUE, right_dock_width)
 
         headerNames = self.model().horizontalHeaders
         enabled = dict((name, True) for name in headerNames)
@@ -84,7 +85,7 @@ class ConfigTreeView(ArgosTreeView):
 
     def sizeHint(self):
         """ The recommended size for the widget."""
-        return QtCore.QSize(RIGHT_DOCK_WIDTH, 500)
+        return QtCore.QSize(self.right_dock_width, 500)
 
 
     # @QtSlot(QtWidgets.QWidget, QtWidgets.QAbstractItemDelegate.EndEditHint)

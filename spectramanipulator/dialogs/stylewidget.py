@@ -16,7 +16,6 @@ from spectramanipulator.settings.structure import style_settings
 
 # import pyqtgraph as pg
 
-
 # from PyQt5.QtCore import Qt
 # from ..settings.settings import Settings
 
@@ -27,7 +26,7 @@ class StyleWidget(InputWidget):
         super(StyleWidget, self).__init__(dock_widget, accepted_func, title='Set style', parent=parent)
 
         self.tree_model = ConfigTreeModel()
-        self.tree_view = ConfigTreeView(self.tree_model)
+        self.tree_view = ConfigTreeView(self.tree_model, right_dock_width=150)
 
         self.settings = {
             'items': style_settings

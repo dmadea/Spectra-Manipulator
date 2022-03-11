@@ -509,8 +509,8 @@ style_settings = [
         'name': 'Line color',
         'value': None,
         'default_value': False,
-        'childrenDisabledValue': True,
-        'description': 'Skips columns that contains the NaN (Not a Number) values.',
+        'childrenDisabledValue': False,
+        'description': 'If True, specific line color will be used, otherwise, default color is used.',
         'items': [
             {
                 'type': ColorCti,
@@ -526,7 +526,7 @@ style_settings = [
                 'default_value': 255,
                 'minValue': 0,
                 'maxValue': 255,
-                'description': 'Value that replaces NaN values.',
+                'description': 'Color alpha.',
             }
         ]
     },
@@ -535,8 +535,8 @@ style_settings = [
         'name': 'Line style',
         'value': None,
         'default_value': False,
-        'childrenDisabledValue': True,
-        'description': 'Skips columns that contains the NaN (Not a Number) values.',
+        'childrenDisabledValue': False,
+        'description': 'If True, specific line style will be used, otherwise, default line style is used.',
         'items': [
             {
                 'type': SnFloatCti,
@@ -546,7 +546,7 @@ style_settings = [
                 'precision': 1,
                 'minValue': 0,
                 'maxValue': 100,
-                'description': 'Value that replaces NaN values.',
+                'description': 'Line width.',
             },
             {
                 'type': ChoiceCti,
@@ -554,7 +554,7 @@ style_settings = [
                 'value': None,
                 'default_value': 1,
                 'configValues': list(map(lambda d: d['name'], line_types)),
-                'description': '...',  # TODO
+                'description': 'Line type.'
             }
         ]
     },
@@ -563,8 +563,8 @@ style_settings = [
         'name': 'Symbol style',
         'value': None,
         'default_value': False,
-        'childrenDisabledValue': True,
-        'description': 'Skips columns that contains the NaN (Not a Number) values.',
+        'childrenDisabledValue': False,
+        'description': 'If True, specific symbol style will be used, otherwise, no symbol style is used.',
         'items': [
             {
                 'type': SnFloatCti,
@@ -574,7 +574,7 @@ style_settings = [
                 'precision': 1,
                 'minValue': 0,
                 'maxValue': 100,
-                'description': 'Value that replaces NaN values.',
+                'description': 'Symbol size.',
             },
             {
                 'type': ChoiceCti,
@@ -582,32 +582,22 @@ style_settings = [
                 'value': None,
                 'default_value': 1,
                 'configValues': list(map(lambda d: d['name'], symbol_types)),
-                'description': '...',  # TODO
-            },
-            {
-                'type': SnFloatCti,
-                'name': 'Line type',
-                'value': None,
-                'default_value': 1,
-                'precision': 1,
-                'minValue': 0,
-                'maxValue': 100,
-                'description': 'Value that replaces NaN values.',
+                'description': 'Symbol type.',
             },
             {
                 'type': BoolCti,
                 'name': 'Brush color',
                 'value': None,
                 'default_value': False,
-                'childrenDisabledValue': True,
-                'description': 'Skips columns that contains the NaN (Not a Number) values.',
+                'childrenDisabledValue': False,
+                'description': 'If True, specific brush color will be used, otherwise, the same color as line color will be used.',
                 'items': [
                     {
                         'type': ColorCti,
                         'name': 'Brush color',
                         'value': None,
                         'default_value': 'blue',
-                        'description': 'Line color',
+                        'description': 'Brush color.',
                     },
                     {
                         'type': IntCti,
@@ -616,7 +606,7 @@ style_settings = [
                         'default_value': 255,
                         'minValue': 0,
                         'maxValue': 255,
-                        'description': 'Value that replaces NaN values.',
+                        'description': 'Color alpha.',
                     }
                 ]
             },
@@ -625,15 +615,15 @@ style_settings = [
                 'name': 'Fill color',
                 'value': None,
                 'default_value': False,
-                'childrenDisabledValue': True,
-                'description': 'Skips columns that contains the NaN (Not a Number) values.',
+                'childrenDisabledValue': False,
+                'description': 'If True, specific fill color will be used, otherwise, the same color as line color will be used.',
                 'items': [
                     {
                         'type': ColorCti,
                         'name': 'Fill color',
                         'value': None,
                         'default_value': 'blue',
-                        'description': 'Line color',
+                        'description': 'Fill color.',
                     },
                     {
                         'type': IntCti,
@@ -642,7 +632,7 @@ style_settings = [
                         'default_value': 255,
                         'minValue': 0,
                         'maxValue': 255,
-                        'description': 'Value that replaces NaN values.',
+                        'description': 'Color alpha.',
                     }
                 ]
             },

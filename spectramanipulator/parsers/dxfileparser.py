@@ -35,7 +35,7 @@ class DXFileParser(Parser):
         if name == '':
             try:
                 split = title_header.split('=')
-                name = split[1][1:]
+                name = ''.join(split[1:])[1:]
             except:
                 pass
 
