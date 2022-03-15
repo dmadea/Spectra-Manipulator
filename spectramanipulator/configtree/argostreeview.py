@@ -58,6 +58,7 @@ logger = logging.getLogger(__name__)
 # Qt classes have many ancestors
 #pylint: disable=R0901
 
+
 class ArgosTreeView(ToggleColumnTreeView):
     """ QTreeView that defines common functionality, look and feel for all tree views in Argos.
 
@@ -88,14 +89,12 @@ class ArgosTreeView(ToggleColumnTreeView):
         treeHeader.setSectionResizeMode(QtWidgets.QHeaderView.Interactive) # don't set to stretch
         treeHeader.setStretchLastSection(True)
 
-
     def setModel(self, model):
         """ Sets the model.
             Checks that the model is a
         """
         # check_class(model, BaseTreeModel)
         super(ArgosTreeView, self).setModel(model)
-
 
     def setCurrentIndex(self, currentIndex):
         """ Sets the current item to be the item at currentIndex.
@@ -107,7 +106,6 @@ class ArgosTreeView(ToggleColumnTreeView):
                           QtCore.QItemSelectionModel.Rows)
         selectionModel.setCurrentIndex(currentIndex, selectionFlags)
 
-
     def getRowCurrentIndex(self):
         """ Returns the index of column 0 of the current item in the underlying model.
             See also the notes at the top of this module on current item vs selected item(s).
@@ -115,7 +113,6 @@ class ArgosTreeView(ToggleColumnTreeView):
         curIndex = self.currentIndex()
         col0Index = curIndex.sibling(curIndex.row(), 0)
         return col0Index
-
 
     def getCurrentItem(self): # TODO: rename? getCurrentItemAndIndex? getCurrentTuple? getCurrent?
         """ Find the current tree item (and the current index while we're at it)
@@ -125,7 +122,6 @@ class ArgosTreeView(ToggleColumnTreeView):
         currentIndex = self.getRowCurrentIndex()
         currentItem = self.model().getItem(currentIndex)
         return currentItem, currentIndex
-
 
     def expandPath(self, path):
         """ Follows the path and expand all nodes along the way.
@@ -139,7 +135,6 @@ class ArgosTreeView(ToggleColumnTreeView):
 
         leaf = iiPath[-1]
         return leaf
-
 
     def expandBranch(self, index=None, expanded=True):
         """ Expands or collapses the node at the index and all it's descendants.

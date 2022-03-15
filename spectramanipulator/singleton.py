@@ -2,8 +2,6 @@
 from PyQt5.QtWidgets import QDialog, QWidget, QDialogButtonBox
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtCore import Qt
-# import types
-# from six import with_metaclass
 # import logging
 from typing import Callable
 

@@ -1,6 +1,5 @@
 
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
 from spectramanipulator.singleton import PersistentOKCancelDialog
 from typing import Callable
 from PyQt5.QtWidgets import QLabel, QSpinBox, QGridLayout, QVBoxLayout, QLineEdit, QCheckBox
@@ -63,19 +62,12 @@ class RenameDialog(PersistentOKCancelDialog):
         # perform change
         self.cbTakeNamesFromList_check_changed()
 
-    # def set_result(self):
-    #     if not self.cbTakeNamesFromList.isChecked():
-    #         self.result = (self.leExpression.text(), self.sbOffset.value(), self.leCounterMulFactor.text())
-    #     else:
-    #         self.list = self.leList.text()
-
     def cbTakeNamesFromList_check_changed(self):
         is_checked = self.cbTakeNamesFromList.isChecked()
         self.sbOffset.setEnabled(not is_checked)
         self.leExpression.setEnabled(not is_checked)
         self.leList.setEnabled(is_checked)
         self.leCounterMulFactor.setEnabled(not is_checked)
-
 
 
 if __name__ == "__main__":

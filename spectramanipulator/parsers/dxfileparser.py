@@ -7,6 +7,16 @@ class DXFileParser(Parser):
 
     def __init__(self, filepath=None, str_data=None, delimiter=' ', decimal_sep='.',
                  dx_import_spectra_name_from_filename=False, dx_if_title_is_empty_use_filename=True):
+        """
+
+
+        :param filepath:
+        :param str_data:
+        :param delimiter:
+        :param decimal_sep:
+        :param dx_import_spectra_name_from_filename: If True and if
+        :param dx_if_title_is_empty_use_filename: If True,
+        """
         super(DXFileParser, self).__init__(filepath, str_data, delimiter, decimal_sep)
 
         self.dx_import_spectra_name_from_filename = dx_import_spectra_name_from_filename

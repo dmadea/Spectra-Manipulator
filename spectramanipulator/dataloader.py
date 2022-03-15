@@ -12,10 +12,6 @@ from .logger import Logger
 
 
 def parse_files(filepaths):
-    # settings_dict = Settings.get_attributes()
-    # if settings is not None:
-    #     settings_dict.update(settings)
-
     sett = Settings()
 
     csv_delimiter = get_delimiter_from_idx(sett['/Public settings/Import/Files/CSV and other files/CSV file/Delimiter'])
@@ -30,14 +26,14 @@ def parse_files(filepaths):
         csv_imp_decimal_sep=sett['/Public settings/Import/Files/CSV and other files/CSV file/Decimal separator'],
         remove_empty_entries=sett['/Public settings/Import/Parser/Remove empty entries'],
         skip_columns_num=sett['/Public settings/Import/Parser/Skip first'],
-        general_import_spectra_name_from_filename=sett['/Public settings/Import/Files/CSV and other files/If header is empty...'],
-        general_if_header_is_empty_use_filename=general_use_filename,
+        general_import_spectra_name_from_filename=general_use_filename,
+        general_if_header_is_empty_use_filename=sett['/Public settings/Import/Files/CSV and other files/If header is empty...'],
         skip_nan_columns=sett['/Public settings/Import/Parser/Skip columns containing NaNs'],
         nan_replacement=sett['/Public settings/Import/Parser/Skip columns containing NaNs/NaN value replacement'],
         dx_imp_delimiter=dx_delimiter,
         dx_imp_decimal_sep=sett['/Public settings/Import/Files/DX file/Decimal separator'],
-        dx_import_spectra_name_from_filename=sett['/Public settings/Import/Files/DX file/If ##TITLE is empty...'],
-        dx_if_title_is_empty_use_filename=dx_use_filename,
+        dx_import_spectra_name_from_filename=dx_use_filename,
+        dx_if_title_is_empty_use_filename=sett['/Public settings/Import/Files/DX file/If ##TITLE is empty...'],
         general_imp_delimiter=general_delimiter,
         general_imp_decimal_sep=sett['/Public settings/Import/Files/CSV and other files/Other files/Decimal separator'],
     )
@@ -64,8 +60,8 @@ def parse_text(text):
                                decimal_sep=sett['/Public settings/Import/Parser/Clipboard/Decimal separator'],
                                remove_empty_entries=sett['/Public settings/Import/Parser/Remove empty entries'],
                                skip_col_num=sett['/Public settings/Import/Parser/Skip first'],
-                               general_import_spectra_name_from_filename=sett['/Public settings/Import/Files/CSV and other files/If header is empty...'],
-                               general_if_header_is_empty_use_filename=use_filename,
+                               general_import_spectra_name_from_filename=use_filename,
+                               general_if_header_is_empty_use_filename=sett['/Public settings/Import/Files/CSV and other files/If header is empty...'],
                                skip_nan_columns=sett['/Public settings/Import/Parser/Skip columns containing NaNs'],
                                nan_replacement=sett['/Public settings/Import/Parser/Skip columns containing NaNs/NaN value replacement'])
 
@@ -189,3 +185,4 @@ def _parse_file(filepath, settings):
                                    nan_replacement=settings['nan_replacement'])
 
         return txt_parser.parse(), txt_parser
+

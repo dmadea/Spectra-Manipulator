@@ -17,8 +17,9 @@
 
 """ Abstract base classes for modeling data tree items for use in the ConfigTreeModel
 """
+
 import enum
-import logging, os
+import logging
 
 # from argos.info import DEBUGGING, icons_directory
 from PyQt5 import QtCore, QtGui, QtWidgets

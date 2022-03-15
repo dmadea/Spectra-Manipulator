@@ -26,7 +26,7 @@ from PyQt5.QtCore import Qt
 logger = logging.getLogger(__name__)
 
 
-class  BoolCti(AbstractCti):
+class BoolCti(AbstractCti):
     """ Config Tree Item to store an boolean. It can be edited using a check box
     """
     def __init__(self, *args, childrenDisabledValue=False, **kwargs):
@@ -41,7 +41,6 @@ class  BoolCti(AbstractCti):
         super(BoolCti, self).__init__(*args, **kwargs)
         self.childrenDisabledValue = childrenDisabledValue
 
-
     @property
     def debugInfo(self):
         """ Returns a string with debugging information
@@ -49,19 +48,16 @@ class  BoolCti(AbstractCti):
         return "{} (enabled={}, childDisabledVal={})".format(self.configValue, self.enabled,
                                                              self.childrenDisabledValue)
 
-
     def _enforceDataType(self, data):
         """ Converts to bool so that self.data always is of that type.
         """
         return bool(data)
-
 
     @property
     def data(self):
         """ Returns the data of this item.
         """
         return self._data
-
 
     @data.setter
     def data(self, data):
@@ -76,13 +72,11 @@ class  BoolCti(AbstractCti):
         self.enableBranch(enabled and self.data != self.childrenDisabledValue)
         self.enabled = enabled
 
-
     @property
     def displayValue(self):
         """ Returns empty string since a checkbox will displayed in the value-column instead.
         """
         return ""
-
 
     def insertChild(self, childItem, position=None):
         """ Inserts a child item to the current item.
@@ -97,14 +91,12 @@ class  BoolCti(AbstractCti):
         childItem.enabled = enableChildren
         return childItem
 
-
     @property
     def valueColumnItemFlags(self):
         """ Returns Qt.ItemIsUserCheckable so that a check box will be drawn in the config tree.
             Note that the flags include Qt.ItemIsEditable; this makes the reset button will appear.
         """
         return Qt.ItemIsUserCheckable | Qt.ItemIsEditable
-
 
     @property
     def checkState(self):
@@ -116,7 +108,6 @@ class  BoolCti(AbstractCti):
             return Qt.Unchecked
         else:
             raise ValueError("Unexpected data: {!r}".format(self.data))
-
 
     @checkState.setter
     def checkState(self, checkState):
@@ -131,7 +122,6 @@ class  BoolCti(AbstractCti):
         else:
             raise ValueError("Unexpected check state: {!r}".format(checkState))
 
-
     def enableBranch(self, enabled):
         """ Sets the enabled member to True or False for a node and all it's children
         """
@@ -143,14 +133,11 @@ class  BoolCti(AbstractCti):
         for child in self.childItems:
             child.enableBranch(enabled)
 
-
     def createEditor(self, delegate, parent, _option):
         """ Creates a hidden widget so that only the reset button is visible during editing.
             :type option: QStyleOptionViewItem
         """
         return GroupCtiEditor(self, delegate, parent=parent)
-
-
 
 
 class BoolGroupCti(AbstractCti):
@@ -167,12 +154,10 @@ class BoolGroupCti(AbstractCti):
         """
         super(BoolGroupCti, self).__init__(nodeName, defaultData, expanded=expanded)
 
-
     def _enforceDataType(self, data):
         """ Converts to bool so that self.data always is of that type.
         """
         return None if data is None else bool(data)
-
 
     @property
     def displayValue(self):
@@ -180,14 +165,12 @@ class BoolGroupCti(AbstractCti):
         """
         return ""
 
-
     @property
     def valueColumnItemFlags(self):
         """ Returns Qt.ItemIsUserCheckable so that a check box will be drawn in the config tree.
             Note that the flags include Qt.ItemIsEditable; this makes the reset button will appear.
         """
         return Qt.ItemIsTristate | Qt.ItemIsUserCheckable | Qt.ItemIsEditable
-
 
     @property
     def checkState(self):
@@ -210,7 +193,6 @@ class BoolGroupCti(AbstractCti):
         else:
             raise AssertionError("Please report this bug: commonData: {!r}".format(commonData))
 
-
     @checkState.setter
     def checkState(self, checkState):
         """ Sets the data to given a Qt.CheckState (Qt.Checked or Qt.Unchecked).
@@ -230,7 +212,6 @@ class BoolGroupCti(AbstractCti):
         for child in self.childItems:
             if isinstance(child, BoolCti):
                 child.data = commonData
-
 
     def createEditor(self, delegate, parent, _option):
         """ Creates a hidden widget so that only the reset button is visible during editing.
