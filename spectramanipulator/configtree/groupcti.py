@@ -124,7 +124,8 @@ class MainGroupCti(GroupCti):
 
 
 class RootCti(MainGroupCti):
-    """ Configuration tree item for a main settings.
+    """
+    Configuration tree item for a main settings.
     """
     def __init__(self, entry_node: dict, nodeName='root', root_xpath='/Public settings'):
         super(RootCti, self).__init__(nodeName, root_xpath=root_xpath)

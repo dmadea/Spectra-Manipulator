@@ -31,7 +31,6 @@ from PyQt5.QtCore import Qt
 # from utils.defs import InvalidInputError
 
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -125,25 +124,21 @@ class ColorCti(AbstractCti):
         """
         return self.data
 
-
     def _nodeMarshall(self):
         """ Returns the non-recursive marshalled value of this CTI. Is called by marshall()
         """
         return self.data.name()
-
 
     def _nodeUnmarshall(self, data):
         """ Initializes itself non-recursively from data. Is called by unmarshall()
         """
         self.data = QtGui.QColor(data)
 
-
     def createEditor(self, delegate, parent, option):
         """ Creates a ColorCtiEditor.
             For the parameters see the AbstractCti constructor documentation.
         """
         return ColorCtiEditor(self, delegate, parent=parent)
-
 
 
 class ColorCtiEditor(AbstractCtiEditor):
@@ -169,13 +164,11 @@ class ColorCtiEditor(AbstractCtiEditor):
 
         self.pickButton = self.addSubEditor(pickButton)
 
-
     def finalize(self):
         """ Is called when the editor is closed. Disconnect signals.
         """
         self.pickButton.clicked.disconnect(self.openColorDialog)
         super(ColorCtiEditor, self).finalize()
-
 
     def openColorDialog(self):
         """ Opens a QColorDialog for the user
@@ -191,12 +184,10 @@ class ColorCtiEditor(AbstractCtiEditor):
             self.setData(qColor)
             self.commitAndClose()
 
-
     def setData(self, qColor):
         """ Provides the main editor widget with a data to manipulate.
         """
         self.lineEditor.setText(qColor.name().upper())
-
 
     def getData(self):
         """ Gets data from the editor widget.

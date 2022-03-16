@@ -5,6 +5,7 @@ from .spectrum import SpectrumList
 from .settings.settings import Settings
 from PyQt5.QtWidgets import QFileDialog
 from .parsers.hplc_dxfileparser import parse_HPLC_DX_file
+from .parsers.hplc_uvfileparser import parse_HPLC_UV_file
 from .dialogs.load_kinetics_dialog import LoadKineticsDialog
 import re
 from .logger import Logger
@@ -62,6 +63,28 @@ def batch_load_kinetics(load_kinetic_func: Callable):
 
     load_kin_dialog = LoadKineticsDialog(accepted)
     load_kin_dialog.show()
+
+
+def import_UV_HPLC_files():
+    sett = Settings()
+
+    # TODO settings
+    filepaths = open_file_dialog("Import Old Agilent HPLC chromatogram", '/',
+                                 _filter="Agilent HPLC DX Files (*.uv, *.UV);;All Files (*.*)",
+                                 initial_filter="Agilent HPLC DX Files (*.uv, *.UV)",
+                                 choose_multiple=True)
+    if filepaths is None:
+        return
+
+    # sett['/Private settings/Import DX file dialog path'] = os.path.dirname(filepaths[0])
+    # sett.save()
+
+    spectral_data = []
+
+    for filepath in filepaths:
+        spectral_data += parse_HPLC_UV_file(filepath)
+
+    return spectral_data
 
 
 def import_DX_HPLC_files():

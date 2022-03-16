@@ -25,6 +25,8 @@ class StyleWidget(InputWidget):
     def __init__(self, dock_widget, accepted_func, selected_item, parent=None):
         super(StyleWidget, self).__init__(dock_widget, accepted_func, title='Set style', parent=parent)
 
+        self.selected_item = selected_item
+
         self.tree_model = ConfigTreeModel()
         self.tree_view = ConfigTreeView(self.tree_model, right_dock_width=150)
 
@@ -42,14 +44,10 @@ class StyleWidget(InputWidget):
 
         self.setLayout(self.layout)
 
-        # self.dock_widget = dock_widget
-        # self.accepted_func = accepted_func
-        # # self.selected_item = selected_item
-        #
-        # self.color = None
-        # self.sym_brush_color = None
-        # self.sym_fill_color = None
-        #
+        self.color = None
+        self.sym_brush_color = None
+        self.sym_fill_color = None
+
         # self.btnOK.clicked.connect(self.accept)
         # self.btnApply.clicked.connect(self.applied)
         # self.btnCancel.clicked.connect(self.reject)

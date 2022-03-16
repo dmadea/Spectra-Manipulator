@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 from spectramanipulator.spectrum import Spectrum, SpectrumList
 
 
-def _read_utf16(f):
+def read_utf16(f):
     """modified string read method which works with Agilent files"""
     # determine length to read
     read_len, = struct.unpack('>B', f.read(1))
@@ -40,14 +40,14 @@ def _read_data(file, loc, data_scale_factor):
 
     # load name of sample, not necessary
     file.seek(loc + sample_name_shift)
-    sample_name = _read_utf16(file)
+    sample_name = read_utf16(file)
 
     # load scaling factor for data
     file.seek(loc + scale_factor_shift)
     scale_fac, = struct.unpack('>d', file.read(8))
     scale_fac *= data_scale_factor
     # load unit of data
-    unit = _read_utf16(file)
+    unit = read_utf16(file)
 
     # load data itself
     file.seek(loc + data_shift)
@@ -86,8 +86,6 @@ def _read_data(file, loc, data_scale_factor):
 
 
 def parse_HPLC_DX_file(fpath):
-    _dir, fname = os.path.split(fpath)   # get dir and filename
-    fname, _ = os.path.splitext(fname)  # get filename without extension
 
     with open(fpath, 'rb') as f:
         # read the last 35000 bytes (this should contain all XML tree at the end of DX file)
@@ -137,16 +135,14 @@ def parse_HPLC_DX_file(fpath):
             # 4 bytes before the ID is location in data file
             FLD_loc, = struct.unpack('<I', data[fld_id_idx - 4: fld_id_idx])
 
-            data_mat, times, wavelengths, _, unit = _read_data(f, FLD_loc, 1e-6)  # an extra scaling factor
+            data_mat, times, wavelengths, sample_name, unit = _read_data(f, FLD_loc, 1e-6)  # an extra scaling factor
 
-            group1 = SpectrumList(name=f'Fluorescence - {fname}')
+            group1 = SpectrumList(name=f'Fluorescence - {sample_name}')
             for i in range(wavelengths.shape[0]):
                 sp = Spectrum.from_xy_values(times, data_mat[:, i], str(wavelengths[i]))
                 group1.children.append(sp)
 
             spectral_data.append(group1)
-
-            # save_mat2csv(os.path.join(_dir, f'FLD_{fname}.csv'), data_mat, times, wavelengths, unit=unit)
 
         # ----------- READ UV DATA -------
 
@@ -154,16 +150,14 @@ def parse_HPLC_DX_file(fpath):
             uv_id_idx = data.find(bytes(uv_ID + '.UVPK', 'utf8'))
             UV_loc, = struct.unpack('<I', data[uv_id_idx - 4: uv_id_idx])
 
-            data_mat, times, wavelengths, _, unit = _read_data(f, UV_loc, 1 / 2000)  # an extra scaling factor
+            data_mat, times, wavelengths, sample_name, unit = _read_data(f, UV_loc, 1 / 2000)  # an extra scaling factor
 
-            group2 = SpectrumList(name=f'Absorption - {fname}')
+            group2 = SpectrumList(name=f'Absorption - {sample_name}')
             for i in range(wavelengths.shape[0]):
                 sp = Spectrum.from_xy_values(times, data_mat[:, i], str(wavelengths[i]))
                 group2.children.append(sp)
 
             spectral_data.append(group2)
-
-            # save_mat2csv(os.path.join(_dir, f'UV_{fname}.csv'), data_mat, times, wavelengths, unit=unit)
 
         return spectral_data
 

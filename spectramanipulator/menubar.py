@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QMenuBar, QAction, QMenu
 # from spectramanipulator.dialogs.fitwidget import FitWidget
 from spectramanipulator import __version__
 from functools import partial
-from .special_importer import import_DX_HPLC_files, import_LPF_kinetics, import_EEM_Duetta, import_kinetics_Duetta, batch_load_kinetics
+from .special_importer import import_DX_HPLC_files, import_UV_HPLC_files, import_LPF_kinetics, import_EEM_Duetta, import_kinetics_Duetta, batch_load_kinetics
 
 
 class MenuBar(QMenuBar):
@@ -71,9 +71,8 @@ class MenuBar(QMenuBar):
 
         self.import_special_menu.addAction(self.batch_load_kin)
 
-        # TODO create old HPLC importer
         self.old_HPLC_chrom = QAction('Old Agilent HPLC chromatogram (*.UV)', self)
-        # self.old_HPLC_chrom.triggered.connect(self.main_window...)
+        self.old_HPLC_chrom.triggered.connect(partial(self.import_spectral_data, import_UV_HPLC_files))
         self.import_special_menu.addAction(self.old_HPLC_chrom)
 
         self.new_HPLC_chrom = QAction('New Agilent HPLC chromatogram (*.DX)', self)
