@@ -69,15 +69,15 @@ def import_UV_HPLC_files():
     sett = Settings()
 
     # TODO settings
-    filepaths = open_file_dialog("Import Old Agilent HPLC chromatogram", '/',
+    filepaths = open_file_dialog("Import Old Agilent HPLC chromatogram", sett['/Private settings/Import DX file dialog path'],
                                  _filter="Agilent HPLC DX Files (*.uv, *.UV);;All Files (*.*)",
                                  initial_filter="Agilent HPLC DX Files (*.uv, *.UV)",
                                  choose_multiple=True)
     if filepaths is None:
         return
 
-    # sett['/Private settings/Import DX file dialog path'] = os.path.dirname(filepaths[0])
-    # sett.save()
+    sett['/Private settings/Import DX file dialog path'] = os.path.dirname(filepaths[0])
+    sett.save()
 
     spectral_data = []
 

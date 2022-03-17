@@ -42,7 +42,7 @@ class Settings(metaclass=Singleton):
                         dict(name='Save project dialog path', value=""),
                         dict(name='Load kinetics last path', value=""),
                         dict(name='Recent project filepaths', value=[]),
-                        dict(name='Import DX file dialog path', value=""),
+                        dict(name='Import DX file dialog path', value=""),  # works for both UV and DX files
                         dict(name='Last rename expression', value=""),
                         dict(name='Last rename name taken from list', value=False),
                         {
