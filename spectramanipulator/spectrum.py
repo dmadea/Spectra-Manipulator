@@ -8,6 +8,7 @@ from scipy.interpolate import interp1d
 from scipy.fftpack import fft, fftfreq
 from scipy.integrate import cumtrapz, simps
 from scipy.fftpack import dct, idct
+from numpy.linalg import norm
 
 from typing import Union, Iterable, List
 
@@ -421,14 +422,14 @@ def add_modif_func(redraw_spectra=True, update_view=False):
 
             @functools.wraps(self.fn)
             def fn_spectrum(this, *args, **kwargs):
-                self.fn(this, *args, **kwargs)
+                ret_vals = self.fn(this, *args, **kwargs)
 
                 if redraw_spectra:
                     this._redraw_all_spectra()
                 if update_view:
                     this._update_view()
 
-                return this
+                return ret_vals
 
             @functools.wraps(self.fn)
             def fn_spectrum_list_no_update(this, *args, **kwargs):
@@ -628,6 +629,8 @@ class Spectrum(IOperationBase):
 
         return self
 
+
+
     @add_modif_func(True, False)
     def savgol(self, window_length, poly_order):
         """
@@ -780,6 +783,62 @@ class Spectrum(IOperationBase):
         self.data[:, 1] -= np.average(y)
 
         return self
+
+    @add_modif_func(True, False)
+    def baseline_corr_arPLS(self, lam: float = 1e3, niter: int = 100, tol: float = 2e-3):
+        """
+        Performs baseline correction using asymmetrically reweighted penalized least squares (arPLS). Based on
+        10.1016/j.csda.2009.09.020 and 10.1039/c4an01061b, utilizes discrete cosine transform to efficiently
+        perform the calculation.
+
+        Correctly smooths only evenly spaced data!!
+
+        Parameters
+        ----------
+        lam : float
+            Lambda - parametrizes the roughness of the smoothed curve.
+        niter : int
+            Maximum number of iterations.
+        tol: float
+            Tolerance for convergence based on weight matrix.
+        """
+
+        N = self.data.shape[0]
+
+        Lambda = -2 + 2 * np.cos(np.arange(N) * np.pi / N)  # eigenvalues of 2nd order difference matrix
+
+        gamma = 1 / (1 + lam * Lambda * Lambda)
+
+        y_orig = self.data[:, 1].copy()
+        z = y_orig  # initialize baseline
+        y_corr = None  # data corrected for baseline
+        w = np.ones_like(z)  # weight vector
+
+        i = 0
+        crit = 1
+
+        while crit > tol and i < niter:
+            z = idct(gamma * dct(w * (y_orig - z) + z, norm='ortho'), norm='ortho')  # calculate the baseline
+
+            y_corr = y_orig - z  # data corrected for baseline
+            y_corr_neg = y_corr[y_corr < 0]  # negative data values
+
+            m = np.mean(y_corr_neg)
+            s = np.std(y_corr_neg)
+
+            new_w = 1 / (1 + np.exp(2 * (y_corr - (2 * s - m)) / s))  # update weights with logistic function
+
+            crit = norm(new_w - w) / norm(new_w)
+            w = new_w
+
+            if (i + 1) % int(np.sqrt(niter)) == 0:
+                print(f'Iteration={i + 1}, {crit=:.2g}')
+            i += 1
+
+        self.data[:, 1] = y_corr
+
+        return self, Spectrum.from_xy_values(self.data[:, 0], z, f'{self.name} - baseline'),\
+               Spectrum.from_xy_values(self.data[:, 0], y_orig, f'{self.name} - original data')   # return the corrected data, baseline and the original data
 
     @add_modif_func(True, False)
     def normalize(self, x0=None, x1=None):

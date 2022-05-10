@@ -2,6 +2,7 @@
 
 from PyQt5 import QtGui
 import pyqtgraph as pg
+import numpy as np
 
 from spectramanipulator.pyqtgraphmodif.legend_item import LegendItem
 from spectramanipulator.pyqtgraphmodif.plot_item import PlotItem
@@ -14,6 +15,7 @@ from spectramanipulator.singleton import Singleton
 from spectramanipulator.settings.settings import Settings
 
 from PyQt5.QtCore import Qt
+
 # from PyQt5.QtGui import QColor
 
 
@@ -31,6 +33,7 @@ class PlotWidget(pg.GraphicsLayoutWidget, metaclass=Singleton):
         self.plotted_fits = {}
 
         self.vb = ViewBox(self.plotted_items)
+
         self.plotItem = PlotItem(viewBox=self.vb)
         self.probe_label = pg.LabelItem('no cursor data shown', justify='left')
 
@@ -60,10 +63,8 @@ class PlotWidget(pg.GraphicsLayoutWidget, metaclass=Singleton):
 
         self.plotItem.setTitle(self.sett['/Public settings/Plotting/Graph/Graph title'], size="{}pt".format(20))
 
-        self.plotItem.setLabel('left', text=self.sett['/Public settings/Plotting/Graph/Y axis label'],
-                               units=None)
-        self.plotItem.setLabel('bottom', text=self.sett['/Public settings/Plotting/Graph/X axis label'],
-                               units=None)
+        self.plotItem.setLabel('left', text=self.sett['/Public settings/Plotting/Graph/Y axis label'], units=None)
+        self.plotItem.setLabel('bottom', text=self.sett['/Public settings/Plotting/Graph/X axis label'], units=None)
         # self.plotItem.showGrid(x=Settings.show_grid, y=Settings.show_grid, alpha=Settings.grid_alpha)
 
         left_label_font = QtGui.QFont()
@@ -77,7 +78,9 @@ class PlotWidget(pg.GraphicsLayoutWidget, metaclass=Singleton):
         self.plotItem.getAxis('bottom').label.setFont(bottom_label_font)
 
     def plot(self, item, **kwargs):
-        """kwargs are passed to plotItem.plot function"""
+        """kwargs are passed to plotItem.plot function
+        item is Spectrum
+        """
 
         # if spectrum is already plotted, update the data and style
         if item in self.plotted_items:
