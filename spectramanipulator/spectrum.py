@@ -785,13 +785,16 @@ class Spectrum(IOperationBase):
         return self
 
     @add_modif_func(True, False)
-    def baseline_corr_arPLS(self, lam: float = 1e3, niter: int = 100, tol: float = 2e-3):
+    def baseline_corr_arPLS(self, lam: float = 1e3, niter: int = 100, tol: float = 2e-3, x0_data=None, x1_data=None):
         """
         Performs baseline correction using asymmetrically reweighted penalized least squares (arPLS). Based on
         10.1016/j.csda.2009.09.020 and 10.1039/c4an01061b, utilizes discrete cosine transform to efficiently
         perform the calculation.
 
         Correctly smooths only evenly spaced data!!
+
+        If x0_data or x1_data is not None, the data range will be used and weight vector will be fixed during fitting.
+        In those region where data are located, w = 0 and 1 otherwise.
 
         Parameters
         ----------
@@ -801,6 +804,10 @@ class Spectrum(IOperationBase):
             Maximum number of iterations.
         tol: float
             Tolerance for convergence based on weight matrix.
+        x0_data : None or int or float
+            First x value that denotes the signal from data.
+        x1_data : None or int or float
+            Last x value that denotes the signal from data.
         """
 
         N = self.data.shape[0]
@@ -817,6 +824,12 @@ class Spectrum(IOperationBase):
         i = 0
         crit = 1
 
+        fix_w = False
+        if x0_data or x1_data:
+            start, end = self._get_start_end_indexes(x0_data, x1_data)
+            w[start:end] = 0  #  data have zero weight
+            fix_w = True
+
         while crit > tol and i < niter:
             z = idct(gamma * dct(w * (y_orig - z) + z, norm='ortho'), norm='ortho')  # calculate the baseline
 
@@ -829,7 +842,8 @@ class Spectrum(IOperationBase):
             new_w = 1 / (1 + np.exp(2 * (y_corr - (2 * s - m)) / s))  # update weights with logistic function
 
             crit = norm(new_w - w) / norm(new_w)
-            w = new_w
+            if not fix_w:
+                w = new_w
 
             if (i + 1) % int(np.sqrt(niter)) == 0:
                 print(f'Iteration={i + 1}, {crit=:.2g}')
@@ -838,7 +852,8 @@ class Spectrum(IOperationBase):
         self.data[:, 1] = y_corr
 
         return self, Spectrum.from_xy_values(self.data[:, 0], z, f'{self.name} - baseline'),\
-               Spectrum.from_xy_values(self.data[:, 0], y_orig, f'{self.name} - original data')   # return the corrected data, baseline and the original data
+               Spectrum.from_xy_values(self.data[:, 0], y_orig, f'{self.name} - original data'),\
+                Spectrum.from_xy_values(self.data[:, 0], w, f'{self.name} - weights')             # return the corrected data, baseline and the original data
 
     @add_modif_func(True, False)
     def normalize(self, x0=None, x1=None):
