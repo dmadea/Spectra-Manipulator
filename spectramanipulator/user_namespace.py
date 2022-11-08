@@ -618,7 +618,7 @@ def plot_kinetics(kin_group_items: list, n_rows: int = None, n_cols: int = None,
                  linthresh=100, cmap='jet_r', major_ticks_labels=(100, 1000), emph_t=(0, 200, 1000),
                  inset_loc=(0.75, 0.1, 0.03, 0.8), colorbar_label='Time / s', lw=0.5, alpha=0.5,
                  fig_size_one_graph=(5, 4), y_label='Absorbance', x_label=WL_LABEL, x_lim=(230, 600), filepath=None,
-                 dpi=500, transparent=True, LED_sources: list = None):
+                 dpi=500, transparent=True, LED_sources: list = None, add_wavenumber_axis=True):
 
     kin_group_items = kin_group_items if isinstance(kin_group_items, list) else [kin_group_items]
     n = len(kin_group_items)  # number of EEMs to plot
@@ -653,7 +653,8 @@ def plot_kinetics(kin_group_items: list, n_rows: int = None, n_cols: int = None,
         w = group[0].data[:, 0]
 
         _set_main_axis(ax, x_label=x_label, y_label=y_label, xlim=x_lim, x_minor_locator=None, y_minor_locator=None)
-        _ = _setup_wavenumber_axis(ax)
+        if add_wavenumber_axis:
+            _setup_wavenumber_axis(ax)
 
         cmap = cm.get_cmap(cmap)
         norm = mpl.colors.SymLogNorm(vmin=t[0], vmax=t[-1], linscale=linscale, linthresh=linthresh, base=10, clip=True)
