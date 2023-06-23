@@ -36,6 +36,7 @@ delimiter_separators = {
     'Horizontal tabulator \\t': '\t',
     'Comma': ',',
     'Dot': '.',
+    'Semicolon': ';',
     'Space': ' ',
     'New Line \\n': '\n',
     'Carriage return \\r': '\r',
