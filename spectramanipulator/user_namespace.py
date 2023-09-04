@@ -1060,7 +1060,7 @@ def plot_fits(data_group, fit_group, residuals_group, n_rows=None, n_cols=None, 
 
     if filepath:
         ext = os.path.splitext(filepath)[1].lower()[1:]
-        plt.savefig(fname=filepath, format=ext, transparent=transparent, dpi=dpi)
+        plt.savefig(fname=filepath, format=ext, transparent=transparent, dpi=dpi, bbox_inches='tight')
 
     plt.show()
 
