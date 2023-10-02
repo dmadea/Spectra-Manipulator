@@ -9,16 +9,20 @@ from pyqtgraph.graphicsItems.PlotItem import PlotItem as _PlotItem
 
 class PlotItem(_PlotItem):
 
-    def addItem(self, item, *args, **kwargs):
+    def addItem(self, item, *args, **kargs):
         """
-        Add a graphics item to the view box. 
-        If the item has plot data (PlotDataItem, PlotCurveItem, ScatterPlotItem), it may
-        be included in analysis performed by the PlotItem.
+        Add a graphics item to the view box.
+        If the item has plot data (:class:`PlotDataItem <pyqtgraph.PlotDataItem>` ,
+        :class:`~pyqtgraph.PlotCurveItem` , :class:`~pyqtgraph.ScatterPlotItem` ),
+        it may be included in analysis performed by the PlotItem.
         """
+        if item in self.items:
+            warnings.warn('Item already added to PlotItem, ignoring.')
+            return
         self.items.append(item)
         vbargs = {}
-        if 'ignoreBounds' in kwargs:
-            vbargs['ignoreBounds'] = kwargs['ignoreBounds']
+        if 'ignoreBounds' in kargs:
+            vbargs['ignoreBounds'] = kargs['ignoreBounds']
         self.vb.addItem(item, *args, **vbargs)
         name = None
         if hasattr(item, 'implements') and item.implements('plotData'):
@@ -26,7 +30,7 @@ class PlotItem(_PlotItem):
             self.dataItems.append(item)
             # self.plotChanged()
 
-            params = kwargs.get('params', {})
+            params = kargs.get('params', {})
             self.itemMeta[item] = params
             # item.setMeta(params)
             self.curves.append(item)
@@ -42,21 +46,20 @@ class PlotItem(_PlotItem):
             item.setFftMode(self.ctrl.fftCheck.isChecked())
             item.setDownsampling(*self.downsampleMode())
             item.setClipToView(self.clipToViewMode())
-            item.setPointMode(self.pointMode())
 
             ## Hide older plots if needed
             self.updateDecimation()
 
             ## Add to average if needed
             self.updateParamList()
-            if self.ctrl.averageGroup.isChecked() and 'skipAverage' not in kwargs:
+            if self.ctrl.averageGroup.isChecked() and 'skipAverage' not in kargs:
                 self.addAvgCurve(item)
 
             # c.connect(c, QtCore.SIGNAL('plotChanged'), self.plotChanged)
             # item.sigPlotChanged.connect(self.plotChanged)
             # self.plotChanged()
         # name = kargs.get('name', getattr(item, 'opts', {}).get('name', None))
-        plot_legend = kwargs.get('plot_legend', True)  # added
+        plot_legend = kargs.get('plot_legend', True)  # added
         if name is not None and hasattr(self, 'legend') and self.legend is not None and plot_legend:
             self.legend.addItem(item, name=name)
 
