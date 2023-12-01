@@ -17,6 +17,7 @@ class MenuBar(QMenuBar):
         # ---File Menu---
 
         self.file_menu = self.addMenu("&File")
+        self.setNativeMenuBar(False)
 
         self.open_project_act = QAction("&Open Project", self)
         self.open_project_act.setShortcut("Ctrl+O")
@@ -86,7 +87,9 @@ class MenuBar(QMenuBar):
 
         self.file_menu.addSeparator()
 
-        self.settings_act = QAction("Se&ttings", self)
+        # On mac, Settings on native menu did not show because the name is reserved... WTF
+        # https://stackoverflow.com/questions/28559730/menu-entry-not-shown-on-mac-os
+        self.settings_act = QAction("Settings", self)
         self.settings_act.triggered.connect(self.main_window.open_settings)
         self.file_menu.addAction(self.settings_act)
 

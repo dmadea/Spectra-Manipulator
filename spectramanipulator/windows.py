@@ -2,8 +2,10 @@
 import sys
 import os
 from spectramanipulator.settings.settings import Settings
-import winshell
-from ctypes import windll
+
+if sys.platform == 'win32':
+    import winshell
+    from ctypes import windll
 
 # --- Window control ---
 
@@ -11,13 +13,14 @@ SW_SHOW = 5    # activate and display
 SW_SHOWNA = 8  # show without activation
 SW_HIDE = 0
 
-GetConsoleWindow = windll.kernel32.GetConsoleWindow
-ShowWindow = windll.user32.ShowWindow
-IsWindowVisible = windll.user32.IsWindowVisible
+if sys.platform == 'win32':
+    GetConsoleWindow = windll.kernel32.GetConsoleWindow
+    ShowWindow = windll.user32.ShowWindow
+    IsWindowVisible = windll.user32.IsWindowVisible
 
-# Handle to console window associated with current Python
-# interpreter process, 0 if there is no window
-console_window_handle = GetConsoleWindow()
+    # Handle to console window associated with current Python
+    # interpreter process, 0 if there is no window
+    console_window_handle = GetConsoleWindow()
 
 
 def set_attached_console_visible(state):
