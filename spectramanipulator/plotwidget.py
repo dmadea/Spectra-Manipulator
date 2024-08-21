@@ -220,7 +220,7 @@ class PlotWidget(pg.GraphicsLayoutWidget, metaclass=Singleton):
             else:
                 self.viewport().setCursor(Qt.CrossCursor)
 
-    def add_legend(self, size=None, spacing=5, offset=(-30, 30)):
+    def add_legend(self, size=None, spacing=10, offset=(-30, 30)):
         if self.legend is not None:
             self.legend.clear()
             self.plotItem.legend = None

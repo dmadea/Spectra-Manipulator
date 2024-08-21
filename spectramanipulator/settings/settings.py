@@ -18,7 +18,7 @@ class Settings(metaclass=Singleton):
 
     _config_filename = "config.json"
 
-    enable_multiprocessing = True  # enables importing files as separate processes
+    enable_multiprocessing = False  # enables importing files as separate processes
     force_multiprocess = False  # importing of files will only run in multiple processes
     coordinates_sig_figures = 4  # number of significant figures
 

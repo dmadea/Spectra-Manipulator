@@ -16,7 +16,8 @@ from scipy.linalg import lstsq
 
 from spectramanipulator.settings.settings import Settings
 from spectramanipulator.spectrum import fi, Spectrum, SpectrumList, group2mat
-from scipy.integrate import simps, cumtrapz
+from scipy.integrate import cumulative_trapezoid as cumtrapz
+from scipy.integrate import cumulative_simpson as simps
 from scipy.stats import linregress
 from uncertainties import ufloat, unumpy
 

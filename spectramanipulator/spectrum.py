@@ -6,7 +6,8 @@ from abc import abstractmethod
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 from scipy.fftpack import fft, fftfreq
-from scipy.integrate import cumtrapz, simps
+from scipy.integrate import cumulative_trapezoid as cumtrapz
+from scipy.integrate import cumulative_simpson as simps
 from scipy.fftpack import dct, idct
 from numpy.linalg import norm
 

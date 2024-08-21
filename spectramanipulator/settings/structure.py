@@ -424,7 +424,7 @@ public_settings = [
                         'type': SnFloatCti,
                         'name': 'Legend spacing',
                         'value': None,
-                        'default_value': 8.0,
+                        'default_value': 10.0,
                         'minValue': 0.0,
                         'maxValue': 200,
                         'precision': 1,
