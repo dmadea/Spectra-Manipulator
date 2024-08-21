@@ -191,6 +191,14 @@ def T2A_LFP(item):
     y_transformed = -log10(-y)."""
     pass
 
+
+def average_spectra(group_item):
+    x, y, mat = group2mat(group_item)
+    s = Spectrum.from_xy_values(x, mat.mean(axis=1), name=f"{group_item.name}-avrg")
+
+    if UserNamespace.instance is not None:
+        UserNamespace.instance.tw.add_to_list(s)
+
 #
 # def add_to_list(spectra):
 #     """
