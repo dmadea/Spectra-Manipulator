@@ -10,6 +10,9 @@ import matplotlib.gridspec as gridspec
 
 from matplotlib import colors as c
 
+import cmasher as cmr
+import colorcet as cc
+
 # from copy import deepcopy
 from PyQt5.QtWidgets import QApplication
 from scipy.linalg import lstsq
@@ -862,7 +865,7 @@ def plot_kinetics_no_colorbar(group_item, x_lim=(None, None), y_lim=(None, None)
 
 def plot_EEMs(EEM_group_items: list, n_rows: int = None, n_cols: int = None, log_z: bool = False, transform2wavenumber=True,
               fig_size_one_graph=(5.5, 4), x_lim=(None, None), y_lim=(None, None), z_lim=(1, None),  filepath=None, dpi=500,
-              transparent=False, show_title=True, cmap='hot_r', z_label='Counts', x_major_locators=(None, None), x_minor_locators=(None, None),
+              transparent=False, show_title=True, cmap='cet_fire_r', z_label='Counts', x_major_locators=(None, None), x_minor_locators=(None, None),
               y_major_locators=(None, None), y_minor_locators=(None, None)):
 
     """This will assume that excitation wavelengths are used as names for individual spectra
