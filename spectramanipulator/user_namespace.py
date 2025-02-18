@@ -627,7 +627,7 @@ def plot_kinetics(kin_group_items: list, n_rows: int = None, n_cols: int = None,
                  linthresh=100, cmap='jet_r', major_ticks_labels=(100, 1000), emph_t=(0, 200, 1000),
                  inset_loc=(0.75, 0.1, 0.03, 0.8), colorbar_label='Time / s', lw=0.5, alpha=0.5,
                  fig_size_one_graph=(5, 4), y_label='Absorbance', x_label=WL_LABEL, x_lim=(230, 600), filepath=None,
-                 dpi=500, transparent=True, LED_sources: list = None, add_wavenumber_axis=True):
+                 dpi=500, transparent=True, LED_sources: list = None, add_wavenumber_axis=True, y_lim=(None, None)):
 
     kin_group_items = kin_group_items if isinstance(kin_group_items, list) else [kin_group_items]
     n = len(kin_group_items)  # number of EEMs to plot
@@ -661,7 +661,7 @@ def plot_kinetics(kin_group_items: list, n_rows: int = None, n_cols: int = None,
         t = np.asarray(group.get_names(), dtype=np.float64)
         w = group[0].data[:, 0]
 
-        _set_main_axis(ax, x_label=x_label, y_label=y_label, xlim=x_lim, x_minor_locator=None, y_minor_locator=None)
+        _set_main_axis(ax, x_label=x_label, y_label=y_label, xlim=x_lim, ylim=y_lim, x_minor_locator=None, y_minor_locator=None)
         if add_wavenumber_axis:
             _setup_wavenumber_axis(ax)
 
@@ -1009,7 +1009,7 @@ def plot_fits(data_group, fit_group, residuals_group, n_rows=None, n_cols=None, 
 
     fig = plt.figure(figsize=(fig_size_one_graph[0] * n_cols, fig_size_one_graph[1] * n_rows))
 
-    outer_grid = gridspec.GridSpec(n_rows, n_cols, wspace=0.25, hspace=0.3)
+    outer_grid = gridspec.GridSpec(n_rows, n_cols, wspace=0.25, hspace=0.3, figure=fig)
 
     for og, data, fit, res in zip(outer_grid, data_group, fit_group, residuals_group):
 
