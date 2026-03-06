@@ -1,7 +1,7 @@
 
 import requests
-from distutils.version import StrictVersion
-from distutils.version import LooseVersion
+# from distutils.version import StrictVersion
+# from distutils.version import LooseVersion
 import sys
 import os
 import subprocess

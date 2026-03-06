@@ -63,9 +63,9 @@ class Main(QMainWindow):
         w, h = 1000, 600
 
         # setup window size based on current resolution
-        if sys.platform == 'win32':
-            from win32api import GetSystemMetrics
-            w, h = int(GetSystemMetrics(0) * 0.45), int(GetSystemMetrics(1) * 0.45)
+        # if sys.platform == 'win32':
+        #     from win32api import GetSystemMetrics
+        #     w, h = int(GetSystemMetrics(0) * 0.45), int(GetSystemMetrics(1) * 0.45)
 
         # print(w, h)
         self.resize(w, h)
@@ -504,8 +504,8 @@ def main():
         return
 
     try:
-        if sys.platform == 'win32' and not debug:
-            windows.set_attached_console_visible(False)
+        # if sys.platform == 'win32' and not debug:
+        #     windows.set_attached_console_visible(False)
 
         app = QApplication(sys.argv)
 
@@ -522,8 +522,9 @@ def main():
         # app.lastWindowClosed.connect(app.quit)
         sys.exit(app.exec_())
     finally:
-        if sys.platform == 'win32' and not debug:
-            windows.set_attached_console_visible(True)
+        pass
+    #     if sys.platform == 'win32' and not debug:
+    #         windows.set_attached_console_visible(True)
 
     ### cProfile.run('app.exec_()', 'profdata')
     # cProfile.runctx('app.exec_()', None, locals(), filename='profdata')

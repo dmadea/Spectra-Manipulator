@@ -17,8 +17,10 @@ Installation Methods
 * PyQt5
 * qtconsole
 * numba
-* requests
-* winshell
+<!-- * requests
+* winshell -->
+* colorset
+* cmasher
 
 First Launch
 --------------------
