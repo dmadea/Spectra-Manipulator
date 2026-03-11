@@ -29,13 +29,13 @@ def int_line_style(counter):
 
 def int_default_color_scheme(counter):
     colors = [
-        (255, 0, 0, 255),  # red
-        (0, 255, 0, 255),  # green
-        (0, 0, 255, 255),  # blue
+        (9, 0, 101, 255),  # blue
+        (197, 43, 34, 255),  # red
+        (48, 112, 29, 255),  # green
         (0, 0, 0, 255),  # black
-        (255, 255, 0, 255),  # yellow
-        (255, 0, 255, 255),  # magenta
-        (0, 255, 255, 255),  # cyan
+        (200, 200, 0, 255),  # yellow
+        (200, 0, 200, 255),  # magenta
+        (0, 200, 200, 255),  # cyan
         (155, 155, 155, 255),  # gray
         (155, 0, 0, 255),  # dark red
         (0, 155, 0, 255),  # dark green
