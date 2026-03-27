@@ -550,7 +550,7 @@ class TreeWidget(TreeView):
 
         sel_it_menu = QMenu("With Selected Items")
 
-        check_selected_items = QAction("Check Items (Ctrl + Q)", self)
+        check_selected_items = QAction("Check Items (Ctrl + E)", self)
         # check_selected_items.setShortcut(QKeySequence(Qt.Key_Control, Qt.Key_D))
 
         sel_it_menu.addAction(check_selected_items)
@@ -724,8 +724,8 @@ class TreeWidget(TreeView):
             # Ctrl + N
             self.normalize()
 
-        if e.key() == 81 and e.modifiers() == Qt.ControlModifier:
-            # Ctrl + Q
+        if e.key() == 69 and e.modifiers() == Qt.ControlModifier:
+            # Ctrl + E
             self.check_selected_items()
 
         if e.key() == 87 and e.modifiers() == Qt.ControlModifier:
