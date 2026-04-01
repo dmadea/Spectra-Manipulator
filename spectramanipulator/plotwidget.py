@@ -77,6 +77,10 @@ class PlotWidget(pg.GraphicsLayoutWidget, metaclass=Singleton):
 
         self.plotItem.getAxis('bottom').label.setFont(bottom_label_font)
 
+        for axis_name in ("left", "bottom", "top", "right"):
+            axis = self.plotItem.getAxis(axis_name)
+            axis.enableAutoSIPrefix(False)
+
     def plot(self, item, **kwargs):
         """kwargs are passed to plotItem.plot function
         item is Spectrum
