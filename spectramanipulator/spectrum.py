@@ -629,6 +629,22 @@ class Spectrum(IOperationBase):
         self.data[:, 1] = idct(gamma * dct(self.data[:, 1], norm='ortho'), norm='ortho')
 
         return self
+    
+    @add_modif_func(True, False)
+    def maverage(self, window_length, mode: str = 'same'):
+        """
+        Applies Moving average filter to a spectrum. Uses numpy.convolve.
+        
+        Parameters
+        ----------
+        window_length : int
+            Length of window that is used in the algorithm, must be positive odd integer.
+        """
+        window_length = int(window_length)
+
+        self.data[:, 1] = np.convolve(self.data[:, 1], np.ones(window_length), mode=mode) / window_length
+
+        return self
 
 
 
