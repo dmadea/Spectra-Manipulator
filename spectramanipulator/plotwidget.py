@@ -7,6 +7,7 @@ import numpy as np
 from spectramanipulator.pyqtgraphmodif.legend_item import LegendItem
 from spectramanipulator.pyqtgraphmodif.plot_item import PlotItem
 from spectramanipulator.pyqtgraphmodif.view_box import ViewBox
+from spectramanipulator.pyqtgraphmodif.axis_item import patch_axisitem_respect_disable_auto_si_prefix
 
 from spectramanipulator.singleton import Singleton
 # from pyqtgraph.exporters import ImageExporter
@@ -35,6 +36,8 @@ class PlotWidget(pg.GraphicsLayoutWidget, metaclass=Singleton):
         self.vb = ViewBox(self.plotted_items)
 
         self.plotItem = PlotItem(viewBox=self.vb)
+        for _axis_name in ('left', 'bottom'):
+            patch_axisitem_respect_disable_auto_si_prefix(self.plotItem.getAxis(_axis_name))
         self.probe_label = pg.LabelItem('no cursor data shown', justify='left')
 
         self.legend = None
