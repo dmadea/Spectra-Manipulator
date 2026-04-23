@@ -432,7 +432,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         sender = self.sender()
 
         if not sender.isChecked():
-            PlotWidget.remove_linear_region()
+            PlotWidget().remove_linear_region()
             self.lr = None
             return
 
@@ -460,7 +460,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         except ValueError:
             region = None
 
-        self.lr = PlotWidget.add_linear_region(bounds=bounds, z_value=1e8, region=region)
+        self.lr = PlotWidget().add_linear_region(bounds=bounds, z_value=1e8, region=region) 
         self.lr.sigRegionChanged.connect(lambda: self.update_region_text_values(sender.lb, sender.ub))
 
     def update_region_text_values(self, lb, ub):
@@ -885,7 +885,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
     def clear_plot(self):
         self.fits.children.clear()
         self.residuals.children.clear()
-        PlotWidget.remove_all_fits()
+        PlotWidget().remove_all_fits()
 
     def cbMethod_currentIndexChanged(self):
         dialog_cls = self.methods[self.cbMethod.currentIndex()]['option_dialog']
@@ -1014,8 +1014,8 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         if len(self.fits) != len(self.node):
             return
 
-        pw_plot_items = PlotWidget.plotted_items()
-        df = Settings.fit_dark_factor
+        pw_plot_items = PlotWidget().plotted_items
+        df = 0.8 # Settings.fit_dark_factor
 
         for i, (sp_fit, sp_res) in enumerate(zip(self.fits, self.residuals)):
             fit_color = QColor(0, 0, 0, 255)
@@ -1035,19 +1035,19 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
                                       node_color.blueF() * df * 0.9,
                                       node_color.alphaF())
 
-                PlotWidget.plot_fit(sp_fit, name=f'Fif of {self.node[i].name}',
+                PlotWidget().plot_fit(sp_fit, name=f'Fif of {self.node[i].name}',
                                     pen=pg.mkPen(color=fit_color, width=2),
                                     zValue=2e5 - i)
 
                 if self.cbShowResiduals.isChecked():
-                    PlotWidget.plot_fit(sp_res, name=f'Residual of {self.node[i].name}',
+                    PlotWidget().plot_fit(sp_res, name=f'Residual of {self.node[i].name}',
                                         pen=pg.mkPen(color=res_color, width=1),
                                         zValue=1e5 - i)
                 else:
-                    PlotWidget.remove_fits([sp_res])
+                    PlotWidget().remove_fits([sp_res])
             else:
                 # remove them from plot
-                PlotWidget.remove_fits([sp_fit, sp_res])
+                PlotWidget().remove_fits([sp_fit, sp_res])
 
     def plot_fits(self, x_vals, fits, residuals):
 
@@ -1197,7 +1197,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
         self.accepted_func()
 
         self.clear_plot()
-        PlotWidget.remove_linear_region()
+        PlotWidget().remove_linear_region()
 
         self.print_report()
 
@@ -1208,7 +1208,7 @@ class FitWidget(QtWidgets.QWidget, Ui_Form):
 
     def reject(self):
         self.clear_plot()
-        PlotWidget.remove_linear_region()
+        PlotWidget().remove_linear_region()
         self.is_opened = False
         self._instance = None
         self.dock_widget.setVisible(False)
