@@ -1,5 +1,6 @@
 
 import numpy as np
+import pandas as pd
 # import math
 from abc import abstractmethod
 
@@ -114,6 +115,75 @@ def group2mat(spectra):
     y = None if err else np.asarray(header_vals_temp)
 
     return x, y, matrix.T
+
+
+def log_bin_reduction_average(data: np.ndarray, points_per_decade: int =  100) -> np.ndarray:
+    """
+    Reduce time-series data into logarithmically spaced time bins and average values.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe. The first column is interpreted as time (seconds).
+        Remaining numeric columns are averaged within each logarithmic time bin.
+    bin_size : int | None
+        Number of logarithmic bins used between min(time) and max(time).
+        Must be >= 1.
+        If None, the number of bins is estimated from the number of valid points.
+
+    Returns
+    -------
+    pd.DataFrame
+        Reduced dataframe with:
+        - first column: logarithmic bin center time (geometric center)
+        - remaining columns: arithmetic mean in each bin
+
+    Notes
+    -----
+    - Rows with non-positive or NaN times are removed because log-binning requires t > 0.
+    - Empty bins are dropped.
+    """
+
+    df = pd.DataFrame(data)
+
+    time_col = df.columns[0]
+    signal_cols = list(df.columns[1:])
+
+    work = df[[time_col] + signal_cols].copy()
+
+    n_before = len(work)
+    work = work[work[time_col] > 0]  # remove rows with negative times
+    if work.empty:
+        raise ValueError("Log-binning requires positive times; no rows with time > 0 were found.")
+    if len(work) < n_before:
+        print(f"log_bin_reduction_average: dropped {n_before - len(work)} rows with non-positive time.")
+
+    t_min = float(work[time_col].min())
+    t_max = float(work[time_col].max())
+
+    n_points = len(work)
+    # use fixed number of points per decade
+    n_decades = np.log10(t_max) - np.log10(t_min)
+    n_bins = int(points_per_decade * n_decades)
+
+    n_bins = min(n_bins, n_points)
+    edges = np.logspace(np.log10(t_min), np.log10(t_max), n_bins + 1)
+    # Include right edge in final bin.
+    edges[-1] = np.nextafter(edges[-1], np.inf)
+
+    work["_log_bin"] = pd.cut(work[time_col], bins=edges, labels=False, include_lowest=True)
+    grouped = work.groupby("_log_bin", observed=True)
+
+    reduced = grouped[signal_cols].mean()
+
+    # Geometric centers for each populated bin.
+    used_bins = reduced.index.to_numpy(dtype=int)
+    centers = np.sqrt(edges[used_bins] * edges[used_bins + 1])
+    reduced.insert(0, time_col, centers)
+
+    reduced = reduced.reset_index(drop=True)
+
+    return reduced.to_numpy(dtype=np.float64)
 
 
 def operation(operator=lambda a, b: a + b, operator_str='+', switch_names=False):
@@ -645,8 +715,21 @@ class Spectrum(IOperationBase):
         self.data[:, 1] = np.convolve(self.data[:, 1], np.ones(window_length), mode=mode) / window_length
 
         return self
+    
+    @add_modif_func(True, False)
+    def logavrgresample(self, points_per_decade: int = 100):
+        """
+        Applies Log averaging and resampling.
+        
+        Parameters
+        ----------
+        n_bins_per_decade : int
+            Number of points per decade.
+        """
 
+        self.data = log_bin_reduction_average(self.data, points_per_decade)
 
+        return self
 
     @add_modif_func(True, False)
     def savgol(self, window_length, poly_order):
