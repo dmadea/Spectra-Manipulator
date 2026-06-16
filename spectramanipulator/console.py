@@ -83,6 +83,7 @@ class Console(QDockWidget):
 
     def __init__(self, app, parentWindow):
         QDockWidget.__init__(self, parentWindow)
+        self.app = app
         self.setTitleBarWidget(QWidget())
         self.setAllowedAreas(QtCore.Qt.BottomDockWidgetArea)
         self.setFeatures(QDockWidget.NoDockWidgetFeatures)
@@ -98,34 +99,73 @@ Enjoy.
 """
         Console._instance = self
 
-        # Add console window
-        self.console_widget = ConsoleWidget(app, banner)
+        self.banner = banner
+        self.console_widget = None
+        self._plain_text_buffer = []
+        self._html_buffer = []
+        self._cmd_buffer = []
+        self._vars_buffer = []
+        self.setWidget(QWidget())
+
+    def _ensure_console_widget(self):
+        if self.console_widget is not None:
+            return
+
+        self.console_widget = ConsoleWidget(self.app, self.banner)
         self.setWidget(self.console_widget)
+
+        for txt in self._plain_text_buffer:
+            self.console_widget.print_text(txt)
+        for html in self._html_buffer:
+            self.console_widget.print_html(html)
+        for cmd, hidden in self._cmd_buffer:
+            self.console_widget.execute_command(cmd, hidden)
+        for var_dict in self._vars_buffer:
+            self.console_widget.push_vars(var_dict)
+
+        self._plain_text_buffer.clear()
+        self._html_buffer.clear()
+        self._cmd_buffer.clear()
+        self._vars_buffer.clear()
 
     def setVisible(self, visible):
         """
         Override to set proper focus.
         """
-        QDockWidget.setVisible(self, visible)
         if visible:
+            self._ensure_console_widget()
+        QDockWidget.setVisible(self, visible)
+        if visible and self.console_widget is not None:
             self.console_widget.setFocus()
 
     @staticmethod
     def showMessage(message, add_new_line=True):
         if Console._instance is not None:
             string = '\n' + message if add_new_line else message
-            Console._instance.console_widget.print_text(string)
+            if Console._instance.console_widget is None:
+                Console._instance._plain_text_buffer.append(string)
+            else:
+                Console._instance.console_widget.print_text(string)
 
     def print_html(self, text, add_new_line=True):
         string = '\n' + text if add_new_line else text
+        if self.console_widget is None:
+            self._html_buffer.append(string)
+            return
         self.console_widget.print_html(string)
 
     @staticmethod
     def execute_command(cmd, hidden=True):
         if Console._instance is not None:
-            Console._instance.console_widget.execute_command(cmd, hidden)
+            if Console._instance.console_widget is None:
+                Console._instance._cmd_buffer.append((cmd, hidden))
+            else:
+                Console._instance.console_widget.execute_command(cmd, hidden)
 
     @staticmethod
     def push_variables(variable_dict):
         if Console._instance is not None:
-            Console._instance.console_widget.push_vars(variable_dict)
+            if Console._instance.console_widget is None:
+                Console._instance._vars_buffer.append(variable_dict)
+            else:
+                Console._instance.console_widget.push_vars(variable_dict)

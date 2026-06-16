@@ -3,6 +3,10 @@ from typing import Iterable
 import os
 
 import matplotlib as mpl
+# On macOS + newer Python versions, matplotlib may default to the native
+# "macosx" backend, which can interfere with the running Qt event loop.
+# Force Qt backend to keep all UI components responsive.
+# mpl.use("Qt5Agg")
 import matplotlib.pyplot as plt  # we plot graphs with this library
 from matplotlib import cm
 from matplotlib.ticker import *
