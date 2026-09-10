@@ -1189,7 +1189,7 @@ def reaction_QY_relative(sample_items, actinometer_items, QY_act=1, irradiation_
             abs_light = (1 - 10 ** -y) * irr  # (1 - 10 ** -A) * I_irr
 
             if integration_method == 'trapz':
-                return np.trapz(abs_light, x)  # integrate using trapezoidal rule
+                return np.trapezoid(abs_light, x)  # integrate using trapezoidal rule
             else:
                 return simps(abs_light, x)  # integrate using simpsons rule
 

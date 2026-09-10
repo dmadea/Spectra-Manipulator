@@ -861,7 +861,7 @@ class Spectrum(IOperationBase):
             x_diff = x[1:] - x[:-1]
             return (y[:-1] * x_diff).sum()
         elif method == 'trapz':
-            return np.trapz(y, x)
+            return np.trapezoid(y, x)
         else:  # simpsons rule
             return simps(y, x)
 
