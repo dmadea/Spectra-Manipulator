@@ -3,7 +3,7 @@ import sys
 from sys import platform
 from copy import deepcopy
 
-from PyQt5.QtWidgets import QTreeView, QAbstractItemView, QStyledItemDelegate
+from PyQt5.QtWidgets import QTreeView, QAbstractItemView, QStyledItemDelegate, QStyleFactory
 from PyQt5.QtCore import pyqtSignal, QAbstractItemModel, QVariant, QModelIndex, QItemSelection, QItemSelectionModel, Qt
 from PyQt5.QtGui import QFont
 
@@ -533,6 +533,11 @@ class TreeView(QTreeView):
 
     def __init__(self, parent=None):
         super(TreeView, self).__init__(parent)
+
+        # the native macOS style of Qt5 does not draw check indicators in item views on recent macOS versions
+        if platform == 'darwin':
+            self._style = QStyleFactory.create('Fusion')
+            self.setStyle(self._style)
 
         self.myModel = Model(self)
         self.setModel(self.myModel)
