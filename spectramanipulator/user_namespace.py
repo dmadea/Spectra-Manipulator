@@ -672,7 +672,7 @@ def plot_kinetics(kin_group_items: list, n_rows: int = None, n_cols: int = None,
         if add_wavenumber_axis:
             _setup_wavenumber_axis(ax)
 
-        cmap = cm.get_cmap(cmap)
+        cmap = mpl.colormaps[cmap]
         norm = mpl.colors.SymLogNorm(vmin=t[0], vmax=t[-1], linscale=linscale, linthresh=linthresh, base=10, clip=True)
 
         tsb_idxs = fi(t, emph_t)
